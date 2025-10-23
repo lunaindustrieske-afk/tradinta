@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { TopNav } from '@/components/top-nav';
+import { Logo } from '@/components/logo';
 
 const categories = [
   'Packaging',
@@ -108,6 +110,7 @@ const blogPosts = [
 export default function HomePage() {
   return (
     <>
+      <TopNav />
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col gap-12 md:gap-20">
           {/* 1. Hero Section */}
@@ -304,7 +307,7 @@ export default function HomePage() {
             <h2 className="text-2xl font-bold mb-4">Join hundreds of manufacturers growing with Tradinta.</h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button size="lg" asChild>
-                  <Link href="#">Register as Manufacturer</Link>
+                  <Link href="/signup">Register as Manufacturer</Link>
                 </Button>
                 <Button size="lg" variant="secondary" asChild>
                   <Link href="#">Browse Wholesale Offers</Link>
@@ -313,6 +316,41 @@ export default function HomePage() {
           </section>
         </div>
       </div>
+      {/* 11. Footer */}
+      <footer className="border-t pt-8">
+        <div className="container mx-auto grid md:grid-cols-4 gap-8">
+            <div>
+                <Logo />
+                <p className="text-muted-foreground mt-2 text-sm">© {new Date().getFullYear()} Tradinta. All rights reserved.</p>
+            </div>
+            <div>
+                <h4 className="font-semibold mb-2">Links</h4>
+                <ul className="space-y-1 text-sm">
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">About</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">Contact</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">Privacy Policy</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">Terms of Service</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">Careers</Link></li>
+                </ul>
+            </div>
+            <div>
+                <h4 className="font-semibold mb-2">Follow Us</h4>
+                <ul className="space-y-1 text-sm">
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">LinkedIn</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">YouTube</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">X / Twitter</Link></li>
+                    <li><Link href="#" className="text-muted-foreground hover:text-primary">Instagram</Link></li>
+                </ul>
+            </div>
+            <div>
+                <h4 className="font-semibold mb-2">Stay ahead with trade insights.</h4>
+                {/* Newsletter signup form can be added here */}
+            </div>
+        </div>
+        <div className="container mx-auto mt-8 text-center text-sm text-muted-foreground">
+            <p>Payment partners: M-Pesa, Visa, Mastercard</p>
+        </div>
+      </footer>
     </>
   );
 }
