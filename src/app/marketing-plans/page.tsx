@@ -1,7 +1,6 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { CheckCircle } from "lucide-react";
-import { TopNav } from "@/components/top-nav";
 
 const plans = [
     {
@@ -88,52 +87,49 @@ const plans = [
 
 export default function MarketingPlansPage() {
     return (
-        <>
-            <TopNav />
-            <main className="container mx-auto px-4 py-12">
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Tradinta Integrated Growth Packages</h1>
-                    <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
-                        Combine external digital advertising with internal marketplace visibility to grow your business on and off Tradinta.
-                    </p>
-                </div>
+        <div className="container mx-auto px-4 py-12">
+            <div className="text-center mb-12">
+                <h1 className="text-4xl md:text-5xl font-bold font-headline mb-4">Tradinta Integrated Growth Packages</h1>
+                <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
+                    Combine external digital advertising with internal marketplace visibility to grow your business on and off Tradinta.
+                </p>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
-                    {plans.map((plan, index) => (
-                        <Card key={plan.name} className={`flex flex-col h-full ${index === 2 ? 'lg:scale-105 lg:shadow-2xl z-10' : ''}`}>
-                            <CardHeader>
-                                <CardTitle className="font-headline text-2xl">{plan.name}</CardTitle>
-                                <CardDescription className="font-semibold text-primary">{plan.subtitle}</CardDescription>
-                                <p className="text-xl font-bold">{plan.fee}</p>
-                            </CardHeader>
-                            <CardContent className="flex-grow">
-                                <p className="font-semibold mb-2">Goal:</p>
-                                <p className="text-muted-foreground mb-4">{plan.goal}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
+                {plans.map((plan, index) => (
+                    <Card key={plan.name} className={`flex flex-col h-full ${index === 2 ? 'lg:scale-105 lg:shadow-2xl z-10' : ''}`}>
+                        <CardHeader>
+                            <CardTitle className="font-headline text-2xl">{plan.name}</CardTitle>
+                            <CardDescription className="font-semibold text-primary">{plan.subtitle}</CardDescription>
+                            <p className="text-xl font-bold">{plan.fee}</p>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                            <p className="font-semibold mb-2">Goal:</p>
+                            <p className="text-muted-foreground mb-4">{plan.goal}</p>
 
-                                <p className="font-semibold mb-2">Channels:</p>
-                                <p className="text-muted-foreground mb-4">{plan.channels}</p>
+                            <p className="font-semibold mb-2">Channels:</p>
+                            <p className="text-muted-foreground mb-4">{plan.channels}</p>
 
-                                <ul className="space-y-2">
-                                    {plan.includes.map(item => (
-                                        <li key={item} className="flex items-start gap-2">
-                                            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
-                                            <span className="text-sm text-muted-foreground">{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-                                
-                                <div className="mt-4">
-                                  <p className="font-semibold text-sm">Metric Focus:</p>
-                                  <p className="text-sm text-muted-foreground">{plan.metricFocus}</p>
-                                </div>
-                            </CardContent>
-                            <CardFooter>
-                                <Button className="w-full">Choose Plan</Button>
-                            </CardFooter>
-                        </Card>
-                    ))}
-                </div>
-            </main>
-        </>
+                            <ul className="space-y-2">
+                                {plan.includes.map(item => (
+                                    <li key={item} className="flex items-start gap-2">
+                                        <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
+                                        <span className="text-sm text-muted-foreground">{item}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                            
+                            <div className="mt-4">
+                              <p className="font-semibold text-sm">Metric Focus:</p>
+                              <p className="text-sm text-muted-foreground">{plan.metricFocus}</p>
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <Button className="w-full">Choose Plan</Button>
+                        </CardFooter>
+                    </Card>
+                ))}
+            </div>
+        </div>
     );
 }
