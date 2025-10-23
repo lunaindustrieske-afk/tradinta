@@ -1,5 +1,5 @@
 import type { Product, Order, Campaign } from './definitions';
-import { PlaceHolderImages } from './placeholder-images';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 export const products: Product[] = [
   {

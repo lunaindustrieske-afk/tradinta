@@ -1,127 +1,105 @@
-'use client';
-
-import { DollarSign, Package, ShoppingCart, Users } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight, Search } from 'lucide-react';
+import { products } from '@/app/lib/mock-data';
 import {
   Card,
   CardContent,
-  CardHeader,
+  CardDescription,
+  CardFooter,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from '@/components/ui/chart';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import type { ChartConfig } from '@/components/ui/chart';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
 
-const chartData = [
-  { month: 'January', sales: 186, revenue: 80 },
-  { month: 'February', sales: 305, revenue: 200 },
-  { month: 'March', sales: 237, revenue: 120 },
-  { month: 'April', sales: 73, revenue: 190 },
-  { month: 'May', sales: 209, revenue: 130 },
-  { month: 'June', sales: 214, revenue: 140 },
+const categories = [
+  ...new Set(products.map((product) => product.category)),
 ];
 
-const chartConfig = {
-  sales: {
-    label: 'Sales',
-    color: 'hsl(var(--chart-1))',
-  },
-  revenue: {
-    label: 'Revenue',
-    color: 'hsl(var(--chart-2))',
-  },
-} satisfies ChartConfig;
-
-export default function DashboardPage() {
+export default function HomePage() {
   return (
-    <>
-      <div className="grid gap-4 md:grid-cols-2 md:gap-8 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">KES 1,259,345.00</div>
-            <p className="text-xs text-muted-foreground">
-              +20.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Orders</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+1,234</div>
-            <p className="text-xs text-muted-foreground">
-              +18.1% from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Products</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">573</div>
-            <p className="text-xs text-muted-foreground">
-              +19 from last month
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Buyers</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">+89</div>
-            <p className="text-xs text-muted-foreground">+3 since last hour</p>
-          </CardContent>
-        </Card>
-      </div>
-      <div className="grid gap-4 md:gap-8 lg:grid-cols-2 xl:grid-cols-1">
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Performance</CardTitle>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <ResponsiveContainer>
-                <BarChart data={chartData}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tickLine={false}
-                    tickMargin={10}
-                    axisLine={false}
-                    tickFormatter={(value) => value.slice(0, 3)}
+    <div className="flex flex-col gap-8 md:gap-12">
+      <section className="relative h-[400px] md:h-[500px] rounded-lg overflow-hidden">
+        <Image
+          src="https://picsum.photos/seed/hero/1600/900"
+          alt="Manufacturing Hub"
+          fill
+          className="object-cover"
+          data-ai-hint="industrial manufacturing"
+        />
+        <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center text-center p-4">
+          <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-headline">
+            Powering Africa’s Manufacturers
+          </h1>
+          <p className="text-lg md:text-xl text-primary-foreground max-w-2xl mb-8">
+            The leading B2B marketplace connecting manufacturers with suppliers and buyers across the continent.
+          </p>
+          <div className="w-full max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Search for products, materials, or suppliers..."
+                className="w-full rounded-full pl-10 pr-4 py-3 text-base"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-bold mb-6 font-headline">Shop by Category</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {categories.map((category) => (
+            <Link href="#" key={category}>
+              <Card className="h-full hover:shadow-lg transition-shadow">
+                <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                  <div className="font-semibold">{category}</div>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold font-headline">Featured Products</h2>
+          <Button variant="outline" asChild>
+            <Link href="/products">
+              View All <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {products.slice(0, 4).map((product) => (
+            <Card key={product.id} className="overflow-hidden group">
+              <CardContent className="p-0">
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <Image
+                    src={product.imageUrl}
+                    alt={product.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform"
+                    data-ai-hint={product.imageHint}
                   />
-                  <YAxis />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent />}
-                  />
-                  <Bar dataKey="sales" fill="var(--color-sales)" radius={8} />
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-    </>
+                </div>
+                <div className="p-4">
+                  <Badge variant="secondary" className="mb-2">{product.category}</Badge>
+                  <CardTitle className="text-lg mb-1 truncate">{product.name}</CardTitle>
+                  <CardDescription className="text-base font-bold text-primary">
+                    KES {product.price.toLocaleString()}
+                  </CardDescription>
+                </div>
+              </CardContent>
+              <CardFooter className="p-4 pt-0">
+                <Button className="w-full">View Product</Button>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
