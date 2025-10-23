@@ -23,7 +23,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/t
 
 function UserMenu() {
     // This is a placeholder for a real authentication check
-    const isLoggedIn = true;
+    const isLoggedIn = false;
 
     if (isLoggedIn) {
         return (
