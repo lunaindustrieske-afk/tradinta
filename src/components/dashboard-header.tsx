@@ -1,0 +1,203 @@
+'use client';
+
+import {
+  Bell,
+  Home,
+  LineChart,
+  Package,
+  Package2,
+  Search,
+  ShoppingCart,
+  Users,
+} from 'lucide-react';
+import Link from 'next/link';
+
+import { Badge } from '@/components/ui/badge';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { usePathname } from 'next/navigation';
+import { Logo } from './logo';
+import {
+  SidebarProvider,
+  Sidebar,
+  SidebarTrigger,
+  SidebarContent,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarFooter,
+  useSidebar,
+} from '@/components/ui/sidebar';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import React from 'react';
+
+const BREADCRUMB_LABELS: { [key: string]: string } = {
+  '/': 'Dashboard',
+  '/products': 'Products',
+  '/orders': 'Orders',
+  '/marketing': 'Marketing',
+  '/ai-tools': 'AI Tools',
+};
+
+function MobileNav() {
+  const pathname = usePathname();
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" size="icon" className="shrink-0 md:hidden">
+          <Package2 className="h-5 w-5" />
+          <span className="sr-only">Toggle navigation menu</span>
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="left" className="flex flex-col">
+        <nav className="grid gap-2 text-lg font-medium">
+          <Link
+            href="#"
+            className="flex items-center gap-2 text-lg font-semibold"
+          >
+            <Logo />
+          </Link>
+          <Link
+            href="/"
+            className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
+              pathname === '/'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Home className="h-5 w-5" />
+            Dashboard
+          </Link>
+          <Link
+            href="/orders"
+            className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
+              pathname === '/orders'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ShoppingCart className="h-5 w-5" />
+            Orders
+          </Link>
+          <Link
+            href="/products"
+            className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
+              pathname === '/products'
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Package className="h-5 w-5" />
+            Products
+          </Link>
+        </nav>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function UserMenu() {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="secondary" size="icon" className="rounded-full">
+          <Avatar>
+            <AvatarImage src="https://picsum.photos/seed/user/32/32" />
+            <AvatarFallback>JD</AvatarFallback>
+          </Avatar>
+          <span className="sr-only">Toggle user menu</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>Settings</DropdownMenuItem>
+        <DropdownMenuItem>Support</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem>Logout</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+export function DashboardHeader() {
+  const pathname = usePathname();
+  const { toggleSidebar } = useSidebar();
+
+  const breadcrumbLabel = React.useMemo(() => {
+    const path = pathname === '/' ? '/' : `/${pathname.split('/')[1]}`;
+    return BREADCRUMB_LABELS[path] || 'Page';
+  }, [pathname]);
+
+  return (
+    <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
+      <Button
+        variant="outline"
+        size="icon"
+        className="shrink-0 hidden md:flex"
+        onClick={toggleSidebar}
+      >
+        <Package2 className="h-5 w-5" />
+        <span className="sr-only">Toggle navigation menu</span>
+      </Button>
+      <MobileNav />
+      <div className="w-full flex-1">
+        <Breadcrumb className="hidden md:flex">
+          <BreadcrumbList>
+            <BreadcrumbItem>
+              <BreadcrumbLink asChild>
+                <Link href="/">Dashboard</Link>
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            {pathname !== '/' && (
+              <>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>{breadcrumbLabel}</BreadcrumbPage>
+                </BreadcrumbItem>
+              </>
+            )}
+          </BreadcrumbList>
+        </Breadcrumb>
+      </div>
+      <div className="flex items-center gap-4">
+        <form className="ml-auto flex-1 sm:flex-initial">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search products..."
+              className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
+            />
+          </div>
+        </form>
+        <UserMenu />
+      </div>
+    </header>
+  );
+}
