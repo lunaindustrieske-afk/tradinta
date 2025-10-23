@@ -57,11 +57,17 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import React from 'react';
 
 const BREADCRUMB_LABELS: { [key: string]: string } = {
-  '/': 'Dashboard',
-  '/products': 'Products',
-  '/orders': 'Orders',
-  '/marketing': 'Marketing',
-  '/ai-tools': 'AI Tools',
+  '/dashboards': 'Overview',
+  '/dashboards/products': 'Products',
+  '/dashboards/orders': 'Orders & Quotations',
+  '/dashboards/seller': 'My Shop',
+  '/dashboards/tradpay-admin': 'TradPay Wallet',
+  '/dashboards/tradcoin-airdrop': 'TradPoints & TradCoin',
+  '/dashboards/marketing': 'Marketing',
+  '/dashboards/analytics': 'Analytics',
+  '/dashboards/support': 'Messages',
+  '/dashboards/legal-compliance': 'Verification',
+  '/dashboards/ai-tools': 'AI Tools',
 };
 
 function MobileNav() {
@@ -83,9 +89,9 @@ function MobileNav() {
             <Logo />
           </Link>
           <Link
-            href="/"
+            href="/dashboards"
             className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
-              pathname === '/'
+              pathname === '/dashboards'
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -94,9 +100,9 @@ function MobileNav() {
             Dashboard
           </Link>
           <Link
-            href="/orders"
+            href="/dashboards/orders"
             className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
-              pathname === '/orders'
+              pathname === '/dashboards/orders'
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
@@ -105,15 +111,15 @@ function MobileNav() {
             Orders
           </Link>
           <Link
-            href="/products"
+            href="/dashboards/seller"
             className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
-              pathname === '/products'
+              pathname.includes('/dashboards/seller')
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Package className="h-5 w-5" />
-            Products
+            My Shop
           </Link>
         </nav>
       </SheetContent>
@@ -150,8 +156,7 @@ export function DashboardHeader() {
   const { toggleSidebar } = useSidebar();
 
   const breadcrumbLabel = React.useMemo(() => {
-    const path = pathname === '/' ? '/' : `/${pathname.split('/')[1]}`;
-    return BREADCRUMB_LABELS[path] || 'Page';
+    return BREADCRUMB_LABELS[pathname] || 'Dashboard';
   }, [pathname]);
 
   return (
@@ -171,10 +176,10 @@ export function DashboardHeader() {
           <BreadcrumbList>
             <BreadcrumbItem>
               <BreadcrumbLink asChild>
-                <Link href="/">Dashboard</Link>
+                <Link href="/dashboards">My Tradinta</Link>
               </BreadcrumbLink>
             </BreadcrumbItem>
-            {pathname !== '/' && (
+            {pathname !== '/dashboards' && (
               <>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
@@ -191,7 +196,7 @@ export function DashboardHeader() {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search products..."
+              placeholder="Search..."
               className="pl-8 sm:w-[300px] md:w-[200px] lg:w-[300px]"
             />
           </div>

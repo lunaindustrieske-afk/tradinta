@@ -12,6 +12,12 @@ import {
   Package,
   Settings,
   ShoppingCart,
+  LineChart,
+  Wallet,
+  Coins,
+  MessageSquare,
+  UserCheck,
+  LifeBuoy
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -56,24 +62,48 @@ function MainSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/dashboards/products')}
-              tooltip="Products"
+              isActive={isActive('/dashboards/orders')}
+              tooltip="Orders & Quotations"
             >
-              <Link href="/dashboards/products">
+              <Link href="/dashboards/orders">
+                <ShoppingCart />
+                <span>Orders & Quotations</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/dashboards/shop')}
+              tooltip="My Shop"
+            >
+              <Link href="/dashboards/seller">
                 <Package />
-                <span>Products</span>
+                <span>My Shop</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/dashboards/orders')}
-              tooltip="Orders"
+              isActive={isActive('/dashboards/tradpay')}
+              tooltip="TradPay Wallet"
             >
-              <Link href="/dashboards/orders">
-                <ShoppingCart />
-                <span>Orders</span>
+              <Link href="/dashboards/tradpay-admin">
+                <Wallet />
+                <span>TradPay Wallet</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/dashboards/tradcoin')}
+              tooltip="TradPoints & TradCoin"
+            >
+              <Link href="/dashboards/tradcoin-airdrop">
+                <Coins />
+                <span>TradPoints & TradCoin</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -86,6 +116,42 @@ function MainSidebar() {
               <Link href="/dashboards/marketing">
                 <Megaphone />
                 <span>Marketing</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/dashboards/analytics')}
+              tooltip="Analytics"
+            >
+              <Link href="/dashboards/analytics">
+                <LineChart />
+                <span>Analytics</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/dashboards/messages')}
+              tooltip="Messages"
+            >
+              <Link href="/dashboards/support">
+                <MessageSquare />
+                <span>Messages</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+           <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              isActive={isActive('/dashboards/verification')}
+              tooltip="Verification"
+            >
+              <Link href="/dashboards/legal-compliance">
+                <UserCheck />
+                <span>Verification</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -110,6 +176,14 @@ function MainSidebar() {
               <Link href="#">
                 <Settings />
                 <span>Settings</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild tooltip="Help Center">
+              <Link href="#">
+                <LifeBuoy />
+                <span>Help Center</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
