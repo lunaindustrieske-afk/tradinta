@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { ChevronDown, Search } from 'lucide-react';
+import { ChevronDown, Search, UserPlus } from 'lucide-react';
 import { Logo } from './logo';
 import { Button } from './ui/button';
 import {
@@ -19,6 +19,7 @@ import {
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 function UserMenu() {
     // This is a placeholder for a real authentication check
@@ -50,14 +51,26 @@ function UserMenu() {
     }
 
     return (
+      <TooltipProvider>
         <div className="flex items-center gap-2">
             <Button variant="ghost" asChild>
                 <Link href="/login">Log in</Link>
             </Button>
-            <Button asChild>
-                <Link href="/signup">Sign Up</Link>
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                 <Button asChild variant="outline" size="icon">
+                    <Link href="/signup">
+                      <UserPlus />
+                      <span className="sr-only">Sign Up</span>
+                    </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Create an account</p>
+              </TooltipContent>
+            </Tooltip>
         </div>
+      </TooltipProvider>
     )
   }
 
