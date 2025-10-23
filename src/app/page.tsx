@@ -256,7 +256,7 @@ export default function HomePage() {
             <div>
                 <h2 className="text-3xl font-bold mb-4 font-headline">Reach 10x More Buyers</h2>
                 <p className="mb-4">Our Ambassadors and marketing packages help your factory reach thousands of new buyers across the continent.</p>
-                <Button variant="secondary" asChild><Link href="#">Explore Marketing</Link></Button>
+                <Button variant="secondary" asChild><Link href="/marketing-plans">Explore Marketing</Link></Button>
             </div>
             <div className="grid grid-cols-2 gap-4 text-center">
                 <div className="bg-primary/50 p-4 rounded">
