@@ -9,6 +9,10 @@ import {
   Search,
   ShoppingCart,
   Users,
+  Wallet,
+  Coins,
+  MessageSquare,
+  UserCheck
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -42,15 +46,6 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { usePathname } from 'next/navigation';
 import { Logo } from './logo';
 import {
-  SidebarProvider,
-  Sidebar,
-  SidebarTrigger,
-  SidebarContent,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
-  SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -58,16 +53,11 @@ import React from 'react';
 
 const BREADCRUMB_LABELS: { [key: string]: string } = {
   '/dashboards': 'Overview',
-  '/dashboards/products': 'Products',
   '/dashboards/orders': 'Orders & Quotations',
-  '/dashboards/seller': 'My Shop',
-  '/dashboards/tradpay-admin': 'TradPay Wallet',
-  '/dashboards/tradcoin-airdrop': 'TradPoints & TradCoin',
-  '/dashboards/marketing': 'Marketing',
-  '/dashboards/analytics': 'Analytics',
-  '/dashboards/support': 'Messages',
-  '/dashboards/legal-compliance': 'Verification',
-  '/dashboards/ai-tools': 'AI Tools',
+  '/dashboards/tradpay': 'TradPay Wallet',
+  '/dashboards/tradcoin': 'TradPoints & TradCoin',
+  '/dashboards/messages': 'Messages',
+  '/dashboards/verification': 'Verification',
 };
 
 function MobileNav() {
@@ -111,15 +101,15 @@ function MobileNav() {
             Orders
           </Link>
           <Link
-            href="/dashboards/seller"
+            href="/dashboards/tradpay"
             className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${
-              pathname.includes('/dashboards/seller')
+              pathname.includes('/dashboards/tradpay')
                 ? 'bg-muted text-foreground'
                 : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Package className="h-5 w-5" />
-            My Shop
+            <Wallet className="h-5 w-5" />
+            TradPay
           </Link>
         </nav>
       </SheetContent>
@@ -156,7 +146,9 @@ export function DashboardHeader() {
   const { toggleSidebar } = useSidebar();
 
   const breadcrumbLabel = React.useMemo(() => {
-    return BREADCRUMB_LABELS[pathname] || 'Dashboard';
+    // Find the key that the pathname starts with
+    const activePath = Object.keys(BREADCRUMB_LABELS).find(path => pathname.startsWith(path) && path !== '/dashboards');
+    return BREADCRUMB_LABELS[activePath || pathname] || 'Dashboard';
   }, [pathname]);
 
   return (

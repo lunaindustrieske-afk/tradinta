@@ -4,15 +4,11 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  Bot,
   Home,
   LayoutDashboard,
   LogOut,
-  Megaphone,
-  Package,
   Settings,
   ShoppingCart,
-  LineChart,
   Wallet,
   Coins,
   MessageSquare,
@@ -71,18 +67,6 @@ function MainSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={isActive('/dashboards/shop')}
-              tooltip="My Shop"
-            >
-              <Link href="/dashboards/seller">
-                <Package />
-                <span>My Shop</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
@@ -107,30 +91,6 @@ function MainSidebar() {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={isActive('/dashboards/marketing')}
-              tooltip="Marketing"
-            >
-              <Link href="/dashboards/marketing">
-                <Megaphone />
-                <span>Marketing</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-           <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={isActive('/dashboards/analytics')}
-              tooltip="Analytics"
-            >
-              <Link href="/dashboards/analytics">
-                <LineChart />
-                <span>Analytics</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
            <SidebarMenuItem>
             <SidebarMenuButton
               asChild
@@ -152,18 +112,6 @@ function MainSidebar() {
               <Link href="/dashboards/legal-compliance">
                 <UserCheck />
                 <span>Verification</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              isActive={isActive('/dashboards/ai-tools')}
-              tooltip="AI Tools"
-            >
-              <Link href="/dashboards/ai-tools">
-                <Bot />
-                <span>AI Tools</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

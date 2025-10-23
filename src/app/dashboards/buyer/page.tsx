@@ -4,11 +4,11 @@ export default function BuyerDashboard() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Retail Buyer / Business Client Dashboard</CardTitle>
-                <CardDescription>Request quotations, make payments, and rate sellers.</CardDescription>
+                <CardTitle>Buyer Dashboard</CardTitle>
+                <CardDescription>This is a simplified view for buyers. All your orders, quotations, and messages are now managed from the main dashboard page.</CardDescription>
             </CardHeader>
             <CardContent>
-                <p>Buyer specific components and data will go here.</p>
+                <p>Welcome to your streamlined buyer dashboard.</p>
             </CardContent>
         </Card>
     );
