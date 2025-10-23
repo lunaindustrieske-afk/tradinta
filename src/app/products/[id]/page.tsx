@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
+import { RequestQuoteModal } from '@/components/request-quote-modal';
 
 const relatedProducts = allProducts.slice(1, 5);
 
@@ -161,7 +162,9 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 <p className="text-3xl font-bold mb-4">KES {product.price.toLocaleString()}</p>
                 
                 <div className="space-y-3">
-                    <Button size="lg" className="w-full">Request Quotation</Button>
+                    <RequestQuoteModal product={product}>
+                        <Button size="lg" className="w-full">Request Quotation</Button>
+                    </RequestQuoteModal>
                     <Button size="lg" variant="outline" className="w-full">
                         <MessageSquare className="mr-2 h-5 w-5"/>
                         Contact Manufacturer
@@ -297,5 +300,3 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     </div>
   );
 }
-
-    

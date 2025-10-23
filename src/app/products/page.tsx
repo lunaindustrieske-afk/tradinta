@@ -39,6 +39,7 @@ import {
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { RequestQuoteModal } from '@/components/request-quote-modal';
 
 const categories = [
   'Packaging',
@@ -204,49 +205,51 @@ export default function ProductsPage() {
           {/* Product Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden group">
-                <Link href={`/products/${product.id}`}>
-                <CardContent className="p-0">
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <Image
-                      src={product.imageUrl}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform"
-                      data-ai-hint={product.imageHint}
-                    />
-                     <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
-                      Verified Factory
-                    </Badge>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <CardTitle className="text-lg leading-tight h-10">
-                      {product.name}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      From a trusted supplier in{' '}
-                      <span className="font-semibold text-primary">
-                        {product.category}
-                      </span>
-                    </CardDescription>
+              <Card key={product.id} className="overflow-hidden group flex flex-col">
+                <div className="flex-grow">
+                    <Link href={`/products/${product.id}`}>
+                        <CardContent className="p-0">
+                          <div className="relative aspect-[4/3] overflow-hidden">
+                            <Image
+                              src={product.imageUrl}
+                              alt={product.name}
+                              fill
+                              className="object-cover group-hover:scale-105 transition-transform"
+                              data-ai-hint={product.imageHint}
+                            />
+                             <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
+                              Verified Factory
+                            </Badge>
+                          </div>
+                          <div className="p-4 space-y-2">
+                            <CardTitle className="text-lg leading-tight h-10">
+                              {product.name}
+                            </CardTitle>
+                            <CardDescription className="text-sm">
+                              From a trusted supplier in{' '}
+                              <span className="font-semibold text-primary">
+                                {product.category}
+                              </span>
+                            </CardDescription>
 
-                    <div className="flex items-baseline justify-between">
-                         <p className="text-xl font-bold text-foreground">
-                            KES {product.price.toLocaleString()}
-                        </p>
-                        <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-sm font-medium">{product.rating}</span>
-                            <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
-                        </div>
-                    </div>
-                  </div>
-                </CardContent>
-                </Link>
+                            <div className="flex items-baseline justify-between">
+                                 <p className="text-xl font-bold text-foreground">
+                                    KES {product.price.toLocaleString()}
+                                </p>
+                                <div className="flex items-center gap-1">
+                                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                    <span className="text-sm font-medium">{product.rating}</span>
+                                    <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                                </div>
+                            </div>
+                          </div>
+                        </CardContent>
+                    </Link>
+                </div>
                  <div className="p-4 pt-0">
-                    <Button className="w-full mt-2" asChild>
-                      <Link href={`/products/${product.id}?action=quote`}>Request Quotation</Link>
-                    </Button>
+                    <RequestQuoteModal product={product}>
+                        <Button className="w-full mt-2">Request Quotation</Button>
+                    </RequestQuoteModal>
                   </div>
               </Card>
             ))}
