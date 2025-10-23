@@ -12,6 +12,11 @@ import {
   Package,
   Settings,
   ShoppingCart,
+  Coins,
+  ShieldCheck,
+  Truck,
+  BarChart,
+  Lock,
 } from 'lucide-react';
 import {
   SidebarProvider,
