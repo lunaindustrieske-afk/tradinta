@@ -320,7 +320,7 @@ export default function HomePage() {
             <div className="container mx-auto grid md:grid-cols-4 gap-8">
                 <div>
                     <Logo />
-                    <p className="text-muted-foreground mt-2 text-sm">© {new Date().getFullYear()} Tradigital. All rights reserved.</p>
+                    <p className="text-muted-foreground mt-2 text-sm">© {new Date().getFullYear()} Tradinta. All rights reserved.</p>
                 </div>
                 <div>
                     <h4 className="font-semibold mb-2">Links</h4>

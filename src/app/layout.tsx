@@ -4,7 +4,7 @@ import './globals.css';
 import { TopNav } from '@/components/top-nav';
 
 export const metadata: Metadata = {
-  title: 'Tradigital',
+  title: 'Tradinta',
   description: 'Powering Africa’s Manufacturers Through Digital Trade',
 };
 
