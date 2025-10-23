@@ -1,0 +1,295 @@
+
+'use client';
+
+import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { products as allProducts } from '@/app/lib/mock-data';
+import { notFound } from 'next/navigation';
+import {
+  Star,
+  ShieldCheck,
+  ChevronRight,
+  Truck,
+  MessageSquare,
+  Heart,
+  Coins,
+  Share2,
+} from 'lucide-react';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+const relatedProducts = allProducts.slice(1, 5);
+
+export default function ProductDetailPage({ params }: { params: { id: string } }) {
+  const product = allProducts.find((p) => p.id === params.id);
+  const [mainImage, setMainImage] = React.useState(product?.imageUrl);
+
+  if (!product) {
+    notFound();
+  }
+
+  const images = [
+    product.imageUrl,
+    'https://picsum.photos/seed/product-gallery1/600/400',
+    'https://picsum.photos/seed/product-gallery2/600/400',
+    'https://picsum.photos/seed/product-gallery3/600/400',
+  ];
+
+  return (
+    <div className="container mx-auto py-12">
+      <Breadcrumb className="mb-6">
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/">Home</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/products">Products</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+           <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href={`/products?category=${product.category}`}>{product.category}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{product.name}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+      <div className="grid lg:grid-cols-3 gap-12">
+        {/* Left Column: Image Gallery */}
+        <div className="lg:col-span-1">
+          <div className="relative aspect-square w-full mb-4 rounded-lg overflow-hidden">
+            <Image
+              src={mainImage || product.imageUrl}
+              alt={product.name}
+              fill
+              className="object-cover transition-transform duration-300 hover:scale-105"
+            />
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {images.map((img, index) => (
+              <div
+                key={index}
+                className={`relative aspect-square rounded-md overflow-hidden cursor-pointer border-2 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
+                onClick={() => setMainImage(img)}
+              >
+                <Image
+                  src={img}
+                  alt={`${product.name} thumbnail ${index + 1}`}
+                  fill
+                  className="object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Center Column: Product Info */}
+        <div className="lg:col-span-1">
+          <h1 className="text-3xl font-bold font-headline mb-2">{product.name}</h1>
+          <div className="flex items-center gap-4 mb-4">
+             <div className="flex items-center gap-1">
+              <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+              <span className="font-bold">{product.rating}</span>
+              <span className="text-sm text-muted-foreground">({product.reviewCount} reviews)</span>
+            </div>
+            <Separator orientation="vertical" className="h-5" />
+             <Badge variant="secondary" className="flex items-center gap-1">
+                <ShieldCheck className="h-4 w-4 text-green-600" />
+                Verified Manufacturer
+            </Badge>
+          </div>
+          <p className="text-muted-foreground mb-4">{product.description}</p>
+          
+          <Card className="bg-muted/50">
+            <CardContent className="p-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p className="text-muted-foreground">SKU</p>
+                        <p className="font-semibold">PROD-{product.id.padStart(4, '0')}</p>
+                    </div>
+                     <div>
+                        <p className="text-muted-foreground">Category</p>
+                        <p className="font-semibold text-primary hover:underline">
+                            <Link href={`/products?category=${product.category}`}>{product.category}</Link>
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-muted-foreground">Min. Order (MOQ)</p>
+                        <p className="font-semibold">50 Units</p>
+                    </div>
+                     <div>
+                        <p className="text-muted-foreground">Lead Time</p>
+                        <p className="font-semibold">7-14 days</p>
+                    </div>
+                </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column: Action Panel */}
+        <div className="lg:col-span-1">
+            <Card className="p-6">
+                <p className="text-sm text-muted-foreground">Price starts from</p>
+                <p className="text-3xl font-bold mb-4">KES {product.price.toLocaleString()}</p>
+                
+                <div className="space-y-3">
+                    <Button size="lg" className="w-full">Request Quotation</Button>
+                    <Button size="lg" variant="outline" className="w-full">
+                        <MessageSquare className="mr-2 h-5 w-5"/>
+                        Contact Manufacturer
+                    </Button>
+                </div>
+
+                <div className="flex items-center justify-center gap-4 mt-4 text-sm">
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                        <Heart className="mr-2 h-4 w-4"/> Wishlist
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                        <Share2 className="mr-2 h-4 w-4"/> Share
+                    </Button>
+                </div>
+                <Separator className="my-4"/>
+
+                <div className="space-y-2 text-center text-sm">
+                    <p className="font-semibold">Accepted Payments</p>
+                    <div className="flex justify-center gap-2">
+                        <Badge>TradPay</Badge>
+                        <Badge>Bank Transfer</Badge>
+                        <Badge>LPO</Badge>
+                    </div>
+                </div>
+                <div className="mt-4 p-3 bg-accent/20 rounded-md text-center">
+                    <p className="flex items-center justify-center gap-2 text-sm font-semibold text-primary">
+                        <Coins className="h-5 w-5" />
+                        Earn +30 TradPoints on purchase
+                    </p>
+                </div>
+            </Card>
+        </div>
+      </div>
+      
+      {/* Lower Section */}
+      <div className="grid lg:grid-cols-3 gap-12 mt-12">
+        <div className="lg:col-span-2">
+            {/* Product Details Tabs */}
+            <Tabs defaultValue="description">
+                <TabsList>
+                    <TabsTrigger value="description">Description</TabsTrigger>
+                    <TabsTrigger value="specs">Specifications</TabsTrigger>
+                    <TabsTrigger value="packaging">Packaging</TabsTrigger>
+                    <TabsTrigger value="reviews">Reviews ({product.reviewCount})</TabsTrigger>
+                </TabsList>
+                <TabsContent value="description" className="prose prose-sm max-w-none text-muted-foreground mt-4">
+                    <p>{product.description}</p>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nisl vitae ultricies lacinia, nisl nisl aliquet nisl, eget aliquam nisl nisl sit amet nisl. Sed euismod, nisl vitae ultricies lacinia, nisl nisl aliquet nisl, eget aliquam nisl nisl sit amet nisl.</p>
+                </TabsContent>
+                <TabsContent value="specs" className="mt-4">
+                     <Table>
+                        <TableBody>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Weight</TableCell><TableCell>50kg per bag</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Dimensions</TableCell><TableCell>80cm x 50cm x 15cm</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Material</TableCell><TableCell>Portland Cement Type I</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Standards</TableCell><TableCell>KEBS Certified</TableCell></TableRow>
+                        </TableBody>
+                    </Table>
+                </TabsContent>
+                 <TabsContent value="packaging" className="mt-4 text-sm text-muted-foreground">
+                    <p>Packed in durable, multi-wall paper bags to ensure product integrity during transport and storage. Each pallet contains 40 bags, shrink-wrapped for stability.</p>
+                </TabsContent>
+                <TabsContent value="reviews" className="mt-4">
+                    <h3 className="text-lg font-bold">Customer Reviews</h3>
+                    {/* Placeholder for reviews */}
+                    <div className="border-t mt-4 pt-4">
+                        <div className="flex gap-2 items-center mb-1">
+                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
+                             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
+                              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
+                               <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
+                                <Star className="w-4 h-4 text-gray-300"/>
+                        </div>
+                        <p className="font-semibold">Great value for bulk orders.</p>
+                        <p className="text-sm text-muted-foreground">"The quality is consistent and delivery was on time." - John D. on 24 Oct 2023</p>
+                    </div>
+                </TabsContent>
+            </Tabs>
+        </div>
+        <div className="lg:col-span-1">
+             {/* Manufacturer Section */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>About the Supplier</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center gap-4 mb-4">
+                        <Image src="https://picsum.photos/seed/mfg1/64/64" alt="Constructa Ltd" width={64} height={64} className="rounded-full" />
+                        <div>
+                            <h4 className="font-bold">Constructa Ltd</h4>
+                            <p className="text-sm text-muted-foreground">Nairobi, Kenya</p>
+                             <div className="flex items-center gap-1 text-sm">
+                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/> 4.8 Seller Rating
+                             </div>
+                        </div>
+                    </div>
+                    <Button className="w-full">View Shop</Button>
+                </CardContent>
+            </Card>
+        </div>
+      </div>
+
+       {/* Related Products */}
+      <div className="mt-16">
+        <h2 className="text-3xl font-bold font-headline mb-6">You May Also Like</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          {relatedProducts.map((p) => (
+            <Card key={p.id} className="overflow-hidden group">
+              <Link href={`/products/${p.id}`}>
+                <CardContent className="p-0">
+                  <div className="relative aspect-[4/3]">
+                    <Image
+                      src={p.imageUrl}
+                      alt={p.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform"
+                      data-ai-hint={p.imageHint}
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold truncate">{p.name}</h3>
+                    <p className="text-primary font-bold">KES {p.price.toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Link>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  );
+}

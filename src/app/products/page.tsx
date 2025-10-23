@@ -36,16 +36,7 @@ import {
   ListFilter,
   Search,
   Star,
-  LayoutGrid,
-  List,
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
@@ -214,6 +205,7 @@ export default function ProductsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden group">
+                <Link href={`/products/${product.id}`}>
                 <CardContent className="p-0">
                   <div className="relative aspect-[4/3] overflow-hidden">
                     <Image
@@ -248,10 +240,14 @@ export default function ProductsPage() {
                             <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
                         </div>
                     </div>
-                   
-                    <Button className="w-full mt-2">Request Quotation</Button>
                   </div>
                 </CardContent>
+                </Link>
+                 <div className="p-4 pt-0">
+                    <Button className="w-full mt-2" asChild>
+                      <Link href={`/products/${product.id}?action=quote`}>Request Quotation</Link>
+                    </Button>
+                  </div>
               </Card>
             ))}
           </div>
