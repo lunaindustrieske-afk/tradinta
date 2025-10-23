@@ -132,7 +132,7 @@ export default function HomePage() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button size="lg" asChild>
-                  <Link href="#">Open a Manufacturer Shop</Link>
+                  <Link href="/signup">Open a Manufacturer Shop</Link>
                 </Button>
                 <Button size="lg" variant="secondary" asChild>
                   <Link href="/products">Explore Verified Products</Link>
