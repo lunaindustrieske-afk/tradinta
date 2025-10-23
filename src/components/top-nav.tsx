@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import Link from 'next/link';
 import { ChevronDown, Search } from 'lucide-react';
@@ -11,6 +11,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal
 } from './ui/dropdown-menu';
 import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -18,7 +22,7 @@ import { ScrollArea } from './ui/scroll-area';
 
 function UserMenu() {
     // This is a placeholder for a real authentication check
-    const isLoggedIn = false;
+    const isLoggedIn = true;
 
     if (isLoggedIn) {
         return (
@@ -70,9 +74,46 @@ export function TopNav() {
                  <Link href="/marketing-plans" className='font-medium text-muted-foreground transition-colors hover:text-primary'>
                     Marketing
                 </Link>
-                <Link href="/about" className='font-medium text-muted-foreground transition-colors hover:text-primary'>
-                    About
-                </Link>
+                <DropdownMenu>
+                    <DropdownMenuTrigger className="flex items-center gap-1 font-medium text-muted-foreground transition-colors hover:text-primary">
+                        Dashboards <ChevronDown className="h-4 w-4" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                        <DropdownMenuItem asChild><Link href="/dashboards/seller">Seller Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/buyer">Buyer Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/distributor">Distributor Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/ambassador">Ambassador Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>Admin Roles</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                               <DropdownMenuItem asChild><Link href="/dashboards/admin">Admin/Operations</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">Seller Centre</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/marketing">Marketing</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/support">Support</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/finance">Finance</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/legal-compliance">Legal & Compliance</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/content-management">Content Management</Link></DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                         <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>TradPay Roles</DropdownMenuSubTrigger>
+                          <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                               <DropdownMenuItem asChild><Link href="/dashboards/tradpay-admin">TradPay Admin</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/tradcoin-airdrop">TradCoin Airdrop</Link></DropdownMenuItem>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuPortal>
+                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                         <DropdownMenuItem asChild><Link href="/dashboards/logistics">Logistics Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/analytics">Analytics Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/investor-partner">Investor/Partner View</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/super-admin">Super Admin</Link></DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </nav>
         </div>
         
