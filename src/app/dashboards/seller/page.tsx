@@ -3,109 +3,63 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, BarChart, DollarSign, PlusCircle, Star, MessageSquare } from "lucide-react";
-import { products, orders } from "@/app/lib/mock-data";
+import { Megaphone, Users, BarChart, PlusCircle } from "lucide-react";
 
-
-const quotes = [
-    { id: 'QUO-005', customer: 'BuildWell Ltd', product: 'Industrial Grade Cement', quantity: 500, status: 'Pending' },
-    { id: 'QUO-004', customer: 'Yum Foods', product: 'Commercial Baking Flour', quantity: 100, status: 'Responded' },
+const campaigns = [
+    { id: 'CAMP-01', name: 'End of Year Clearance', status: 'Active', budget: 50000, impressions: 120500, clicks: 8230 },
+    { id: 'CAMP-02', name: 'New Product Launch: Eco-Pack', status: 'Active', budget: 75000, impressions: 250000, clicks: 15400 },
+    { id: 'CAMP-03', name: 'Back to School Special', status: 'Expired', budget: 30000, impressions: 85000, clicks: 4500 },
+    { id: 'CAMP-04', name: 'Q1 2024 Planning', status: 'Draft', budget: 100000, impressions: 0, clicks: 0 },
 ];
 
-export default function SellerDashboard() {
-    return (
-        <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="products">Products</TabsTrigger>
-                <TabsTrigger value="orders">Orders</TabsTrigger>
-                <TabsTrigger value="quotes">Quotations</TabsTrigger>
-                <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
+const ambassadors = [
+    { id: 'AMB001', name: 'John Doe', status: 'Verified', campaigns: 2, followers: '15k' },
+    { id: 'AMB002', name: 'Jane Smith', status: 'Pending', campaigns: 0, followers: '5k' },
+];
 
-            <TabsContent value="overview">
+export default function MarketingDashboard() {
+    return (
+        <Tabs defaultValue="campaigns">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="campaigns">Campaign Management</TabsTrigger>
+                <TabsTrigger value="ambassadors">Ambassador Network</TabsTrigger>
+                <TabsTrigger value="promotions">Promotions & Banners</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="campaigns">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Manufacturer / Seller Dashboard</CardTitle>
-                        <CardDescription>Your central hub for managing your shop, products, and sales on Tradinta.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-                                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">KES 350,000</div>
-                                    <p className="text-xs text-muted-foreground">+15% from last month</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Active Orders</CardTitle>
-                                    <Package className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">12</div>
-                                    <p className="text-xs text-muted-foreground">3 new orders today</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Pending Quotes</CardTitle>
-                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">3</div>
-                                    <p className="text-xs text-muted-foreground">Respond to get orders</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Shop Rating</CardTitle>
-                                    <Star className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">4.8/5.0</div>
-                                    <p className="text-xs text-muted-foreground">Based on 150 reviews</p>
-                                </CardContent>
-                            </Card>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Marketing Campaigns</CardTitle>
+                                <CardDescription>Manage promotional campaigns and ad placements.</CardDescription>
+                            </div>
+                            <Button><PlusCircle className="mr-2 h-4 w-4" /> Create New Campaign</Button>
                         </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-
-            <TabsContent value="products">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <div>
-                            <CardTitle>My Products</CardTitle>
-                            <CardDescription>Manage your product listings and inventory.</CardDescription>
-                        </div>
-                        <Button><PlusCircle className="mr-2 h-4 w-4"/> Add New Product</Button>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Product Name</TableHead>
-                                    <TableHead>Stock</TableHead>
-                                    <TableHead>Price (KES)</TableHead>
+                                    <TableHead>Campaign Name</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Budget (KES)</TableHead>
+                                    <TableHead>Impressions</TableHead>
+                                    <TableHead>Clicks</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {products.map((product) => (
-                                    <TableRow key={product.id}>
-                                        <TableCell className="font-medium">{product.name}</TableCell>
-                                        <TableCell>{product.stock}</TableCell>
-                                        <TableCell>{product.price.toLocaleString()}</TableCell>
-                                        <TableCell><Badge>Active</Badge></TableCell>
+                                {campaigns.map((campaign) => (
+                                    <TableRow key={campaign.id}>
+                                        <TableCell className="font-medium">{campaign.name}</TableCell>
+                                        <TableCell><Badge variant={campaign.status === 'Active' ? 'default' : 'outline'}>{campaign.status}</Badge></TableCell>
+                                        <TableCell>{campaign.budget.toLocaleString()}</TableCell>
+                                        <TableCell>{campaign.impressions.toLocaleString()}</TableCell>
+                                        <TableCell>{campaign.clicks.toLocaleString()}</TableCell>
                                         <TableCell className="space-x-2">
                                             <Button variant="outline" size="sm">Edit</Button>
-                                            <Button variant="destructive" size="sm">Unlist</Button>
+                                            <Button size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -115,71 +69,33 @@ export default function SellerDashboard() {
                 </Card>
             </TabsContent>
 
-            <TabsContent value="orders">
+            <TabsContent value="ambassadors">
                 <Card>
                     <CardHeader>
-                        <CardTitle>My Orders</CardTitle>
-                        <CardDescription>Fulfill and track customer orders.</CardDescription>
+                        <CardTitle>Ambassador Network</CardTitle>
+                        <CardDescription>Manage and approve influencers and brand ambassadors.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
-                             <TableHeader>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableHead>Order ID</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Product</TableHead>
-                                    <TableHead>Total</TableHead>
+                                    <TableHead>Name</TableHead>
                                     <TableHead>Status</TableHead>
-                                    <TableHead>Action</TableHead>
+                                    <TableHead>Active Campaigns</TableHead>
+                                    <TableHead>Follower Count</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {orders.slice(0,3).map((order) => (
-                                    <TableRow key={order.id}>
-                                        <TableCell>{order.id}</TableCell>
-                                        <TableCell>{order.customerName}</TableCell>
-                                        <TableCell>{order.productName}</TableCell>
-                                        <TableCell>KES {order.total.toLocaleString()}</TableCell>
-                                        <TableCell><Badge variant={order.status === 'Pending' ? 'destructive' : 'default'}>{order.status}</Badge></TableCell>
+                                {ambassadors.map((amb) => (
+                                    <TableRow key={amb.id}>
+                                        <TableCell className="font-medium">{amb.name}</TableCell>
+                                        <TableCell><Badge variant={amb.status === 'Verified' ? 'secondary' : 'default'}>{amb.status}</Badge></TableCell>
+                                        <TableCell>{amb.campaigns}</TableCell>
+                                        <TableCell>{amb.followers}</TableCell>
                                         <TableCell>
-                                            <Button size="sm" disabled={order.status !== 'Pending'}>Mark as Shipped</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            
-            <TabsContent value="quotes">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Incoming Quotation Requests</CardTitle>
-                        <CardDescription>Respond to inquiries from potential buyers.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <Table>
-                             <TableHeader>
-                                <TableRow>
-                                    <TableHead>Quote ID</TableHead>
-                                    <TableHead>Customer</TableHead>
-                                    <TableHead>Product</TableHead>
-                                    <TableHead>Quantity</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {quotes.map((quote) => (
-                                    <TableRow key={quote.id}>
-                                        <TableCell>{quote.id}</TableCell>
-                                        <TableCell>{quote.customer}</TableCell>
-                                        <TableCell>{quote.product}</TableCell>
-                                        <TableCell>{quote.quantity}</TableCell>
-                                        <TableCell><Badge variant={quote.status === 'Pending' ? 'default' : 'outline'}>{quote.status}</Badge></TableCell>
-                                        <TableCell>
-                                            <Button size="sm" disabled={quote.status !== 'Pending'}>Respond</Button>
+                                            {amb.status === 'Pending' && <Button size="sm">Approve</Button>}
+                                            {amb.status === 'Verified' && <Button variant="outline" size="sm">View Profile</Button>}
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -189,16 +105,16 @@ export default function SellerDashboard() {
                 </Card>
             </TabsContent>
 
-            <TabsContent value="analytics">
-                <Card>
+            <TabsContent value="promotions">
+                 <Card>
                     <CardHeader>
-                        <CardTitle>Shop Analytics</CardTitle>
-                        <CardDescription>Insights into your shop's performance.</CardDescription>
+                        <CardTitle>Homepage Banners & Promotions</CardTitle>
+                        <CardDescription>Manage featured listings and homepage ad banners.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                       <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                           <BarChart className="h-16 w-16 text-muted-foreground" />
-                           <p className="ml-4 text-muted-foreground">Shop Performance Charts Here</p>
+                     <CardContent>
+                        <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
+                           <Megaphone className="h-16 w-16 text-muted-foreground" />
+                           <p className="ml-4 text-muted-foreground">Banner Management Component Here</p>
                        </div>
                     </CardContent>
                 </Card>
