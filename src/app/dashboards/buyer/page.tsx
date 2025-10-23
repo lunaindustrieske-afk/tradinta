@@ -1,162 +1,129 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, FileText, MessageSquare, Heart } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { ArrowRight, Coins, Gift, Heart, MessageSquare, Package, Search, Sparkles, Star, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 
-const myOrders = [
-    { id: 'ORD-002', product: '50 sacks of Baking Flour', supplier: 'SuperBake Bakery', status: 'Pending Payment', total: 110000, date: '2023-10-27' },
-    { id: 'ORD-001', product: '200 bags of Cement', supplier: 'Constructa Ltd', status: 'Delivered', total: 130000, date: '2023-10-26' },
-];
-
-const myQuotations = [
-    { id: 'QUO-001', product: '200 bags of Cement', supplier: 'Constructa Ltd', status: 'Approved', expires: '2023-11-28' },
-    { id: 'QUO-003', product: '10 tons of steel bars', supplier: 'SteelMakers Inc', status: 'Pending', expires: '2023-11-30' },
-];
-
-const myWishlist = [
-    { id: 'PROD-003', name: 'HDPE Plastic Pellets', category: 'Plastics & Polymers', price: 135000.00 },
-    { id: 'PROD-005', name: 'Bulk Cooking Oil', category: 'Food & Beverage', price: 4500.00 },
+const quickActions = [
+  { title: "My Orders & RFQs", icon: <Package className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/orders" },
+  { title: "Messages", icon: <MessageSquare className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/messages" },
+  { title: "My Wishlist", icon: <Heart className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/wishlist" },
+  { title: "Browse Products", icon: <Search className="w-6 h-6 text-primary" />, href: "/products" },
 ];
 
 export default function BuyerDashboard() {
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Buyer Dashboard</CardTitle>
-                <CardDescription>Manage your orders, quotations, and communications.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Tabs defaultValue="orders">
-                    <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="orders">My Orders</TabsTrigger>
-                        <TabsTrigger value="quotations">My Quotations</TabsTrigger>
-                        <TabsTrigger value="messages">Messages</TabsTrigger>
-                        <TabsTrigger value="wishlist">My Wishlist</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="orders">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>My Orders</CardTitle>
-                                <CardDescription>Track your active and past orders.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Order ID</TableHead>
-                                            <TableHead>Product Summary</TableHead>
-                                            <TableHead>Supplier</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Total</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {myOrders.map((order) => (
-                                            <TableRow key={order.id}>
-                                                <TableCell>{order.id}</TableCell>
-                                                <TableCell className="font-medium">{order.product}</TableCell>
-                                                <TableCell>{order.supplier}</TableCell>
-                                                <TableCell><Badge variant={order.status === 'Delivered' ? 'secondary' : 'default'}>{order.status}</Badge></TableCell>
-                                                <TableCell>KES {order.total.toLocaleString()}</TableCell>
-                                                <TableCell className="space-x-2">
-                                                    <Button variant="outline" size="sm">View Details</Button>
-                                                    {order.status === 'Pending Payment' && <Button size="sm">Pay Now</Button>}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>My Tradinta Dashboard</CardTitle>
+                    <CardDescription>Your central hub for trading, rewards, and insights.</CardDescription>
+                </CardHeader>
+            </Card>
+
+            {/* Balances & Rewards Panel */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <CardHeader className="flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">TradPay Balance</CardTitle>
+                        <Wallet className="w-5 h-5 text-blue-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">KES 12,450.00</div>
+                        <p className="text-xs text-muted-foreground">Available for payments</p>
+                    </CardContent>
+                    <CardFooter>
+                        <Button size="sm" variant="outline">Add Funds</Button>
+                    </CardFooter>
+                </Card>
+                 <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+                    <CardHeader className="flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">TradPoints</CardTitle>
+                        <Sparkles className="w-5 h-5 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">1,850 Points</div>
+                        <Progress value={85} className="mt-2 h-2" />
+                    </CardContent>
+                     <CardFooter>
+                        <p className="text-xs text-muted-foreground">150 points to next reward</p>
+                     </CardFooter>
+                </Card>
+                 <Card className="bg-muted/50 border-dashed">
+                    <CardHeader className="flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-sm font-medium">$TRAD Balance</CardTitle>
+                        <Coins className="w-5 h-5 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-muted-foreground">Coming Soon</div>
+                        <p className="text-xs text-muted-foreground">TradPoints will be convertible to $TRAD</p>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Quick Actions Panel */}
+             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {quickActions.map((action) => (
+                     <Link href={action.href} key={action.title}>
+                        <Card className="text-center hover:bg-accent hover:shadow-md transition-all h-full flex flex-col justify-center items-center p-4">
+                            <div className="mb-2">{action.icon}</div>
+                            <p className="font-semibold text-sm">{action.title}</p>
                         </Card>
-                    </TabsContent>
-                    <TabsContent value="quotations">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>My Quotations</CardTitle>
-                                <CardDescription>Manage your requested price quotations.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Quote ID</TableHead>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead>Supplier</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Expires On</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {myQuotations.map((quote) => (
-                                            <TableRow key={quote.id}>
-                                                <TableCell>{quote.id}</TableCell>
-                                                <TableCell className="font-medium">{quote.product}</TableCell>
-                                                <TableCell>{quote.supplier}</TableCell>
-                                                <TableCell><Badge variant={quote.status === 'Approved' ? 'default' : 'outline'}>{quote.status}</Badge></TableCell>
-                                                <TableCell>{quote.expires}</TableCell>
-                                                <TableCell>
-                                                    {quote.status === 'Approved' ? <Button size="sm">Accept & Order</Button> : <Button variant="outline" size="sm">View Quote</Button>}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="messages">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Messages</CardTitle>
-                                <CardDescription>Conversations with sellers and support.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                 <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                                   <MessageSquare className="h-16 w-16 text-muted-foreground" />
-                                   <p className="ml-4 text-muted-foreground">Message History Component Here</p>
-                               </div>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                    <TabsContent value="wishlist">
-                         <Card>
-                            <CardHeader>
-                                <CardTitle>My Wishlist</CardTitle>
-                                <CardDescription>Products you have saved for later.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Product Name</TableHead>
-                                            <TableHead>Category</TableHead>
-                                            <TableHead>Price</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {myWishlist.map((item) => (
-                                            <TableRow key={item.id}>
-                                                <TableCell className="font-medium">{item.name}</TableCell>
-                                                <TableCell>{item.category}</TableCell>
-                                                <TableCell>KES {item.price.toLocaleString()}</TableCell>
-                                                <TableCell className="space-x-2">
-                                                    <Button size="sm">Add to Cart</Button>
-                                                    <Button variant="outline" size="sm">Remove</Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
+                    </Link>
+                ))}
+            </div>
+
+            {/* TradPoints Engagement Panel */}
+            <Card className="bg-gradient-to-br from-primary/10 to-accent/10">
+                <CardHeader>
+                     <CardTitle className="flex items-center gap-2"><Gift className="w-6 h-6"/> Earn More TradPoints!</CardTitle>
+                     <CardDescription>Complete tasks and refer others to earn rewards that will convert to $TRAD tokens.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="bg-background/50 rounded-lg p-4 mb-4">
+                        <label htmlFor="referral-link" className="text-sm font-medium">Your Unique Referral Link</label>
+                        <div className="flex items-center gap-2 mt-1">
+                            <input id="referral-link" type="text" value="https://tradinta.com/ref/johndoe123" readOnly className="flex-grow bg-muted border border-border rounded-md px-3 py-1.5 text-sm" />
+                            <Button size="sm" variant="outline">Copy</Button>
+                        </div>
+                    </div>
+                     <p className="text-sm text-muted-foreground">Share your link via WhatsApp, Email, or Social Media to earn 50 points for every verified signup!</p>
+                </CardContent>
+                <CardFooter>
+                     <Button>View All Tasks & Rewards <ArrowRight className="ml-2 w-4 h-4" /></Button>
+                </CardFooter>
+            </Card>
+
+             {/* Insights & Tasks Panel */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Your Next Steps</CardTitle>
+                    <CardDescription>Complete these tasks to earn more points and improve your profile.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                        <div className="flex items-center gap-3">
+                            <Star className="w-5 h-5 text-yellow-500" />
+                            <div>
+                                <p className="font-semibold">Review your last purchase</p>
+                                <p className="text-sm text-muted-foreground">Product: Industrial Grade Cement</p>
+                            </div>
+                        </div>
+                        <Button variant="outline" size="sm">Write Review (+15 Points)</Button>
+                    </div>
+                     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
+                        <div className="flex items-center gap-3">
+                            <Badge>New</Badge>
+                            <div>
+                                <p className="font-semibold">Verify Your Business Details</p>
+                                <p className="text-sm text-muted-foreground">Get a verified buyer badge.</p>
+                            </div>
+                        </div>
+                        <Button variant="outline" size="sm">Start Verification (+100 Points)</Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     );
 }
