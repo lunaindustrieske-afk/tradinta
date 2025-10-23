@@ -82,7 +82,7 @@ export function TopNav() {
                         <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">Seller Centre</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/buyer">Buyer Dashboard</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/distributor">Distributor Dashboard</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link href="/dashboards/ambassador">Influencer Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/marketing">Marketing</Link></DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>Admin Roles</DropdownMenuSubTrigger>
