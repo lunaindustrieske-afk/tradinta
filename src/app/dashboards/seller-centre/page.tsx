@@ -1,9 +1,10 @@
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Package, ShoppingCart, FileText, BarChart, Settings, LifeBuoy } from "lucide-react";
+import { Package, ShoppingCart, FileText, BarChart, Settings, LifeBuoy, Star } from "lucide-react";
 
 const products = [
     { id: 'PROD-001', name: 'Industrial Grade Cement', category: 'Building Materials', price: 650, stock: 1200, status: 'Live' },
@@ -75,7 +76,7 @@ export default function SellerDashboard() {
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Shop Rating</CardTitle>
-                                    <FileText className="h-4 w-4 text-muted-foreground" />
+                                    <Star className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">4.8 / 5.0</div>
@@ -215,3 +216,5 @@ export default function SellerDashboard() {
         </Tabs>
     );
 }
+
+    
