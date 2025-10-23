@@ -6,7 +6,7 @@ const gmvData = [
   { name: 'Jan', GMV: 3.2 },
   { name: 'Feb', GMV: 3.8 },
   { name: 'Mar', GMV: 5.1 },
-  { name 'Apr', GMV: 6.2 },
+  { name: 'Apr', GMV: 6.2 },
   { name: 'May', GMV: 7.5 },
   { name: 'Jun', GMV: 8.1 },
 ];

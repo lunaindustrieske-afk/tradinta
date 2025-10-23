@@ -19,7 +19,7 @@ const userGrowthData = [
     { name: 'Mar', buyers: 230, sellers: 28 },
     { name: 'Apr', buyers: 280, sellers: 35 },
     { name: 'May', buyers: 350, sellers: 42 },
-    { name 'Jun', buyers: 410, sellers: 50 },
+    { name: 'Jun', buyers: 410, sellers: 50 },
 ];
 
 const topCategories = [
