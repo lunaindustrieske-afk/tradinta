@@ -72,12 +72,7 @@ function MobileNav() {
       </SheetTrigger>
       <SheetContent side="left" className="flex flex-col">
         <nav className="grid gap-2 text-lg font-medium">
-          <Link
-            href="#"
-            className="flex items-center gap-2 text-lg font-semibold"
-          >
             <Logo />
-          </Link>
           <Link
             href="/dashboards"
             className={`mx-[-0.65rem] flex items-center gap-4 rounded-xl px-3 py-2 ${

@@ -1,5 +1,6 @@
-import { Building } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 type LogoProps = {
   className?: string;
@@ -7,9 +8,14 @@ type LogoProps = {
 
 export function Logo({ className }: LogoProps) {
   return (
-    <div className={cn("flex items-center gap-2 font-headline text-xl font-bold text-primary", className)}>
-      <Building className="h-6 w-6" />
-      <span>Tradinta</span>
-    </div>
+    <Link href="/" className={cn("relative h-10 w-32", className)}>
+      <Image
+        src="https://i.postimg.cc/NGkTK7Jc/Gemini-Generated-Image-e6p14ne6p14ne6p1-removebg-preview.png"
+        alt="Tradinta Logo"
+        fill
+        className="object-contain"
+        priority
+      />
+    </Link>
   );
 }
