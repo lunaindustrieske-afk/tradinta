@@ -12,11 +12,6 @@ import {
   Package,
   Settings,
   ShoppingCart,
-  Coins,
-  ShieldCheck,
-  Truck,
-  BarChart,
-  Lock,
 } from 'lucide-react';
 import {
   SidebarProvider,
@@ -35,7 +30,7 @@ import { DashboardHeader } from '@/components/dashboard-header';
 function MainSidebar() {
   const pathname = usePathname();
   const isActive = (path: string) => {
-    if (path === '/') return pathname === '/';
+    if (path === '/dashboards') return pathname === '/dashboards';
     return pathname.startsWith(path);
   };
 
@@ -49,10 +44,10 @@ function MainSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/')}
+              isActive={isActive('/dashboards')}
               tooltip="Dashboard"
             >
-              <Link href="/">
+              <Link href="/dashboards">
                 <LayoutDashboard />
                 <span>Dashboard</span>
               </Link>
@@ -61,10 +56,10 @@ function MainSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/products')}
+              isActive={isActive('/dashboards/products')}
               tooltip="Products"
             >
-              <Link href="/products">
+              <Link href="/dashboards/products">
                 <Package />
                 <span>Products</span>
               </Link>
@@ -73,10 +68,10 @@ function MainSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/orders')}
+              isActive={isActive('/dashboards/orders')}
               tooltip="Orders"
             >
-              <Link href="/orders">
+              <Link href="/dashboards/orders">
                 <ShoppingCart />
                 <span>Orders</span>
               </Link>
@@ -85,10 +80,10 @@ function MainSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/marketing')}
+              isActive={isActive('/dashboards/marketing')}
               tooltip="Marketing"
             >
-              <Link href="/marketing">
+              <Link href="/dashboards/marketing">
                 <Megaphone />
                 <span>Marketing</span>
               </Link>
@@ -97,10 +92,10 @@ function MainSidebar() {
           <SidebarMenuItem>
             <SidebarMenuButton
               asChild
-              isActive={isActive('/ai-tools')}
+              isActive={isActive('/dashboards/ai-tools')}
               tooltip="AI Tools"
             >
-              <Link href="/ai-tools">
+              <Link href="/dashboards/ai-tools">
                 <Bot />
                 <span>AI Tools</span>
               </Link>
