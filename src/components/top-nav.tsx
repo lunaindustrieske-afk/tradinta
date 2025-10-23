@@ -82,14 +82,14 @@ export function TopNav() {
                         <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">Seller Centre</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/buyer">Buyer Dashboard</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/distributor">Distributor Dashboard</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link href="/dashboards/marketing">Marketing</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/ambassador">Ambassador</Link></DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>Admin Roles</DropdownMenuSubTrigger>
                           <DropdownMenuPortal>
                             <DropdownMenuSubContent>
-                               <DropdownMenuItem asChild><Link href="/dashboards/admin">Admin/Operations</Link></DropdownMenuItem>
-                                <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">Seller Centre</Link></DropdownMenuItem>
+                               <DropdownMenuItem asChild><Link href="/dashboards/admin">Admin</Link></DropdownMenuItem>
+                               <DropdownMenuItem asChild><Link href="/dashboards/operations-manager">Operations Manager</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/marketing">Marketing</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/support">Support</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/finance">Finance</Link></DropdownMenuItem>

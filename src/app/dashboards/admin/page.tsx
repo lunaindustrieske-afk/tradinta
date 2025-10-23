@@ -3,183 +3,52 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileWarning, CheckCircle, Clock, Users, Package, BarChart, AlertCircle, Handshake } from "lucide-react";
+import { UserCheck, Star, BarChart, LifeBuoy } from "lucide-react";
 
 const pendingVerifications = [
-  { id: 'V001', entity: 'MegaPlastics Ltd', type: 'Seller', date: '2023-11-15' },
-  { id: 'V002', entity: 'FreshProduce Co.', type: 'Buyer', date: '2023-11-14' },
+    { id: 'S004', name: 'Creative Prints', industry: 'Packaging', date: '2023-11-14' },
+    { id: 'S005', name: 'AgriChem Solutions', industry: 'Chemicals', date: '2023-11-13' },
 ];
 
-const recentOrders = [
-  { id: 'ORD-006', product: 'Steel Beams', status: 'Pending', total: 450000, customer: 'BuildRight Const.' },
-  { id: 'ORD-007', product: 'Organic Fertilizers', status: 'Shipped', total: 85000, customer: 'GreenFarms' },
-];
-
-const openDisputes = [
-    { id: 'D001', order: 'ORD-003', user: 'PlastiCo Kenya', reason: 'Incorrect product specifications', status: 'Awaiting response' },
-    { id: 'D002', order: 'ORD-005', user: 'PrintPack Solutions', reason: 'Order cancelled but charged', status: 'Under review' },
+const sellerPerformance = [
+    { id: 'S001', name: 'Constructa Ltd', rating: 4.8, sales: 15, status: 'Active' },
+    { id: 'S002', name: 'SuperBake Bakery', rating: 4.9, sales: 22, status: 'Active' },
+    { id: 'S003', name: 'PlastiCo Kenya', rating: 4.7, sales: 8, status: 'Restricted' },
 ];
 
 export default function AdminDashboard() {
     return (
-        <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="approvals">Approvals & Verification</TabsTrigger>
-                <TabsTrigger value="disputes">Dispute Resolution</TabsTrigger>
-                <TabsTrigger value="platform-health">Platform Health</TabsTrigger>
+        <Tabs defaultValue="onboarding">
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="onboarding">Onboarding & Verification</TabsTrigger>
+                <TabsTrigger value="performance">Seller Performance</TabsTrigger>
+                <TabsTrigger value="support">Support & Training</TabsTrigger>
             </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview">
+            <TabsContent value="onboarding">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Admin & Operations Dashboard</CardTitle>
-                        <CardDescription>Manage the daily functioning of the marketplace and ensure smooth business processes.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">1,257</div>
-                                    <p className="text-xs text-muted-foreground">+30 since last week</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Pending Orders</CardTitle>
-                                    <Package className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">84</div>
-                                    <p className="text-xs text-muted-foreground">2 new orders today</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Open Disputes</CardTitle>
-                                    <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold text-destructive">5</div>
-                                    <p className="text-xs text-muted-foreground">1 new dispute filed</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Platform Revenue (Today)</CardTitle>
-                                    <BarChart className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">KES 45,231</div>
-                                    <p className="text-xs text-muted-foreground">from transaction fees</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Recent Orders</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Order ID</TableHead>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Customer</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {recentOrders.map(order => (
-                                            <TableRow key={order.id}>
-                                                <TableCell>{order.id}</TableCell>
-                                                <TableCell>{order.product}</TableCell>
-                                                <TableCell><Badge variant={order.status === 'Pending' ? 'destructive' : 'secondary'}>{order.status}</Badge></TableCell>
-                                                <TableCell>KES {order.total.toLocaleString()}</TableCell>
-                                                <TableCell>{order.customer}</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-
-            {/* Approvals Tab */}
-            <TabsContent value="approvals">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Pending Verifications</CardTitle>
-                        <CardDescription>Approve or reject new sellers and buyers waiting for platform access.</CardDescription>
+                        <CardTitle>Seller Onboarding Queue</CardTitle>
+                        <CardDescription>Review and approve new manufacturers waiting to join Tradinta.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Entity Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Submission Date</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {pendingVerifications.map((item) => (
-                                    <TableRow key={item.id}>
-                                        <TableCell>{item.id}</TableCell>
-                                        <TableCell className="font-medium">{item.entity}</TableCell>
-                                        <TableCell>{item.type}</TableCell>
-                                        <TableCell>{item.date}</TableCell>
-                                        <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm">View Documents</Button>
-                                            <Button size="sm">Approve</Button>
-                                            <Button variant="destructive" size="sm">Reject</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-
-            {/* Disputes Tab */}
-            <TabsContent value="disputes">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Open Disputes</CardTitle>
-                        <CardDescription>Mediate and resolve conflicts between buyers and sellers.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Dispute ID</TableHead>
-                                    <TableHead>Order ID</TableHead>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Reason</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead>Company Name</TableHead>
+                                    <TableHead>Industry</TableHead>
+                                    <TableHead>Application Date</TableHead>
                                     <TableHead>Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {openDisputes.map((dispute) => (
-                                    <TableRow key={dispute.id}>
-                                        <TableCell>{dispute.id}</TableCell>
-                                        <TableCell>{dispute.order}</TableCell>
-                                        <TableCell>{dispute.user}</TableCell>
-                                        <TableCell>{dispute.reason}</TableCell>
-                                        <TableCell><Badge variant="outline">{dispute.status}</Badge></TableCell>
+                                {pendingVerifications.map((seller) => (
+                                    <TableRow key={seller.id}>
+                                        <TableCell className="font-medium">{seller.name}</TableCell>
+                                        <TableCell>{seller.industry}</TableCell>
+                                        <TableCell>{seller.date}</TableCell>
                                         <TableCell>
-                                            <Button size="sm">Review Case</Button>
+                                            <Button size="sm"><UserCheck className="mr-2 h-4 w-4"/> Review Application</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -188,41 +57,67 @@ export default function AdminDashboard() {
                     </CardContent>
                 </Card>
             </TabsContent>
-             {/* Platform Health Tab */}
-            <TabsContent value="platform-health">
+            
+            <TabsContent value="performance">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Platform Health & Monitoring</CardTitle>
-                        <CardDescription>Overview of system status and performance metrics.</CardDescription>
+                        <CardTitle>Seller Performance</CardTitle>
+                        <CardDescription>Track seller ratings, sales performance, and account status.</CardDescription>
                     </CardHeader>
-                    <CardContent className="grid gap-4 md:grid-cols-2">
-                        <Card className="flex items-center p-4">
-                            <CheckCircle className="h-8 w-8 text-green-500 mr-4"/>
-                            <div>
-                                <p className="font-bold">API Status</p>
-                                <p className="text-sm text-green-500">All Systems Operational</p>
-                            </div>
+                    <CardContent>
+                         <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Seller</TableHead>
+                                    <TableHead>Rating</TableHead>
+                                    <TableHead>Total Sales (Last 30d)</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {sellerPerformance.map((seller) => (
+                                    <TableRow key={seller.id}>
+                                        <TableCell className="font-medium">{seller.name}</TableCell>
+                                        <TableCell><Star className="inline mr-1 h-4 w-4 text-yellow-400"/>{seller.rating}</TableCell>
+                                        <TableCell>{seller.sales}</TableCell>
+                                        <TableCell><Badge variant={seller.status === 'Active' ? 'secondary' : 'destructive'}>{seller.status}</Badge></TableCell>
+                                        <TableCell className="space-x-2">
+                                            <Button variant="outline" size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
+                                            <Button variant="destructive" size="sm" disabled={seller.status !== 'Restricted'}>Lift Restriction</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="support">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Support Resources & Training</CardTitle>
+                        <CardDescription>Manage help articles and training materials for sellers.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <Card>
+                           <CardContent className="p-6 flex items-center justify-between">
+                               <div>
+                                   <p className="font-semibold">Seller Handbook</p>
+                                   <p className="text-sm text-muted-foreground">The complete guide to selling on Tradinta.</p>
+                               </div>
+                               <Button variant="outline">Manage Content</Button>
+                           </CardContent>
                         </Card>
-                         <Card className="flex items-center p-4">
-                            <Clock className="h-8 w-8 text-muted-foreground mr-4"/>
-                            <div>
-                                <p className="font-bold">Average Response Time</p>
-                                <p className="text-sm">120ms</p>
-                            </div>
-                        </Card>
-                        <Card className="flex items-center p-4">
-                            <FileWarning className="h-8 w-8 text-yellow-500 mr-4"/>
-                            <div>
-                                <p className="font-bold">Error Rate</p>
-                                <p className="text-sm">0.05%</p>
-                            </div>
-                        </Card>
-                        <Card className="flex items-center p-4">
-                            <Handshake className="h-8 w-8 text-blue-500 mr-4"/>
-                            <div>
-                                <p className="font-bold">Payment Gateway</p>
-                                <p className="text-sm text-green-500">Connected</p>
-                            </div>
+                        <Card>
+                           <CardContent className="p-6 flex items-center justify-between">
+                               <div>
+                                   <p className="font-semibold">Video Tutorials</p>
+                                   <p className="text-sm text-muted-foreground">Training videos for product uploads, marketing, and more.</p>
+                               </div>
+                               <Button variant="outline">Upload/Edit Videos</Button>
+                           </CardContent>
                         </Card>
                     </CardContent>
                 </Card>
