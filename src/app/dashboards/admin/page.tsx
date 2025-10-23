@@ -1,14 +1,14 @@
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 
-export default function OperationsManagerDashboard() {
+export default function AdminDashboard() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Admin / Operations Manager Dashboard</CardTitle>
+                <CardTitle>Admin Dashboard</CardTitle>
                 <CardDescription>Manage the daily functioning of the marketplace and ensure smooth business processes.</CardDescription>
             </CardHeader>
             <CardContent>
-                <p>Operations manager specific components and data will go here.</p>
+                <p>Admin specific components and data will go here.</p>
             </CardContent>
         </Card>
     );

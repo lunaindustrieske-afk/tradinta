@@ -136,7 +136,7 @@ export default function DashboardLayout({
     <SidebarProvider>
       <MainSidebar />
       <SidebarInset>
-        <div className="flex flex-col">
+        <div className="flex flex-col min-h-screen">
           <DashboardHeader />
           <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
             {children}
