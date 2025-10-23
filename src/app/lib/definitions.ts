@@ -1,3 +1,4 @@
+
 export type Product = {
   id: string;
   name: string;
@@ -9,6 +10,7 @@ export type Product = {
   imageHint: string;
   rating: number;
   reviewCount: number;
+  manufacturerId: string;
 };
 
 export type Order = {
@@ -31,3 +33,35 @@ export type Campaign = {
   impressions: number;
   clicks: number;
 };
+
+export type Manufacturer = {
+  id: string;
+  slug: string;
+  name: string;
+  logoUrl: string;
+  coverImageUrl: string;
+  industry: string;
+  location: string;
+  memberSince: number;
+  rating: number;
+  isVerified: boolean;
+  acceptsTradPay: boolean;
+  overview: string;
+  certifications: string[];
+  businessType: string;
+  workforceSize: string;
+  exportMarkets: string[];
+  productionCapacity: string;
+  paymentMethods: string[];
+  deliveryTerms: string[];
+  leadTime: string;
+  moq: number;
+  reviews: {
+    id: string;
+    author: string;
+    rating: number;
+    comment: string;
+  }[];
+};
+
+    

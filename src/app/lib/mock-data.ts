@@ -1,5 +1,101 @@
-import type { Product, Order, Campaign } from './definitions';
+
+import type { Product, Order, Campaign, Manufacturer } from './definitions';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+
+export const manufacturers: Manufacturer[] = [
+    {
+        id: 'mfg-1',
+        slug: 'constructa-ltd',
+        name: 'Constructa Ltd',
+        logoUrl: 'https://picsum.photos/seed/mfg1/128/128',
+        coverImageUrl: 'https://picsum.photos/seed/mfg1-cover/1600/400',
+        industry: 'Building Materials',
+        location: 'Nairobi, Kenya',
+        memberSince: 2022,
+        rating: 4.8,
+        isVerified: true,
+        acceptsTradPay: true,
+        overview: 'Constructa Ltd is a leading supplier of high-quality building materials in East Africa. Established in 2010, we are committed to providing durable and reliable products for construction projects of all sizes. Our state-of-the-art facilities ensure consistent quality and supply.',
+        certifications: ['KEBS Certified', 'ISO 9001:2015'],
+        businessType: 'Manufacturer & Distributor',
+        workforceSize: '100 - 200 employees',
+        exportMarkets: ['Uganda', 'Tanzania', 'Rwanda'],
+        productionCapacity: '10,000 tons/month',
+        paymentMethods: ['TradPay', 'Bank Transfer', 'LPO'],
+        deliveryTerms: ['FOB Nairobi', 'Door-to-door'],
+        leadTime: '5-10 business days',
+        moq: 10,
+        reviews: [
+            {
+                id: 'rev-1',
+                author: 'BuildRight Const.',
+                rating: 5,
+                comment: 'Reliable supplier with consistent quality. Our go-to for all major projects.'
+            },
+            {
+                id: 'rev-2',
+                author: 'Home Builders Inc.',
+                rating: 4,
+                comment: 'Good products and fair pricing. Sometimes lead times can be longer than stated.'
+            }
+        ]
+    },
+    {
+        id: 'mfg-2',
+        name: 'SuperBake Bakery',
+        slug: 'superbake-bakery',
+        logoUrl: 'https://picsum.photos/seed/mfg2/128/128',
+        coverImageUrl: 'https://picsum.photos/seed/mfg2-cover/1600/400',
+        industry: 'Food & Beverage',
+        location: 'Nakuru, Kenya',
+        memberSince: 2023,
+        rating: 4.9,
+        isVerified: true,
+        acceptsTradPay: true,
+        overview: 'SuperBake Bakery supplies premium, commercial-grade baking ingredients to businesses across Kenya. Our flour, yeast, and oils are sourced from the finest local farms and processed in our modern facility to guarantee freshness and quality.',
+        certifications: ['KEBS Certified', 'HACCP Certified'],
+        businessType: 'Manufacturer',
+        workforceSize: '50 - 100 employees',
+        exportMarkets: ['East Africa'],
+        productionCapacity: '5,000 tons/month',
+        paymentMethods: ['TradPay', 'M-Pesa', 'Bank Transfer'],
+        deliveryTerms: ['FOB Nakuru'],
+        leadTime: '3-7 business days',
+        moq: 20,
+        reviews: [
+            {
+                id: 'rev-3',
+                author: 'Yum Foods',
+                rating: 5,
+                comment: 'The best quality flour we have found in the market. Highly recommended!'
+            }
+        ]
+    },
+    {
+        id: 'mfg-3',
+        name: 'PlastiCo Kenya',
+        slug: 'plastico-kenya',
+        logoUrl: 'https://picsum.photos/seed/mfg3/128/128',
+        coverImageUrl: 'https://picsum.photos/seed/mfg3-cover/1600/400',
+        industry: 'Plastics & Polymers',
+        location: 'Mombasa, Kenya',
+        memberSince: 2021,
+        rating: 4.7,
+        isVerified: true,
+        acceptsTradPay: false,
+        overview: 'PlastiCo Kenya is a major producer of HDPE, LDPE, and PET pellets for various industrial applications. Our coastal location makes us an ideal partner for both local and export markets.',
+        certifications: ['ISO 9001:2015', 'NEMA Certified'],
+        businessType: 'Manufacturer & Exporter',
+        workforceSize: '200+ employees',
+        exportMarkets: ['Global'],
+        productionCapacity: '20,000 tons/month',
+        paymentMethods: ['Bank Transfer', 'Letter of Credit'],
+        deliveryTerms: ['FOB Mombasa'],
+        leadTime: '14-21 business days',
+        moq: 1000,
+        reviews: []
+    }
+];
 
 export const products: Product[] = [
   {
@@ -13,6 +109,7 @@ export const products: Product[] = [
     imageHint: 'construction cement',
     rating: 4.8,
     reviewCount: 150,
+    manufacturerId: 'mfg-1'
   },
   {
     id: '2',
@@ -25,6 +122,7 @@ export const products: Product[] = [
     imageHint: 'flour sack',
     rating: 4.9,
     reviewCount: 210,
+    manufacturerId: 'mfg-2'
   },
   {
     id: '3',
@@ -37,6 +135,7 @@ export const products: Product[] = [
     imageHint: 'plastic pellets',
     rating: 4.7,
     reviewCount: 85,
+    manufacturerId: 'mfg-3'
   },
   {
     id: '4',
@@ -49,6 +148,7 @@ export const products: Product[] = [
     imageHint: 'paper rolls',
     rating: 4.6,
     reviewCount: 120,
+    manufacturerId: 'mfg-1' // Example
   },
   {
     id: '5',
@@ -61,6 +161,20 @@ export const products: Product[] = [
     imageHint: 'cooking oil',
     rating: 4.8,
     reviewCount: 180,
+    manufacturerId: 'mfg-2'
+  },
+   {
+    id: '6',
+    name: 'Steel Reinforcement Bars (Rebar)',
+    description: 'High-tensile steel bars for concrete reinforcement, available in various diameters and lengths.',
+    price: 75000.00,
+    stock: 200,
+    category: 'Building Materials',
+    imageUrl: 'https://picsum.photos/seed/rebar/600/400',
+    imageHint: 'steel rebar',
+    rating: 4.9,
+    reviewCount: 95,
+    manufacturerId: 'mfg-1'
   },
 ];
 
@@ -78,3 +192,5 @@ export const campaigns: Campaign[] = [
     { id: 'CAMP-03', name: 'Back to School Special', status: 'Expired', startDate: '2023-08-01', endDate: '2023-08-31', budget: 30000, impressions: 85000, clicks: 4500 },
     { id: 'CAMP-04', name: 'Q1 2024 Planning', status: 'Draft', startDate: '2024-01-01', endDate: '2024-03-31', budget: 100000, impressions: 0, clicks: 0 },
 ];
+
+    

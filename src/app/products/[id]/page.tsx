@@ -4,7 +4,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as allProducts } from '@/app/lib/mock-data';
+import { products as allProducts, manufacturers } from '@/app/lib/mock-data';
 import { notFound } from 'next/navigation';
 import {
   Star,
@@ -35,14 +35,16 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 
 const relatedProducts = allProducts.slice(1, 5);
 
 export default function ProductDetailPage({ params }: { params: { id: string } }) {
   const product = allProducts.find((p) => p.id === params.id);
+  const manufacturer = manufacturers.find(m => m.id === product?.manufacturerId);
   const [mainImage, setMainImage] = React.useState(product?.imageUrl);
 
-  if (!product) {
+  if (!product || !manufacturer) {
     notFound();
   }
 
@@ -207,7 +209,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 </TabsList>
                 <TabsContent value="description" className="prose prose-sm max-w-none text-muted-foreground mt-4">
                     <p>{product.description}</p>
-                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, nisl vitae ultricies lacinia, nisl nisl aliquet nisl, eget aliquam nisl nisl sit amet nisl. Sed euismod, nisl vitae ultricies lacinia, nisl nisl aliquet nisl, eget aliquam nisl nisl sit amet nisl.</p>
+                    <p>This industrial-grade cement is manufactured to the highest standards, ensuring optimal performance for all your construction needs. It provides excellent strength and durability for foundations, columns, beams, and slabs. Our automated production process guarantees consistency in every bag.</p>
                 </TabsContent>
                 <TabsContent value="specs" className="mt-4">
                      <Table>
@@ -215,12 +217,12 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                             <TableRow><TableCell className="font-medium text-muted-foreground">Weight</TableCell><TableCell>50kg per bag</TableCell></TableRow>
                             <TableRow><TableCell className="font-medium text-muted-foreground">Dimensions</TableCell><TableCell>80cm x 50cm x 15cm</TableCell></TableRow>
                             <TableRow><TableCell className="font-medium text-muted-foreground">Material</TableCell><TableCell>Portland Cement Type I</TableCell></TableRow>
-                            <TableRow><TableCell className="font-medium text-muted-foreground">Standards</TableCell><TableCell>KEBS Certified</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Standards</TableCell><TableCell>KEBS Certified, ASTM C150</TableCell></TableRow>
                         </TableBody>
                     </Table>
                 </TabsContent>
                  <TabsContent value="packaging" className="mt-4 text-sm text-muted-foreground">
-                    <p>Packed in durable, multi-wall paper bags to ensure product integrity during transport and storage. Each pallet contains 40 bags, shrink-wrapped for stability.</p>
+                    <p>Packed in durable, multi-wall paper bags with a moisture-resistant barrier to ensure product integrity during transport and storage. Each pallet contains 40 bags (2 metric tons), securely shrink-wrapped for stability.</p>
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4">
                     <h3 className="text-lg font-bold">Customer Reviews</h3>
@@ -247,16 +249,18 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center gap-4 mb-4">
-                        <Image src="https://picsum.photos/seed/mfg1/64/64" alt="Constructa Ltd" width={64} height={64} className="rounded-full" />
+                        <Image src={manufacturer.logoUrl} alt={manufacturer.name} width={64} height={64} className="rounded-full" />
                         <div>
-                            <h4 className="font-bold">Constructa Ltd</h4>
-                            <p className="text-sm text-muted-foreground">Nairobi, Kenya</p>
+                            <h4 className="font-bold">{manufacturer.name}</h4>
+                            <p className="text-sm text-muted-foreground">{manufacturer.location}</p>
                              <div className="flex items-center gap-1 text-sm">
-                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/> 4.8 Seller Rating
+                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/> {manufacturer.rating} Seller Rating
                              </div>
                         </div>
                     </div>
-                    <Button className="w-full">View Shop</Button>
+                    <Button asChild className="w-full">
+                        <Link href={`/manufacturer/${manufacturer.id}`}>View Shop</Link>
+                    </Button>
                 </CardContent>
             </Card>
         </div>
@@ -293,3 +297,5 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
     </div>
   );
 }
+
+    
