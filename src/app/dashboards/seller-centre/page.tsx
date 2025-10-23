@@ -257,8 +257,12 @@ export default function SellerDashboard() {
                             </Table>
                         </CardContent>
                          <CardFooter>
-                             <Button variant="outline" className="w-full">Manage All Products <ArrowRight className="ml-2 h-4 w-4" /></Button>
-                        </CardFooter>
+                            <Button asChild variant="outline" className="w-full">
+                                <Link href="/dashboards/seller-centre/products">
+                                    Manage All Products <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                            </Button>
+                         </CardFooter>
                     </Card>
                 </div>
             </div>
