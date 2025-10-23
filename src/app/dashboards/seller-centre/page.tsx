@@ -227,7 +227,11 @@ export default function SellerDashboard() {
                             <Progress value={85} className="mb-4 h-2" />
                         </CardContent>
                         <CardFooter>
-                             <Button variant="secondary" className="w-full">Edit Profile <ArrowRight className="ml-2 h-4 w-4" /></Button>
+                             <Button asChild variant="secondary" className="w-full">
+                                <Link href="/dashboards/seller-centre/profile">
+                                    Edit Profile <ArrowRight className="ml-2 h-4 w-4" />
+                                </Link>
+                             </Button>
                         </CardFooter>
                     </Card>
 
