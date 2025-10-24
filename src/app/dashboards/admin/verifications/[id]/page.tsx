@@ -3,7 +3,7 @@
 
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useAuth } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,8 @@ import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { logActivity } from '@/lib/activity-log';
+
 
 type Manufacturer = {
   id: string;
@@ -56,6 +58,7 @@ export default function VerificationDetailPage() {
     const router = useRouter();
     const manufacturerId = params.id as string;
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
     const [isUpdating, setIsUpdating] = React.useState(false);
     const [rejectionReason, setRejectionReason] = React.useState('');
@@ -71,7 +74,7 @@ export default function VerificationDetailPage() {
         status: NonNullable<Manufacturer['verificationStatus']>,
         reason?: string
     ) => {
-        if (!manufRef) return;
+        if (!manufRef || !auth || !manufacturer) return;
 
         if (status === 'Action Required' && !reason?.trim()) {
             toast({
@@ -84,14 +87,26 @@ export default function VerificationDetailPage() {
 
         setIsUpdating(true);
         const dataToUpdate: Partial<Manufacturer> = { verificationStatus: status };
-        if (reason) {
-            dataToUpdate.rejectionReason = reason;
-        } else {
-             // Clear rejection reason if not rejecting
-            dataToUpdate.rejectionReason = '';
-        }
+        let action = '';
+        let details = '';
 
+        if (status === 'Verified') {
+            dataToUpdate.rejectionReason = ''; // Clear reason on approval
+            action = 'VERIFICATION_APPROVED';
+            details = `Approved manufacturer: ${manufacturer.shopName} (ID: ${manufacturer.id})`;
+        } else if (status === 'Action Required' && reason) {
+            dataToUpdate.rejectionReason = reason;
+            action = 'VERIFICATION_REJECTED';
+            details = `Rejected manufacturer ${manufacturer.shopName} (ID: ${manufacturer.id}). Reason: ${reason}`;
+        } else {
+             // Handle other status changes if needed
+            action = 'VERIFICATION_STATUS_CHANGED';
+            details = `Changed status of ${manufacturer.shopName} (ID: ${manufacturer.id}) to ${status}`;
+        }
+        
         updateDocumentNonBlocking(manufRef, dataToUpdate);
+        logActivity(firestore, auth, action, details);
+
 
         toast({
             title: "Status Updated",
@@ -149,7 +164,7 @@ export default function VerificationDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="destructive" disabled={isUpdating} onClick={() => handleUpdateStatus('Action Required', rejectionReason || 'Please review our policies and resubmit.')}>
+                    <Button variant="destructive" disabled={isUpdating} onClick={() => handleUpdateStatus('Action Required', rejectionReason)}>
                         {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <X className="mr-2 h-4 w-4" />}
                         Reject
                     </Button>
@@ -237,3 +252,5 @@ export default function VerificationDetailPage() {
         </div>
     );
 }
+
+    

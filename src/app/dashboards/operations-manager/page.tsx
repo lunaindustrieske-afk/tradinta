@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -5,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileWarning, CheckCircle, Clock, Users, Package, BarChart, AlertCircle, Handshake, Loader2 } from "lucide-react";
+import { FileWarning, CheckCircle, Clock, Users, Package, BarChart, AlertCircle, Handshake, Loader2, BookUser } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
 import Link from "next/link";
@@ -34,6 +35,14 @@ type Dispute = {
     reason: string;
     status: string;
 };
+type ActivityLog = {
+    id: string;
+    timestamp: any;
+    userId: string;
+    userEmail: string;
+    action: string;
+    details: string;
+}
 
 
 export default function OperationsManagerDashboard() {
@@ -57,6 +66,12 @@ export default function OperationsManagerDashboard() {
         return collection(firestore, 'users');
     }, [firestore]);
     const { data: users, isLoading: isLoadingUsers } = useCollection(usersQuery);
+    
+    const activityLogsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'activityLogs'), orderBy('timestamp', 'desc'), limit(50));
+    }, [firestore]);
+    const { data: activityLogs, isLoading: isLoadingLogs } = useCollection<ActivityLog>(activityLogsQuery);
 
     // --- Render Helper Functions ---
     const renderSkeletonRows = (count: number, columns: number) => Array.from({length: count}).map((_, i) => (
@@ -69,10 +84,11 @@ export default function OperationsManagerDashboard() {
 
     return (
         <Tabs defaultValue="overview">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="approvals">Approvals & Verification</TabsTrigger>
                 <TabsTrigger value="disputes">Dispute Resolution</TabsTrigger>
+                <TabsTrigger value="activity">Activity Log</TabsTrigger>
                 <TabsTrigger value="platform-health">Platform Health</TabsTrigger>
             </TabsList>
 
@@ -189,6 +205,37 @@ export default function OperationsManagerDashboard() {
                     </CardContent>
                 </Card>
             </TabsContent>
+            
+             {/* Activity Log Tab */}
+            <TabsContent value="activity">
+                <Card>
+                    <CardHeader><CardTitle>Admin Activity Log</CardTitle><CardDescription>A log of all significant administrative actions for auditing purposes.</CardDescription></CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Timestamp</TableHead>
+                                    <TableHead>Admin User</TableHead>
+                                    <TableHead>Action</TableHead>
+                                    <TableHead className="w-[40%]">Details</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {isLoadingLogs ? renderSkeletonRows(5, 4) :
+                                 !activityLogs || activityLogs.length === 0 ? <TableRow><TableCell colSpan={4} className="h-24 text-center">No activity recorded yet.</TableCell></TableRow>
+                                 : activityLogs.map((log) => (
+                                    <TableRow key={log.id}>
+                                        <TableCell className="text-xs text-muted-foreground">{new Date(log.timestamp?.seconds * 1000).toLocaleString()}</TableCell>
+                                        <TableCell>{log.userEmail}</TableCell>
+                                        <TableCell><Badge variant="secondary">{log.action}</Badge></TableCell>
+                                        <TableCell>{log.details}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </TabsContent>
 
              {/* Platform Health Tab */}
             <TabsContent value="platform-health">
@@ -205,3 +252,5 @@ export default function OperationsManagerDashboard() {
         </Tabs>
     );
 }
+
+    

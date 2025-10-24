@@ -7,12 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { logActivity } from "@/lib/activity-log";
+
 
 type Manufacturer = {
     id: string;
@@ -26,6 +28,7 @@ type Manufacturer = {
 
 export default function AdminDashboard() {
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
 
     const pendingVerificationsQuery = useMemoFirebase(() => {
@@ -49,9 +52,15 @@ export default function AdminDashboard() {
     const { data: allSellers, isLoading: isLoadingSellers } = useCollection<Manufacturer>(allSellersQuery);
 
     const handleRestrictSeller = (sellerId: string, sellerName: string) => {
-        if (!firestore) return;
+        if (!firestore || !auth) return;
         const sellerRef = doc(firestore, 'manufacturers', sellerId);
         updateDocumentNonBlocking(sellerRef, { verificationStatus: 'Restricted' });
+        logActivity(
+            firestore,
+            auth,
+            'SELLER_RESTRICTED',
+            `Restricted seller: ${sellerName} (ID: ${sellerId})`
+        );
         toast({
             title: "Seller Restricted",
             description: `${sellerName} has been restricted.`,
@@ -60,9 +69,15 @@ export default function AdminDashboard() {
     };
 
      const handleUnrestrictSeller = (sellerId: string, sellerName: string) => {
-        if (!firestore) return;
+        if (!firestore || !auth) return;
         const sellerRef = doc(firestore, 'manufacturers', sellerId);
         updateDocumentNonBlocking(sellerRef, { verificationStatus: 'Verified' });
+         logActivity(
+            firestore,
+            auth,
+            'SELLER_UNRESTRICTED',
+            `Lifted restrictions for seller: ${sellerName} (ID: ${sellerId})`
+        );
         toast({
             title: "Seller Unrestricted",
             description: `${sellerName}'s restrictions have been lifted.`,
@@ -227,3 +242,5 @@ export default function AdminDashboard() {
         </Tabs>
     );
 }
+
+    
