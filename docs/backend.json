@@ -1,0 +1,475 @@
+{
+  "entities": {
+    "Manufacturer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Manufacturer",
+      "type": "object",
+      "description": "Represents a manufacturer registered on the Tradinta platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Manufacturer entity."
+        },
+        "shopName": {
+          "type": "string",
+          "description": "The name of the manufacturer's shop on Tradinta."
+        },
+        "ownerName": {
+          "type": "string",
+          "description": "The name of the manufacturer's shop owner."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the manufacturer.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the manufacturer."
+        },
+        "businessLicenseNumber": {
+          "type": "string",
+          "description": "The business license number of the manufacturer."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the manufacturer."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the manufacturer and their products."
+        },
+        "registrationDate": {
+          "type": "string",
+          "description": "The date when the manufacturer registered on the platform.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "shopName",
+        "email"
+      ]
+    },
+    "Buyer": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Buyer",
+      "type": "object",
+      "description": "Represents a buyer registered on the Tradinta platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Buyer entity."
+        },
+        "companyName": {
+          "type": "string",
+          "description": "The name of the buyer's company."
+        },
+        "contactName": {
+          "type": "string",
+          "description": "The name of the buyer's contact person."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the buyer.",
+          "format": "email"
+        },
+        "phone": {
+          "type": "string",
+          "description": "The phone number of the buyer."
+        },
+        "address": {
+          "type": "string",
+          "description": "The physical address of the buyer."
+        },
+        "registrationDate": {
+          "type": "string",
+          "description": "The date when the buyer registered on the platform.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "companyName",
+        "email"
+      ]
+    },
+    "Product": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Product",
+      "type": "object",
+      "description": "Represents a product listed on the Tradinta platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Product entity."
+        },
+        "manufacturerId": {
+          "type": "string",
+          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:N Product)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the product."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the product."
+        },
+        "price": {
+          "type": "number",
+          "description": "The price of the product."
+        },
+        "unit": {
+          "type": "string",
+          "description": "Unit of measurement for the product (e.g., kg, piece)."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "URL of the product image.",
+          "format": "uri"
+        },
+        "tags": {
+          "type": "array",
+          "description": "Tags or labels to help users search for the product",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "manufacturerId",
+        "name",
+        "price",
+        "unit"
+      ]
+    },
+    "Order": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Order",
+      "type": "object",
+      "description": "Represents an order placed on the Tradinta platform.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Order entity."
+        },
+        "buyerId": {
+          "type": "string",
+          "description": "Reference to Buyer. (Relationship: Buyer 1:N Order)"
+        },
+        "orderDate": {
+          "type": "string",
+          "description": "The date when the order was placed.",
+          "format": "date-time"
+        },
+        "totalAmount": {
+          "type": "number",
+          "description": "The total amount of the order."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the order (e.g., pending, processing, shipped, delivered)."
+        },
+        "orderItems": {
+          "type": "array",
+          "description": "List of items included in the order.",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "buyerId",
+        "orderDate",
+        "totalAmount",
+        "status"
+      ]
+    },
+    "OrderItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "OrderItem",
+      "type": "object",
+      "description": "Represents an item within an order.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the OrderItem entity."
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Reference to Order. (Relationship: Order 1:N OrderItem)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to Product. (Relationship: Product 1:N OrderItem)"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product in the order item."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of the product at order time."
+        }
+      },
+      "required": [
+        "id",
+        "orderId",
+        "productId",
+        "quantity",
+        "price"
+      ]
+    },
+    "Quotation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quotation",
+      "type": "object",
+      "description": "Represents a quotation request from a buyer to a manufacturer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Quotation entity."
+        },
+        "buyerId": {
+          "type": "string",
+          "description": "Reference to Buyer. (Relationship: Buyer 1:N Quotation)"
+        },
+        "manufacturerId": {
+          "type": "string",
+          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:N Quotation)"
+        },
+        "productId": {
+          "type": "string",
+          "description": "Reference to Product. (Relationship: Product 1:N Quotation)"
+        },
+        "requestDate": {
+          "type": "string",
+          "description": "The date when the quotation was requested.",
+          "format": "date-time"
+        },
+        "quantity": {
+          "type": "number",
+          "description": "The quantity of the product requested in the quotation."
+        },
+        "unit": {
+          "type": "string",
+          "description": "The unit of product being quoted"
+        },
+        "offeredPrice": {
+          "type": "number",
+          "description": "The price offered by the manufacturer, if any."
+        },
+        "expirationDate": {
+          "type": "string",
+          "description": "The expiration date of the quotation, if any.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the quotation (e.g., pending, accepted, rejected)."
+        }
+      },
+      "required": [
+        "id",
+        "buyerId",
+        "manufacturerId",
+        "productId",
+        "requestDate",
+        "quantity",
+        "unit"
+      ]
+    },
+    "MarketingCampaign": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MarketingCampaign",
+      "type": "object",
+      "description": "Represents a marketing campaign run by a manufacturer.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MarketingCampaign entity."
+        },
+        "manufacturerId": {
+          "type": "string",
+          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:N MarketingCampaign)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the marketing campaign."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The start date of the marketing campaign.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The end date of the marketing campaign.",
+          "format": "date-time"
+        },
+        "discountPercentage": {
+          "type": "number",
+          "description": "The discount percentage offered in the campaign."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the marketing campaign."
+        }
+      },
+      "required": [
+        "id",
+        "manufacturerId",
+        "name",
+        "startDate",
+        "endDate",
+        "discountPercentage"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/manufacturers/{manufacturerId}",
+        "definition": {
+          "entityName": "Manufacturer",
+          "schema": {
+            "$ref": "#/backend/entities/Manufacturer"
+          },
+          "description": "Stores manufacturer profiles. The 'manufacturerId' is the document ID and corresponds to the user's UID.",
+          "params": [
+            {
+              "name": "manufacturerId",
+              "description": "The Firebase UID of the manufacturer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/buyers/{buyerId}",
+        "definition": {
+          "entityName": "Buyer",
+          "schema": {
+            "$ref": "#/backend/entities/Buyer"
+          },
+          "description": "Stores buyer profiles. The 'buyerId' is the document ID and corresponds to the user's UID.",
+          "params": [
+            {
+              "name": "buyerId",
+              "description": "The Firebase UID of the buyer."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/manufacturers/{manufacturerId}/products/{productId}",
+        "definition": {
+          "entityName": "Product",
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores products owned by a manufacturer. The 'manufacturerId' identifies the owner.",
+          "params": [
+            {
+              "name": "manufacturerId",
+              "description": "The Firebase UID of the manufacturer who owns the product."
+            },
+            {
+              "name": "productId",
+              "description": "The unique ID of the product."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/buyers/{buyerId}/orders/{orderId}",
+        "definition": {
+          "entityName": "Order",
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores orders placed by a buyer. The 'buyerId' identifies the order owner.",
+          "params": [
+            {
+              "name": "buyerId",
+              "description": "The Firebase UID of the buyer who placed the order."
+            },
+            {
+              "name": "orderId",
+              "description": "The unique ID of the order."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}",
+        "definition": {
+          "entityName": "OrderItem",
+          "schema": {
+            "$ref": "#/backend/entities/OrderItem"
+          },
+          "description": "Stores order items within an order.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The ID of the order."
+            },
+            {
+              "name": "buyerId",
+              "description": "The Firebase UID of the buyer who placed the order."
+            },
+            {
+              "name": "orderItemId",
+              "description": "The unique ID of the order item."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/quotations/{quotationId}",
+        "definition": {
+          "entityName": "Quotation",
+          "schema": {
+            "$ref": "#/backend/entities/Quotation"
+          },
+          "description": "Stores quotations. Includes denormalized 'buyerId' and 'manufacturerId' for authorization independence.",
+          "params": [
+            {
+              "name": "quotationId",
+              "description": "The unique ID of the quotation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}",
+        "definition": {
+          "entityName": "MarketingCampaign",
+          "schema": {
+            "$ref": "#/backend/entities/MarketingCampaign"
+          },
+          "description": "Stores marketing campaigns owned by a manufacturer. The 'manufacturerId' identifies the owner.",
+          "params": [
+            {
+              "name": "manufacturerId",
+              "description": "The Firebase UID of the manufacturer who owns the campaign."
+            },
+            {
+              "name": "marketingCampaignId",
+              "description": "The unique ID of the marketing campaign."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection.  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer (`/manufacturers/{manufacturerId}/products/{productId}`, `/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}`) to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership. Similarly, OrderItems are nested under Orders.\n    *   **Quotations**: Stored in a top-level collection `/quotations/{quotationId}` with denormalized `buyerId` and `manufacturerId`. This enables queries like \"Get all quotations for a manufacturer\" or \"Get all quotations for a buyer\" without complex collection group queries and enables rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` collection enables secure listing based on either party without complex queries. The path-based ownership structure for orders and marketing campaigns allows direct listing for a buyer and manufacturer.\n\nThis structure prioritizes security, scalability, and maintainability, aligning with best practices for Firestore data modeling."
+  }
+}
