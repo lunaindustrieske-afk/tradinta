@@ -1,14 +1,26 @@
+
+'use client';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Star, BarChart, LifeBuoy } from "lucide-react";
+import { UserCheck, Star, BarChart, LifeBuoy, Loader2 } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, where } from "firebase/firestore";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const pendingVerifications = [
-    { id: 'S004', name: 'Creative Prints', industry: 'Packaging', date: '2023-11-14' },
-    { id: 'S005', name: 'AgriChem Solutions', industry: 'Chemicals', date: '2023-11-13' },
-];
+type Manufacturer = {
+    id: string;
+    shopName: string;
+    industry?: string;
+    registrationDate: any; // Firestore timestamp
+    verificationStatus: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
+    rating?: number;
+    sales?: number; // This would need to be calculated/stored
+};
 
 const sellerPerformance = [
     { id: 'S001', name: 'Constructa Ltd', rating: 4.8, sales: 15, status: 'Active' },
@@ -17,6 +29,90 @@ const sellerPerformance = [
 ];
 
 export default function AdminDashboard() {
+    const firestore = useFirestore();
+
+    const pendingVerificationsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(
+            collection(firestore, 'manufacturers'),
+            where('verificationStatus', 'in', ['Pending Legal', 'Pending Admin'])
+        );
+    }, [firestore]);
+
+    const { data: pendingVerifications, isLoading: isLoadingVerifications } = useCollection<Manufacturer>(pendingVerificationsQuery);
+    
+    const allSellersQuery = useMemoFirebase(() => {
+         if (!firestore) return null;
+        return query(
+            collection(firestore, 'manufacturers'),
+            where('verificationStatus', '==', 'Verified')
+        )
+    }, [firestore]);
+
+    const { data: allSellers, isLoading: isLoadingSellers } = useCollection<Manufacturer>(allSellersQuery);
+
+
+    const renderVerificationRows = () => {
+        if (isLoadingVerifications) {
+            return Array.from({length: 2}).map((_, i) => (
+                <TableRow key={`skel-ver-${i}`}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-9 w-40" /></TableCell>
+                </TableRow>
+            ))
+        }
+        if (!pendingVerifications || pendingVerifications.length === 0) {
+            return <TableRow><TableCell colSpan={4} className="text-center h-24">No pending verifications.</TableCell></TableRow>
+        }
+        return pendingVerifications.map((seller) => (
+            <TableRow key={seller.id}>
+                <TableCell className="font-medium">{seller.shopName}</TableCell>
+                <TableCell>{seller.industry || 'N/A'}</TableCell>
+                <TableCell>{new Date(seller.registrationDate?.seconds * 1000).toLocaleDateString()}</TableCell>
+                <TableCell>
+                    <Button size="sm" asChild>
+                        <Link href={`/dashboards/admin/verifications/${seller.id}`}>
+                            <UserCheck className="mr-2 h-4 w-4"/> Review Application
+                        </Link>
+                    </Button>
+                </TableCell>
+            </TableRow>
+        ));
+    }
+    
+    const renderPerformanceRows = () => {
+        if (isLoadingSellers) {
+            return Array.from({length: 3}).map((_, i) => (
+                <TableRow key={`skel-perf-${i}`}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-9 w-48" /></TableCell>
+                </TableRow>
+            ))
+        }
+         if (!allSellers || allSellers.length === 0) {
+            return <TableRow><TableCell colSpan={5} className="text-center h-24">No verified sellers yet.</TableCell></TableRow>
+        }
+        // Using mock data for sales for now as it's not in the DB
+        return allSellers.map((seller) => (
+            <TableRow key={seller.id}>
+                <TableCell className="font-medium">{seller.shopName}</TableCell>
+                <TableCell><Star className="inline mr-1 h-4 w-4 text-yellow-400"/>{seller.rating || 'N/A'}</TableCell>
+                <TableCell>{seller.sales || 0}</TableCell>
+                <TableCell><Badge variant={seller.verificationStatus === 'Verified' ? 'secondary' : 'destructive'}>{seller.verificationStatus}</Badge></TableCell>
+                <TableCell className="space-x-2">
+                    <Button variant="outline" size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
+                    <Button variant="destructive" size="sm" disabled={seller.verificationStatus === 'Verified'}>Restrict</Button>
+                </TableCell>
+            </TableRow>
+        ));
+    }
+
+
     return (
         <Tabs defaultValue="onboarding">
             <TabsList className="grid w-full grid-cols-3">
@@ -42,16 +138,7 @@ export default function AdminDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {pendingVerifications.map((seller) => (
-                                    <TableRow key={seller.id}>
-                                        <TableCell className="font-medium">{seller.name}</TableCell>
-                                        <TableCell>{seller.industry}</TableCell>
-                                        <TableCell>{seller.date}</TableCell>
-                                        <TableCell>
-                                            <Button size="sm"><UserCheck className="mr-2 h-4 w-4"/> Review Application</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                               {renderVerificationRows()}
                             </TableBody>
                         </Table>
                     </CardContent>
@@ -76,18 +163,7 @@ export default function AdminDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {sellerPerformance.map((seller) => (
-                                    <TableRow key={seller.id}>
-                                        <TableCell className="font-medium">{seller.name}</TableCell>
-                                        <TableCell><Star className="inline mr-1 h-4 w-4 text-yellow-400"/>{seller.rating}</TableCell>
-                                        <TableCell>{seller.sales}</TableCell>
-                                        <TableCell><Badge variant={seller.status === 'Active' ? 'secondary' : 'destructive'}>{seller.status}</Badge></TableCell>
-                                        <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
-                                            <Button variant="destructive" size="sm" disabled={seller.status !== 'Restricted'}>Lift Restriction</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {renderPerformanceRows()}
                             </TableBody>
                         </Table>
                     </CardContent>
