@@ -38,7 +38,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
 
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('upload_preset', 'tradinta_uploads'); // Create an unsigned upload preset in your Cloudinary account named 'tradinta_uploads'
+      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!);
 
       try {
         const response = await fetch(
