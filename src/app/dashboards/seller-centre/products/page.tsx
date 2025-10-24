@@ -36,6 +36,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
@@ -63,6 +64,10 @@ export default function SellerProductsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const [activeTab, setActiveTab] = React.useState('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock' | 'outOfStock'>('all');
 
   const productsQuery = useMemoFirebase(() => {
     if (!user) return null;
@@ -110,6 +115,53 @@ export default function SellerProductsPage() {
     }
   };
 
+  const filteredProducts = React.useMemo(() => {
+    if (!products) return null;
+
+    return products
+      .filter((product) => {
+        // Tab filter
+        if (activeTab === 'all') return true;
+        return product.status === activeTab;
+      })
+      .filter((product) => {
+        // Search filter
+        return product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      })
+      .filter((product) => {
+        // Stock filter
+        if (stockFilter === 'all') return true;
+        if (stockFilter === 'inStock') return product.stock > 0;
+        if (stockFilter === 'outOfStock') return product.stock === 0;
+        return true;
+      });
+  }, [products, activeTab, searchQuery, stockFilter]);
+
+  const exportToCsv = () => {
+    if (!filteredProducts || filteredProducts.length === 0) {
+      toast({
+        title: "No products to export",
+        description: "There are no products in the current view to export.",
+        variant: "destructive"
+      });
+      return;
+    }
+    const headers = ['ID', 'Name', 'Status', 'Stock', 'Price (KES)'];
+    const rows = filteredProducts.map(p => 
+      [p.id, `"${p.name.replace(/"/g, '""')}"`, p.status, p.stock, p.price].join(',')
+    );
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "products.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: "Export successful", description: "Your products have been downloaded as products.csv."});
+  };
+
   const renderProductRows = (productData: Product[] | null) => {
     if (isLoading) {
       return Array.from({ length: 3 }).map((_, i) => (
@@ -137,13 +189,13 @@ export default function SellerProductsPage() {
     }
 
     if (!productData || productData.length === 0) {
-        return (
-            <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
-                    No products found. Get started by adding a new product.
-                </TableCell>
-            </TableRow>
-        )
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="h-24 text-center">
+            No products found. Try adjusting your filters.
+          </TableCell>
+        </TableRow>
+      );
     }
 
     return productData.map((product) => (
@@ -165,7 +217,7 @@ export default function SellerProductsPage() {
             {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
           </Badge>
         </TableCell>
-        <TableCell className="hidden md:table-cell">{product.stock}</TableCell>
+        <TableCell className="hidden md:table-cell">{product.stock > 0 ? product.stock : <Badge variant="destructive">Out of Stock</Badge>}</TableCell>
         <TableCell className="hidden md:table-cell">
           KES {product.price?.toLocaleString() || '0'}
         </TableCell>
@@ -206,6 +258,24 @@ export default function SellerProductsPage() {
     ));
   };
 
+  const productTable = (
+     <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
+            <TableHead>Product</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="hidden md:table-cell">Stock</TableHead>
+            <TableHead className="hidden md:table-cell">Price</TableHead>
+            <TableHead>
+              <span className="sr-only">Actions</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>{renderProductRows(filteredProducts)}</TableBody>
+      </Table>
+  );
+
   return (
     <Card>
       <CardHeader>
@@ -217,7 +287,7 @@ export default function SellerProductsPage() {
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={exportToCsv}>
               <File className="mr-2 h-4 w-4" />
               Export
             </Button>
@@ -231,7 +301,7 @@ export default function SellerProductsPage() {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="all">
+        <Tabs defaultValue="all" onValueChange={setActiveTab}>
           <div className="flex items-center justify-between">
             <TabsList>
               <TabsTrigger value="all">All</TabsTrigger>
@@ -241,64 +311,48 @@ export default function SellerProductsPage() {
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search products..." className="pl-8" />
+                <Input placeholder="Search products..." className="pl-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
               </div>
-              <Button variant="outline" size="sm" className="gap-1">
-                <ListFilter className="h-3.5 w-3.5" />
-                <span>Filter</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1">
+                    <ListFilter className="h-3.5 w-3.5" />
+                    <span>Filter</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>Filter by Stock</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={stockFilter === 'all'}
+                    onCheckedChange={() => setStockFilter('all')}
+                  >
+                    All
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={stockFilter === 'inStock'}
+                    onCheckedChange={() => setStockFilter('inStock')}
+                  >
+                    In Stock
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={stockFilter === 'outOfStock'}
+                    onCheckedChange={() => setStockFilter('outOfStock')}
+                  >
+                    Out of Stock
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
           <TabsContent value="all">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Stock</TableHead>
-                  <TableHead className="hidden md:table-cell">Price</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>{renderProductRows(products)}</TableBody>
-            </Table>
+            {productTable}
           </TabsContent>
           <TabsContent value="published">
-             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Stock</TableHead>
-                  <TableHead className="hidden md:table-cell">Price</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>{renderProductRows(products?.filter(p => p.status === 'published') || null)}</TableBody>
-            </Table>
+             {productTable}
           </TabsContent>
           <TabsContent value="draft">
-             <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="hidden md:table-cell">Stock</TableHead>
-                  <TableHead className="hidden md:table-cell">Price</TableHead>
-                  <TableHead>
-                    <span className="sr-only">Actions</span>
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>{renderProductRows(products?.filter(p => p.status === 'draft') || null)}</TableBody>
-            </Table>
+             {productTable}
           </TabsContent>
         </Tabs>
       </CardContent>
