@@ -11,10 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 import Image from "next/image";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 function FactoryIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -55,7 +56,11 @@ export default function SignUpPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [businessName, setBusinessName] = useState('');
+  
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -71,13 +76,51 @@ export default function SignUpPage() {
     }
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      // TODO: Create user profile in Firestore
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Create user profile in Firestore
+      const userDocRef = doc(firestore, "users", user.uid);
+      
+      const userProfileData: {
+        email: string;
+        role: string;
+        fullName: string;
+        businessName?: string;
+        registrationDate: any;
+      } = {
+        email: user.email!,
+        role: role,
+        fullName: fullName,
+        registrationDate: serverTimestamp(),
+      };
+
+      if (role === 'manufacturer') {
+        userProfileData.businessName = businessName;
+      }
+
+      await setDoc(userDocRef, userProfileData);
+
       toast({
         title: "Account Created!",
         description: "You have successfully signed up.",
       });
-      router.push('/dashboards/seller-centre'); // Or redirect based on role
+
+      // Redirect based on role
+      switch (role) {
+        case 'manufacturer':
+          router.push('/dashboards/seller-centre');
+          break;
+        case 'buyer':
+          router.push('/dashboards/buyer');
+          break;
+        case 'partner':
+           router.push('/dashboards/investor-partner'); // Or a specific influencer dashboard
+           break;
+        default:
+          router.push('/dashboards/seller-centre');
+      }
+
     } catch (error: any) {
       toast({
         title: "Sign up failed",
@@ -123,12 +166,12 @@ export default function SignUpPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className={role === 'manufacturer' ? '' : 'md:col-span-2'}>
                     <Label htmlFor="full-name">Full Name</Label>
-                    <Input id="full-name" name="full-name" type="text" required className="mt-1" />
+                    <Input id="full-name" name="full-name" type="text" required className="mt-1" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 </div>
                 {role === 'manufacturer' && (
                     <div>
                         <Label htmlFor="business-name">Business Name</Label>
-                        <Input id="business-name" name="business-name" type="text" required className="mt-1" />
+                        <Input id="business-name" name="business-name" type="text" required className="mt-1" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
                     </div>
                 )}
             </div>
@@ -209,4 +252,5 @@ export default function SignUpPage() {
       </div>
     </div>
   );
-}
+
+    
