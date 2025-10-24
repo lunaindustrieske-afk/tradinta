@@ -39,8 +39,17 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { PhotoUpload } from '@/components/photo-upload';
 
 export default function EditShopProfilePage() {
+  
+  // Dummy handlers for the upload component
+  const handleLogoUpload = (url: string) => console.log('Logo uploaded to:', url);
+  const handleBannerUpload = (url: string) => console.log('Banner uploaded to:', url);
+  const handleCertUpload = (url: string) => console.log('Certificate uploaded to:', url);
+  const handlePinUpload = (url: string) => console.log('KRA PIN uploaded to:', url);
+
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -87,34 +96,20 @@ export default function EditShopProfilePage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-center gap-6">
-                <div className="flex-shrink-0">
-                  <Label>Shop Logo</Label>
-                  <div className="mt-2 relative w-24 h-24 rounded-full border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted">
-                    <Image
-                      src="https://picsum.photos/seed/mfg1/128/128"
-                      alt="Shop Logo"
-                      fill
-                      className="object-cover rounded-full"
-                    />
-                    <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <Upload className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
+              <div className="flex items-start gap-6">
+                <div className="flex-shrink-0 w-32">
+                   <PhotoUpload
+                    label="Shop Logo"
+                    onUpload={handleLogoUpload}
+                    initialUrl="https://picsum.photos/seed/mfg1/128/128"
+                  />
                 </div>
                 <div className="flex-grow">
-                  <Label>Shop Banner</Label>
-                  <div className="mt-2 relative aspect-video w-full rounded-md border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted">
-                    <Image
-                      src="https://picsum.photos/seed/mfg1-cover/1600/400"
-                      alt="Shop Banner"
-                      fill
-                      className="object-cover rounded-md"
-                    />
-                     <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <Upload className="h-8 w-8 text-white" />
-                    </div>
-                  </div>
+                  <PhotoUpload
+                    label="Shop Banner"
+                    onUpload={handleBannerUpload}
+                    initialUrl="https://picsum.photos/seed/mfg1-cover/1600/400"
+                  />
                 </div>
               </div>
                <div className="grid gap-3">
@@ -184,20 +179,14 @@ export default function EditShopProfilePage() {
                     <CardDescription>Upload required documents to get the "Verified" badge.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between p-3 border rounded-md">
-                        <div className="flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-muted-foreground" />
-                            <p className="font-semibold text-sm">Certificate of Incorporation</p>
-                        </div>
-                        <Button variant="outline" size="sm">Upload</Button>
-                    </div>
-                     <div className="flex items-center justify-between p-3 border rounded-md">
-                        <div className="flex items-center gap-3">
-                            <FileText className="w-5 h-5 text-muted-foreground" />
-                            <p className="font-semibold text-sm">KRA PIN Certificate</p>
-                        </div>
-                        <Badge variant="secondary">Uploaded</Badge>
-                    </div>
+                    <PhotoUpload
+                      label="Certificate of Incorporation"
+                      onUpload={handleCertUpload}
+                    />
+                    <PhotoUpload
+                      label="KRA PIN Certificate"
+                      onUpload={handlePinUpload}
+                    />
                 </CardContent>
             </Card>
 
