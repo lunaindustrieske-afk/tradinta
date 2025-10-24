@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { Button } from './ui/button';
+import { Label } from '@/components/ui/label';
 
 interface PhotoUploadProps extends React.HTMLAttributes<HTMLDivElement> {
   onUpload: (url: string) => void;
