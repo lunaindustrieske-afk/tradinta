@@ -62,15 +62,40 @@ export default function StaticPage() {
     // In a real app, you would use a markdown renderer here for safety and functionality
     // e.g. <ReactMarkdown>{page.content}</ReactMarkdown>
     // For now, using dangerouslySetInnerHTML. Be aware of XSS risks if content is not controlled.
-    const createMarkup = () => {
-        // A simple markdown to HTML converter for basic formatting
-        let html = page.content;
-        html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
-        html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-        html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-        html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-        html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
-        html = html.replace(/\n/gim, '<br />');
+    const createMarkup = (markdown?: string) => {
+        if (!markdown) return { __html: '' };
+
+        let html = markdown
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+            .replace(/\*(.*)\*/gim, '<em>$1</em>')
+            .replace(/!\[(.*?)\]\((.*?)\)/gim, "<img alt='$1' src='$2' />")
+            .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2'>$1</a>")
+            .replace(/\n$/gim, '<br />')
+            .replace(/\n/g, '<br />');
+
+        // Handle unordered lists
+        html = html.replace(/(\<br \/\>)?\s?\*\s(.*?)(?=\<br \/\>|$)/g, '<li>$2</li>');
+        html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+        
+        // Handle ordered lists
+        html = html.replace(/(\<br \/\>)?\s?\d\.\s(.*?)(?=\<br \/\>|$)/g, '<li>$2</li>');
+        html = html.replace(/<li>(.*?)<\/li>/g, (match, content) => {
+            if (content.match(/^\d\./)) return match;
+            return `<li>${content}</li>`;
+        });
+        html = html.replace(/(<li>.*<\/li>)+/g, (match) => {
+            if(match.includes('<ul>')) return match;
+            if(match.match(/<li>\d\./)) return match; // Bit of a hack to avoid re-wrapping
+            return `<ol>${match}</ol>`;
+        });
+
+        // Cleanup empty paragraphs
+        html = html.replace(/<p><\/p>/g, '');
+
         return { __html: html };
     };
 
@@ -93,7 +118,7 @@ export default function StaticPage() {
                     <CardTitle className="text-3xl font-headline">{page.title}</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <div className="prose max-w-none" dangerouslySetInnerHTML={createMarkup()} />
+                    <div className="prose" dangerouslySetInnerHTML={createMarkup(page.content)} />
                 </CardContent>
             </Card>
         </div>

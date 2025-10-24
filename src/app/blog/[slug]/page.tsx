@@ -58,14 +58,40 @@ export default function BlogPostPage() {
     }
 
     // A simple markdown to HTML converter for basic formatting
-    const createMarkup = () => {
-        let html = post.content;
-        html = html.replace(/^# (.*$)/gim, '<h1 class="text-3xl font-bold font-headline mt-8 mb-4">$1</h1>');
-        html = html.replace(/^## (.*$)/gim, '<h2 class="text-2xl font-bold font-headline mt-6 mb-3">$1</h2>');
-        html = html.replace(/^### (.*$)/gim, '<h3 class="text-xl font-bold mt-4 mb-2">$1</h3>');
-        html = html.replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>');
-        html = html.replace(/\*(.*)\*/gim, '<em>$1</em>');
-        html = html.replace(/\n/gim, '<br />');
+    const createMarkup = (markdown?: string) => {
+        if (!markdown) return { __html: '' };
+
+        let html = markdown
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+            .replace(/\*(.*)\*/gim, '<em>$1</em>')
+            .replace(/!\[(.*?)\]\((.*?)\)/gim, "<img alt='$1' src='$2' />")
+            .replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2'>$1</a>")
+            .replace(/\n$/gim, '<br />')
+            .replace(/\n/g, '<br />');
+
+        // Handle unordered lists
+        html = html.replace(/(\<br \/\>)?\s?\*\s(.*?)(?=\<br \/\>|$)/g, '<li>$2</li>');
+        html = html.replace(/(<li>.*<\/li>)+/g, '<ul>$&</ul>');
+        
+        // Handle ordered lists
+        html = html.replace(/(\<br \/\>)?\s?\d\.\s(.*?)(?=\<br \/\>|$)/g, '<li>$2</li>');
+        html = html.replace(/<li>(.*?)<\/li>/g, (match, content) => {
+            if (content.match(/^\d\./)) return match;
+            return `<li>${content}</li>`;
+        });
+        html = html.replace(/(<li>.*<\/li>)+/g, (match) => {
+            if(match.includes('<ul>')) return match;
+            if(match.match(/<li>\d\./)) return match; // Bit of a hack to avoid re-wrapping
+            return `<ol>${match}</ol>`;
+        });
+
+        // Cleanup empty paragraphs
+        html = html.replace(/<p><\/p>/g, '');
+
         return { __html: html };
     };
 
@@ -103,7 +129,7 @@ export default function BlogPostPage() {
                         </time>
                     </div>
                 </header>
-                <div className="prose max-w-none" dangerouslySetInnerHTML={createMarkup()} />
+                <div className="prose" dangerouslySetInnerHTML={createMarkup(post.content)} />
             </article>
         </div>
     );
