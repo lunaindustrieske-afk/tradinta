@@ -72,6 +72,10 @@
           "type": "string",
           "description": "The business license number of the manufacturer."
         },
+        "kraPin": {
+          "type": "string",
+          "description": "The KRA PIN of the manufacturer."
+        },
         "address": {
           "type": "string",
           "description": "The physical address of the manufacturer."
@@ -118,6 +122,33 @@
             "type": "string",
             "format": "uri"
           }
+        },
+        "website": {
+            "type": "string",
+            "format": "uri",
+            "description": "The manufacturer's official website."
+        },
+        "linkedin": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the manufacturer's LinkedIn profile."
+        },
+        "acceptsTradPay": {
+            "type": "boolean",
+            "description": "Indicates if the seller accepts TradPay."
+        },
+        "issuesTradPoints": {
+            "type": "boolean",
+            "description": "Indicates if the seller issues TradPoints."
+        },
+        "verificationStatus": {
+          "type": "string",
+          "description": "The overall verification status of the manufacturer.",
+          "enum": ["Unsubmitted", "Pending Legal", "Pending Admin", "Action Required", "Verified"]
+        },
+        "rejectionReason": {
+            "type": "string",
+            "description": "Reason for rejection if status is 'Action Required'."
         }
       },
       "required": [

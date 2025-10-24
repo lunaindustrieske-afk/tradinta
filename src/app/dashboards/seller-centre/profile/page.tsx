@@ -8,6 +8,7 @@ import {
   Save,
   Globe,
   Link as LinkIcon,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,9 +31,32 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Switch } from '@/components/ui/switch';
 import { PhotoUpload } from '@/components/photo-upload';
-import { useFirestore, useUser } from '@/firebase';
+import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { setDocumentNonBlocking } from '@/firebase';
+
+type ManufacturerData = {
+  shopName?: string;
+  tagline?: string;
+  description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  businessLicenseNumber?: string;
+  kraPin?: string;
+  address?: string;
+  phone?: string;
+  paymentPolicy?: string;
+  shippingPolicy?: string;
+  returnPolicy?: string;
+  website?: string;
+  linkedin?: string;
+  acceptsTradPay?: boolean;
+  issuesTradPoints?: boolean;
+  certifications?: string[];
+  verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
+};
+
 
 export default function EditShopProfilePage() {
   const { user } = useUser();
@@ -56,10 +80,11 @@ export default function EditShopProfilePage() {
   const [kraPinUrl, setKraPinUrl] = useState('');
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
-  const [acceptsTradPay, setAcceptsTradPay] = useState(true);
   const [issuesTradPoints, setIssuesTradPoints] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<ManufacturerData['verificationStatus']>('Unsubmitted');
+
 
   // Fetch existing data
   useEffect(() => {
@@ -68,7 +93,7 @@ export default function EditShopProfilePage() {
         const manufRef = doc(firestore, 'manufacturers', user.uid);
         const docSnap = await getDoc(manufRef);
         if (docSnap.exists()) {
-          const data = docSnap.data();
+          const data = docSnap.data() as ManufacturerData;
           setShopName(data.shopName || '');
           setShopTagline(data.tagline || '');
           setShopDescription(data.description || '');
@@ -83,11 +108,10 @@ export default function EditShopProfilePage() {
           setReturnPolicy(data.returnPolicy || '');
           setWebsite(data.website || '');
           setLinkedin(data.linkedin || '');
-          setAcceptsTradPay(data.acceptsTradPay !== false);
           setIssuesTradPoints(data.issuesTradPoints === true);
+          setVerificationStatus(data.verificationStatus || 'Unsubmitted');
           
           if(data.certifications && data.certifications.length > 0) {
-             // Assuming for now cert and pin are the only two
              setCertUrl(data.certifications.find((c: string) => c.includes('cert')) || '');
              setKraPinUrl(data.certifications.find((c: string) => c.includes('pin')) || '');
           }
@@ -105,7 +129,7 @@ export default function EditShopProfilePage() {
     
     setIsLoading(true);
 
-    const manufacturerData = {
+    const manufacturerData: ManufacturerData = {
       shopName,
       tagline: shopTagline,
       description: shopDescription,
@@ -120,18 +144,28 @@ export default function EditShopProfilePage() {
       returnPolicy,
       website,
       linkedin,
-      acceptsTradPay,
+      acceptsTradPay: false, // Permanently disabled
       issuesTradPoints,
-      certifications: [certUrl, kraPinUrl].filter(Boolean), // Store URLs in an array
+      certifications: [certUrl, kraPinUrl].filter(Boolean),
+      // Update status only if it's the first time submitting
+      verificationStatus: verificationStatus === 'Unsubmitted' && (bizRegNo || certUrl || kraPinUrl) ? 'Pending Legal' : verificationStatus,
     };
     
     try {
       const manufRef = doc(firestore, 'manufacturers', user.uid);
-      await setDoc(manufRef, manufacturerData, { merge: true });
+      // Using non-blocking update
+      setDocumentNonBlocking(manufRef, manufacturerData, { merge: true });
+      
       toast({
-        title: "Profile Updated",
-        description: "Your shop profile has been successfully saved.",
+        title: "Profile Saving...",
+        description: "Your changes are being saved in the background.",
       });
+
+      // Optimistically update local state if needed
+      if (manufacturerData.verificationStatus) {
+        setVerificationStatus(manufacturerData.verificationStatus);
+      }
+
     } catch (error: any) {
       toast({
         title: "Save Failed",
@@ -144,8 +178,14 @@ export default function EditShopProfilePage() {
   };
   
   if (!user) {
-    return <div>Loading...</div>; // Or a proper loading component
+    return (
+        <div className="flex items-center justify-center h-full">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    );
   }
+
+  const isVerified = verificationStatus === 'Verified';
 
   return (
     <div className="space-y-6">
@@ -177,7 +217,7 @@ export default function EditShopProfilePage() {
             Cancel
           </Button>
           <Button size="sm" onClick={handleSaveChanges} disabled={isLoading}>
-            <Save className="mr-2 h-4 w-4" />
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
             {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
@@ -317,18 +357,18 @@ export default function EditShopProfilePage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="flex items-center justify-between">
-                        <Label htmlFor="tradpay-switch" className="flex flex-col gap-1">
+                        <Label htmlFor="tradpay-switch" className="flex flex-col gap-1 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-70" data-disabled="true">
                             <span>Accept TradPay</span>
-                            <span className="font-normal text-xs text-muted-foreground">Enable secure escrow payments.</span>
+                            <span className="font-normal text-xs text-muted-foreground">TradPay is currently disabled platform-wide.</span>
                         </Label>
-                        <Switch id="tradpay-switch" checked={acceptsTradPay} onCheckedChange={setAcceptsTradPay} />
+                        <Switch id="tradpay-switch" disabled={true} checked={false} />
                     </div>
                      <div className="flex items-center justify-between">
-                        <Label htmlFor="tradpoints-switch" className="flex flex-col gap-1">
+                        <Label htmlFor="tradpoints-switch" className="flex flex-col gap-1 data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-70" data-disabled={!isVerified}>
                             <span>Issue TradPoints</span>
-                            <span className="font-normal text-xs text-muted-foreground">Reward buyers for purchases.</span>
+                            <span className="font-normal text-xs text-muted-foreground">Reward buyers for purchases. Requires verification.</span>
                         </Label>
-                        <Switch id="tradpoints-switch" checked={issuesTradPoints} onCheckedChange={setIssuesTradPoints} />
+                        <Switch id="tradpoints-switch" checked={issuesTradPoints} onCheckedChange={setIssuesTradPoints} disabled={!isVerified} />
                     </div>
                 </CardContent>
             </Card>
@@ -339,7 +379,7 @@ export default function EditShopProfilePage() {
             Cancel
           </Button>
           <Button size="sm" onClick={handleSaveChanges} disabled={isLoading}>
-            <Save className="mr-2 h-4 w-4" />
+             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
             {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>

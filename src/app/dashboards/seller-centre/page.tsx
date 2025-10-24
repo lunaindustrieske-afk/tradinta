@@ -16,12 +16,20 @@ import {
     ArrowRight,
     Lock,
     Banknote,
-    MessageSquare
+    MessageSquare,
+    Info,
+    CheckCircle,
+    Clock,
+    AlertTriangle,
+    ShieldCheck
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const products = [
     { id: 'PROD-001', name: 'Industrial Grade Cement', stock: 1200, status: 'Live' },
@@ -55,7 +63,89 @@ const reviews = [
     }
 ]
 
+type VerificationStatus = 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
+
+const statusInfo: Record<VerificationStatus, {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    badgeVariant: "secondary" | "default" | "destructive" | "outline";
+}> = {
+    'Unsubmitted': {
+        icon: <Info className="h-8 w-8 text-muted-foreground" />,
+        title: "Profile Incomplete",
+        description: "Complete your shop profile and submit verification documents to start selling.",
+        badgeVariant: "outline",
+    },
+    'Pending Legal': {
+        icon: <Clock className="h-8 w-8 text-yellow-500" />,
+        title: "Pending Legal & Compliance Review",
+        description: "Your business documents are being reviewed. This usually takes 2-3 business days.",
+        badgeVariant: "default",
+    },
+    'Pending Admin': {
+        icon: <Clock className="h-8 w-8 text-blue-500" />,
+        title: "Pending Admin Approval",
+        description: "Your documents are approved. Final review of your shop profile is in progress.",
+        badgeVariant: "default",
+    },
+    'Action Required': {
+        icon: <AlertTriangle className="h-8 w-8 text-destructive" />,
+        title: "Action Required",
+        description: "There was an issue with your submission. Please check your email for details and resubmit.",
+        badgeVariant: "destructive",
+    },
+    'Verified': {
+        icon: <ShieldCheck className="h-8 w-8 text-green-500" />,
+        title: "Shop Verified",
+        description: "Congratulations! Your shop is live and visible to all buyers on Tradinta.",
+        badgeVariant: "secondary",
+    }
+};
+
+const VerificationStatusCard = ({ manufacturerId }: { manufacturerId: string }) => {
+    const firestore = useFirestore();
+    const manufacturerDocRef = useMemoFirebase(() => {
+        if (!firestore || !manufacturerId) return null;
+        return doc(firestore, 'manufacturers', manufacturerId);
+    }, [firestore, manufacturerId]);
+
+    const { data: manufacturer, isLoading } = useDoc<{ verificationStatus?: VerificationStatus }>(manufacturerDocRef);
+    
+    if (isLoading) {
+        return <Skeleton className="h-32" />
+    }
+
+    const status = manufacturer?.verificationStatus || 'Unsubmitted';
+    const currentStatusInfo = statusInfo[status];
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Verification Status</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center gap-4">
+                {currentStatusInfo.icon}
+                <div>
+                    <Badge variant={currentStatusInfo.badgeVariant} className="mb-2">{currentStatusInfo.title}</Badge>
+                    <p className="text-sm text-muted-foreground">{currentStatusInfo.description}</p>
+                </div>
+            </CardContent>
+            <CardFooter>
+                 <Button asChild variant="secondary" className="w-full">
+                    <Link href="/dashboards/seller-centre/profile">
+                        {status === 'Verified' ? 'View Profile' : 'Update Profile & Documents'}
+                    </Link>
+                 </Button>
+            </CardFooter>
+        </Card>
+    );
+};
+
+
 export default function SellerDashboard() {
+    const { user } = useUser();
+
     return (
         <div className="space-y-6">
              <Card>
@@ -188,6 +278,9 @@ export default function SellerDashboard() {
 
                 {/* Right column */}
                 <div className="space-y-6">
+                    {/* Verification Status Card */}
+                    {user && <VerificationStatusCard manufacturerId={user.uid} />}
+                    
                     {/* Wallet Card */}
                      <Card>
                         <CardHeader>
@@ -273,3 +366,5 @@ export default function SellerDashboard() {
         </div>
     );
 }
+
+    
