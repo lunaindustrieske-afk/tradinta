@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -11,6 +12,7 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 
 type UserProfile = {
@@ -39,7 +41,14 @@ type SystemAlert = {
 
 export default function SuperAdminDashboard() {
     const firestore = useFirestore();
-    const [activeTab, setActiveTab] = React.useState('overview');
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'overview';
+
+    const handleTabChange = (value: string) => {
+        router.push(`${pathname}?tab=${value}`);
+    };
 
     // --- Data Queries ---
     const usersQuery = useMemoFirebase(() => {
@@ -144,7 +153,7 @@ export default function SuperAdminDashboard() {
 
 
     return (
-        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="overview">
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
             <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Platform Overview</TabsTrigger>
                 <TabsTrigger value="user-management">User Management</TabsTrigger>
@@ -160,7 +169,7 @@ export default function SuperAdminDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('user-management')}>
+                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                                     <Users className="h-4 w-4 text-muted-foreground" />
@@ -170,7 +179,7 @@ export default function SuperAdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Across all roles</p>
                                 </CardContent>
                             </Card>
-                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('user-management')}>
+                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Sellers</CardTitle>
                                     <User className="h-4 w-4 text-muted-foreground" />
@@ -180,7 +189,7 @@ export default function SuperAdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Verified & pending</p>
                                 </CardContent>
                             </Card>
-                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('user-management')}>
+                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Buyers</CardTitle>
                                     <Users2 className="h-4 w-4 text-muted-foreground" />
@@ -190,7 +199,7 @@ export default function SuperAdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Registered buyers</p>
                                 </CardContent>
                             </Card>
-                            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('activity-log')}>
+                            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('activity-log')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
                                     <ShieldAlert className="h-4 w-4 text-muted-foreground" />
