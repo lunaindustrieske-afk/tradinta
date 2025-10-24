@@ -32,6 +32,8 @@ import { useFormState } from 'react-dom';
 import { getAITagsAndDescription, type AIFormState } from '@/app/lib/actions';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
+import { categories, Category } from '@/app/lib/categories';
+import { SelectGroup } from '@radix-ui/react-select';
 
 export default function NewProductPage() {
   const { toast } = useToast();
@@ -43,6 +45,25 @@ export default function NewProductPage() {
 
   const [formKey, setFormKey] = React.useState(Date.now());
   const [isGenerating, setIsGenerating] = React.useState(false);
+  
+  const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
+  const [subcategories, setSubcategories] = React.useState<string[]>([]);
+  const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
+
+
+  const handleCategoryChange = (value: string) => {
+    const category = categories.find((c) => c.name === value);
+    if (category) {
+        setSelectedCategory(category);
+        setSubcategories(category.subcategories);
+        setSelectedSubCategory('');
+    } else {
+        setSelectedCategory(null);
+        setSubcategories([]);
+        setSelectedSubCategory('');
+    }
+  }
+
 
   React.useEffect(() => {
     if (state.message) {
@@ -254,22 +275,41 @@ export default function NewProductPage() {
           <Card>
             <CardHeader>
               <CardTitle>Category</CardTitle>
+               <CardDescription>
+                Select a category and sub-category for your product.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6">
                 <div className="grid gap-3">
-                  <Label htmlFor="category">Business Category</Label>
-                  <Select>
+                  <Label htmlFor="category">Category</Label>
+                  <Select onValueChange={handleCategoryChange}>
                     <SelectTrigger id="category" aria-label="Select category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="packaging">Packaging</SelectItem>
-                      <SelectItem value="chemicals">Chemicals</SelectItem>
-                      <SelectItem value="construction">Construction</SelectItem>
-                      <SelectItem value="food">Food & Beverage</SelectItem>
+                        {categories.map((cat) => (
+                            <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
+                </div>
+                 <div className="grid gap-3">
+                    <Label htmlFor="subcategory">Sub-category</Label>
+                    <Select
+                        value={selectedSubCategory}
+                        onValueChange={setSelectedSubCategory}
+                        disabled={!selectedCategory}
+                    >
+                        <SelectTrigger id="subcategory" aria-label="Select sub-category">
+                        <SelectValue placeholder="Select sub-category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {subcategories.map(sub => (
+                                <SelectItem key={sub} value={sub}>{sub}</SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                 </div>
               </div>
             </CardContent>
