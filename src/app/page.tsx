@@ -12,7 +12,7 @@ import {
   Coins,
   Building,
 } from 'lucide-react';
-import { products } from '@/app/lib/mock-data';
+import { products, manufacturers } from '@/app/lib/mock-data';
 import {
   Card,
   CardContent,
@@ -65,21 +65,29 @@ const valueHighlights = [
 
 const featuredManufacturers = [
   {
+    id: 'mfg-1',
+    shopId: 'const-ltd',
     name: 'Constructa Ltd',
     industry: 'Building Materials',
     logo: 'https://picsum.photos/seed/mfg1/48/48',
   },
   {
+    id: 'mfg-2',
+    shopId: 'super-bake',
     name: 'SuperBake Bakery',
     industry: 'Food & Beverage',
     logo: 'https://picsum.photos/seed/mfg2/48/48',
   },
   {
+    id: 'mfg-3',
+    shopId: 'plastico-ke',
     name: 'PlastiCo Kenya',
     industry: 'Plastics & Polymers',
     logo: 'https://picsum.photos/seed/mfg3/48/48',
   },
   {
+    id: 'mfg-4',
+    shopId: 'print-pack',
     name: 'PrintPack Solutions',
     industry: 'Packaging',
     logo: 'https://picsum.photos/seed/mfg4/48/48',
@@ -183,7 +191,7 @@ export default function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {products.slice(0, 4).map((product) => (
                 <Card key={product.id} className="overflow-hidden group">
-                   <Link href={`/products/${product.manufacturerId}/${product.slug}`}>
+                   <Link href={`/products/${manufacturers.find(m => m.id === product.manufacturerId)?.shopId}/${product.slug}`}>
                     <CardContent className="p-0">
                       <div className="relative aspect-[4/3] overflow-hidden">
                         <Image
@@ -222,7 +230,7 @@ export default function HomePage() {
                                 <h4 className="font-semibold">{mfg.name}</h4>
                                 <p className="text-sm text-muted-foreground">{mfg.industry}</p>
                             </div>
-                            <Button variant="outline" size="sm">View Shop</Button>
+                            <Button variant="outline" size="sm" asChild><Link href={`/manufacturer/${mfg.shopId}`}>View Shop</Link></Button>
                         </div>
                     ))}
                 </div>
@@ -323,5 +331,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    

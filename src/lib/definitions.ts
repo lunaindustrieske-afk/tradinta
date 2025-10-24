@@ -1,4 +1,5 @@
 
+
 export type Product = {
   id: string;
   name: string;
@@ -11,7 +12,7 @@ export type Product = {
   imageHint: string;
   rating: number;
   reviewCount: number;
-  manufacturerId: string;
+  manufacturerId: string; // Firebase UID of the manufacturer
 };
 
 export type Order = {
@@ -36,7 +37,8 @@ export type Campaign = {
 };
 
 export type Manufacturer = {
-  id: string;
+  id: string; // Firebase UID
+  shopId: string; // Short, unique, URL-friendly ID
   slug: string;
   name: string;
   logoUrl: string;

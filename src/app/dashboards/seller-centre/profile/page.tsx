@@ -35,8 +35,10 @@ import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { setDocumentNonBlocking } from '@/firebase';
+import { nanoid } from 'nanoid';
 
 type ManufacturerData = {
+  shopId?: string;
   shopName?: string;
   tagline?: string;
   description?: string;
@@ -64,6 +66,7 @@ export default function EditShopProfilePage() {
   const { toast } = useToast();
 
   // Form state
+  const [shopId, setShopId] = useState('');
   const [shopName, setShopName] = useState('');
   const [shopTagline, setShopTagline] = useState('');
   const [shopDescription, setShopDescription] = useState('');
@@ -94,6 +97,7 @@ export default function EditShopProfilePage() {
         const docSnap = await getDoc(manufRef);
         if (docSnap.exists()) {
           const data = docSnap.data() as ManufacturerData;
+          setShopId(data.shopId || '');
           setShopName(data.shopName || '');
           setShopTagline(data.tagline || '');
           setShopDescription(data.description || '');
@@ -129,7 +133,11 @@ export default function EditShopProfilePage() {
     
     setIsLoading(true);
 
+    // Generate a new shopId only if one doesn't exist
+    const finalShopId = shopId || nanoid(6);
+
     const manufacturerData: ManufacturerData = {
+      shopId: finalShopId,
       shopName,
       tagline: shopTagline,
       description: shopDescription,
@@ -165,6 +173,8 @@ export default function EditShopProfilePage() {
       if (manufacturerData.verificationStatus) {
         setVerificationStatus(manufacturerData.verificationStatus);
       }
+      setShopId(finalShopId);
+
 
     } catch (error: any) {
       toast({
@@ -386,5 +396,3 @@ export default function EditShopProfilePage() {
     </div>
   );
 }
-
-    

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Heart, Search, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { products } from "@/app/lib/mock-data";
+import { products, manufacturers } from "@/app/lib/mock-data";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
@@ -29,7 +29,11 @@ export default function WishlistPage() {
         <CardContent>
           {wishlistItems.length > 0 ? (
             <div className="space-y-4">
-              {wishlistItems.map((product, index) => (
+              {wishlistItems.map((product, index) => {
+                const manufacturer = manufacturers.find(m => m.id === product.manufacturerId);
+                const shopId = manufacturer?.shopId || manufacturer?.id; // Fallback to id if shopId is not available
+                
+                return (
                 <React.Fragment key={product.id}>
                   <div className="flex flex-col md:flex-row items-center gap-4">
                     <div className="relative aspect-square w-24 h-24 rounded-md overflow-hidden flex-shrink-0">
@@ -41,7 +45,7 @@ export default function WishlistPage() {
                       />
                     </div>
                     <div className="flex-grow">
-                      <Link href={`/products/${product.manufacturerId}/${product.slug}`}>
+                      <Link href={`/products/${shopId}/${product.slug}`}>
                         <h3 className="font-semibold hover:text-primary transition-colors">{product.name}</h3>
                       </Link>
                       <p className="text-sm text-muted-foreground">{product.category}</p>
@@ -57,7 +61,7 @@ export default function WishlistPage() {
                   </div>
                   {index < wishlistItems.length - 1 && <Separator />}
                 </React.Fragment>
-              ))}
+              )})}
             </div>
           ) : (
             <div className="text-center py-12">
@@ -78,5 +82,3 @@ export default function WishlistPage() {
     </div>
   );
 }
-
-    

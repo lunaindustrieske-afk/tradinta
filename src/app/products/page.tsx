@@ -1,10 +1,9 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as allProducts } from '@/app/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -36,10 +35,15 @@ import {
   ListFilter,
   Search,
   Star,
+  Loader2,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
+import { useFirestore } from '@/firebase';
+import { collectionGroup, getDocs, query, where } from 'firebase/firestore';
+import { type Product, type Manufacturer } from '@/lib/definitions';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const categories = [
   'Packaging',
@@ -52,15 +56,62 @@ const categories = [
   'Plastics & Polymers',
 ];
 
+type ProductWithShopId = Product & { shopId: string };
+
 export default function ProductsPage() {
+  const [allProducts, setAllProducts] = useState<ProductWithShopId[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const [filters, setFilters] = useState({
     category: 'all',
     priceRange: [0, 200000],
     verified: false,
     rating: 0,
   });
-
   const [searchQuery, setSearchQuery] = useState('');
+
+  const firestore = useFirestore();
+
+  useEffect(() => {
+    const fetchProductsAndManufacturers = async () => {
+      if (!firestore) return;
+      setIsLoading(true);
+
+      // 1. Fetch all manufacturers and create a map of UID to shopId
+      const manufCollection = collection(firestore, 'manufacturers');
+      const manufSnapshot = await getDocs(manufCollection);
+      const manufMap = new Map<string, string>();
+      manufSnapshot.forEach(doc => {
+        const data = doc.data() as Manufacturer;
+        if (data.shopId) {
+          manufMap.set(doc.id, data.shopId);
+        }
+      });
+
+      // 2. Fetch all products using a collection group query
+      const productsQuery = query(
+        collectionGroup(firestore, 'products'),
+        where('status', '==', 'published')
+      );
+      const productSnapshot = await getDocs(productsQuery);
+      
+      const productsData = productSnapshot.docs.map(doc => {
+        const product = doc.data() as Product;
+        const shopId = manufMap.get(product.manufacturerId) || '';
+        return {
+          ...product,
+          id: doc.id,
+          shopId: shopId,
+        };
+      }).filter(p => p.shopId); // Only include products where a shopId could be found
+
+      setAllProducts(productsData);
+      setIsLoading(false);
+    };
+
+    fetchProductsAndManufacturers();
+  }, [firestore]);
+
 
   const filteredProducts = allProducts.filter((product) => {
     return (
@@ -204,55 +255,73 @@ export default function ProductsPage() {
 
           {/* Product Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProducts.map((product) => (
-              <Card key={product.id} className="overflow-hidden group flex flex-col">
-                <div className="flex-grow">
-                    <Link href={`/products/${product.manufacturerId}/${product.slug}`}>
-                        <CardContent className="p-0">
-                          <div className="relative aspect-[4/3] overflow-hidden">
-                            <Image
-                              src={product.imageUrl}
-                              alt={product.name}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform"
-                              data-ai-hint={product.imageHint}
-                            />
-                             <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
-                              Verified Factory
-                            </Badge>
-                          </div>
-                          <div className="p-4 space-y-2">
-                            <CardTitle className="text-lg leading-tight h-10">
-                              {product.name}
-                            </CardTitle>
-                            <CardDescription className="text-sm">
-                              From a trusted supplier in{' '}
-                              <span className="font-semibold text-primary">
-                                {product.category}
-                              </span>
-                            </CardDescription>
+            {isLoading ? (
+                Array.from({ length: 6 }).map((_, i) => (
+                    <Card key={i} className="overflow-hidden group flex flex-col">
+                        <Skeleton className="aspect-[4/3] w-full" />
+                        <div className="p-4 space-y-3">
+                            <Skeleton className="h-6 w-3/4" />
+                            <Skeleton className="h-4 w-1/2" />
+                            <Skeleton className="h-8 w-full" />
+                        </div>
+                    </Card>
+                ))
+            ) : filteredProducts.length > 0 ? (
+                 filteredProducts.map((product) => (
+                  <Card key={product.id} className="overflow-hidden group flex flex-col">
+                    <div className="flex-grow">
+                        <Link href={`/products/${product.shopId}/${product.slug}`}>
+                            <CardContent className="p-0">
+                              <div className="relative aspect-[4/3] overflow-hidden">
+                                <Image
+                                  src={product.imageUrl || 'https://placehold.co/600x400'}
+                                  alt={product.name}
+                                  fill
+                                  className="object-cover group-hover:scale-105 transition-transform"
+                                  data-ai-hint={product.imageHint}
+                                />
+                                 <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
+                                  Verified Factory
+                                </Badge>
+                              </div>
+                              <div className="p-4 space-y-2">
+                                <CardTitle className="text-lg leading-tight h-10">
+                                  {product.name}
+                                </CardTitle>
+                                <CardDescription className="text-sm">
+                                  From a trusted supplier in{' '}
+                                  <span className="font-semibold text-primary">
+                                    {product.category}
+                                  </span>
+                                </CardDescription>
 
-                            <div className="flex items-baseline justify-between">
-                                 <p className="text-xl font-bold text-foreground">
-                                    KES {product.price.toLocaleString()}
-                                </p>
-                                <div className="flex items-center gap-1">
-                                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                    <span className="text-sm font-medium">{product.rating}</span>
-                                    <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                                <div className="flex items-baseline justify-between">
+                                     <p className="text-xl font-bold text-foreground">
+                                        KES {product.price.toLocaleString()}
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                        <span className="text-sm font-medium">{product.rating}</span>
+                                        <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                                    </div>
                                 </div>
-                            </div>
-                          </div>
-                        </CardContent>
-                    </Link>
+                              </div>
+                            </CardContent>
+                        </Link>
+                    </div>
+                     <div className="p-4 pt-0">
+                        <RequestQuoteModal product={product}>
+                            <Button className="w-full mt-2">Request Quotation</Button>
+                        </RequestQuoteModal>
+                      </div>
+                  </Card>
+                ))
+            ) : (
+                <div className="col-span-full text-center py-12">
+                    <h3 className="text-lg font-semibold">No Products Found</h3>
+                    <p className="text-muted-foreground">Try adjusting your search or filter criteria.</p>
                 </div>
-                 <div className="p-4 pt-0">
-                    <RequestQuoteModal product={product}>
-                        <Button className="w-full mt-2">Request Quotation</Button>
-                    </RequestQuoteModal>
-                  </div>
-              </Card>
-            ))}
+            )}
           </div>
 
           {/* Pagination */}
@@ -284,5 +353,3 @@ export default function ProductsPage() {
     </div>
   );
 }
-
-    

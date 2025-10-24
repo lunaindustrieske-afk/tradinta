@@ -51,6 +51,10 @@
           "type": "string",
           "description": "Unique identifier for the Manufacturer entity."
         },
+        "shopId": {
+          "type": "string",
+          "description": "A short, unique, URL-friendly identifier for the shop."
+        },
         "shopName": {
           "type": "string",
           "description": "The name of the manufacturer's shop on Tradinta."
@@ -212,7 +216,7 @@
         },
         "manufacturerId": {
           "type": "string",
-          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:N Product)"
+          "description": "Reference to Manufacturer UID. (Relationship: Manufacturer 1:N Product)"
         },
         "name": {
           "type": "string",
@@ -634,5 +638,3 @@
     "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection.  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer (`/manufacturers/{manufacturerId}/products/{productId}`, `/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}`) to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership. Similarly, OrderItems are nested under Orders.\n    *   **Quotations**: Stored in a top-level collection `/quotations/{quotationId}` with denormalized `buyerId` and `manufacturerId`. This enables queries like \"Get all quotations for a manufacturer\" or \"Get all quotations for a buyer\" without complex collection group queries and enables rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` collection enables secure listing based on either party without complex queries. The path-based ownership structure for orders and marketing campaigns allows direct listing for a buyer and manufacturer.\n\nThis structure prioritizes security, scalability, and maintainability, aligning with best practices for Firestore data modeling."
   }
 }
-
-    
