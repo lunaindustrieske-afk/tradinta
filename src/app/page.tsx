@@ -13,7 +13,6 @@ import {
   Building,
   Loader2,
 } from 'lucide-react';
-import { products, manufacturers } from '@/app/lib/mock-data';
 import {
   Card,
   CardContent,
@@ -32,6 +31,8 @@ import {
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { manufacturers, products as mockProducts } from '@/app/lib/mock-data';
+
 
 type HomepageBanner = {
   id: string;
@@ -42,7 +43,7 @@ type HomepageBanner = {
 };
 
 type BlogPost = {
-  id: string;
+  id:string;
   title: string;
   slug: string;
 };
@@ -148,10 +149,28 @@ export default function HomePage() {
       return <Skeleton className="w-full h-full" />;
     }
     if (!banners || banners.length === 0) {
-      return (
-        <div className="w-full h-full flex items-center justify-center bg-muted">
-          <p>No promotional content available right now.</p>
-        </div>
+      // Fallback static banner
+       return (
+          <div className="relative w-full h-full">
+            <Image
+              src="https://picsum.photos/seed/hero-fallback/1600/600"
+              alt="Tradinta Marketplace"
+              fill
+              className="object-cover"
+              data-ai-hint="industrial warehouse"
+            />
+             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-headline">
+                Powering Africa’s Manufacturers
+              </h1>
+              <p className="text-lg md:text-xl text-primary-foreground max-w-3xl mb-8">
+                The leading B2B marketplace to source directly from verified factories.
+              </p>
+              <Button size="lg" asChild>
+                <Link href="/products">Explore Products</Link>
+              </Button>
+            </div>
+          </div>
       );
     }
     return (
@@ -181,8 +200,12 @@ export default function HomePage() {
             </CarouselItem>
           ))}
         </CarouselContent>
-        <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
-        <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+        {banners.length > 1 && (
+            <>
+                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+            </>
+        )}
       </Carousel>
     );
   };
@@ -236,7 +259,7 @@ export default function HomePage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {products.slice(0, 4).map((product) => (
+              {mockProducts.slice(0, 4).map((product) => (
                 <Card key={product.id} className="overflow-hidden group">
                    <Link href={`/products/${manufacturers.find(m => m.id === product.manufacturerId)?.shopId}/${product.slug}`}>
                     <CardContent className="p-0">
@@ -291,7 +314,7 @@ export default function HomePage() {
                 Tradinta is Kenya’s first B2B marketplace built exclusively for manufacturers. We help factories, wholesalers, and retailers connect, transact, and grow using digital tools built for Africa’s supply chain.
             </p>
             <Button variant="link" asChild>
-                <Link href="#">Learn More <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link href="/pages/about-us">Learn More <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </section>
 

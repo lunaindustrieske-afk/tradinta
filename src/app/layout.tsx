@@ -56,7 +56,7 @@ export default function RootLayout({
               <main>{children}</main>
             <Toaster />
             {showFooter && (
-              <footer className="border-t py-8">
+              <footer className="border-t py-8 mt-12">
                 <div className="container mx-auto grid md:grid-cols-4 gap-8">
                     <div>
                         <Logo />
@@ -65,10 +65,10 @@ export default function RootLayout({
                     <div>
                         <h4 className="font-semibold mb-2">Links</h4>
                         <ul className="space-y-1 text-sm">
-                            <li><Link href="/about-us" className="text-muted-foreground hover:text-primary">About</Link></li>
+                            <li><Link href="/pages/about-us" className="text-muted-foreground hover:text-primary">About</Link></li>
                             <li><Link href="#" className="text-muted-foreground hover:text-primary">Contact</Link></li>
-                            <li><Link href="/privacy-policy" className="text-muted-foreground hover:text-primary">Privacy Policy</Link></li>
-                            <li><Link href="/terms-of-service" className="text-muted-foreground hover:text-primary">Terms of Service</Link></li>
+                            <li><Link href="/pages/privacy-policy" className="text-muted-foreground hover:text-primary">Privacy Policy</Link></li>
+                            <li><Link href="/pages/terms-of-service" className="text-muted-foreground hover:text-primary">Terms of Service</Link></li>
                             <li><Link href="#" className="text-muted-foreground hover:text-primary">Careers</Link></li>
                         </ul>
                     </div>
