@@ -142,29 +142,29 @@ export default function SuperAdminDashboard() {
     }
 
     const customerRoles = [
-        { name: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers, href: '/dashboards/user-management/sellers' },
-        { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers, href: '/dashboards/user-management/buyers' },
-        { name: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners, href: '/dashboards/user-management/partners' },
-        { name: 'Distributors', count: 0, isLoading: false, href: '#' },
+        { title: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers, href: '/dashboards/user-management/sellers' },
+        { title: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers, href: '/dashboards/user-management/buyers' },
+        { title: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners, href: '/dashboards/user-management/partners' },
+        { title: 'Distributors', count: 0, isLoading: false, href: '#' },
     ];
 
     const adminRoles = [
-        { name: 'Super Admins', count: 1, isLoading: false, href: '#' },
-        { name: 'Admins', count: 1, isLoading: false, href: '/dashboards/admin' },
-        { name: 'Operations Admins', count: 1, isLoading: false, href: '/dashboards/operations-manager' },
-        { name: 'Marketing Admins', count: 1, isLoading: false, href: '/dashboards/marketing-manager' },
-        { name: 'Finance Admins', count: 1, isLoading: false, href: '/dashboards/finance' },
-        { name: 'Support Admins', count: 1, isLoading: false, href: '/dashboards/support' },
-        { name: 'Legal & Compliance', count: 1, isLoading: false, href: '/dashboards/legal-compliance' },
-        { name: 'Content Management', count: 1, isLoading: false, href: '/dashboards/content-management' },
-        { name: 'User Management Admins', count: 1, isLoading: false, href: '#' },
-        { name: 'Analytics Team', count: 1, isLoading: false, href: '/dashboards/analytics' },
-         { name: 'Logistics Partners', count: 0, isLoading: false, href: '/dashboards/logistics' },
+        { title: 'Super Admins', count: 1, isLoading: false, href: '#' },
+        { title: 'Admins', count: 1, isLoading: false, href: '/dashboards/admin' },
+        { title: 'Operations Admins', count: 1, isLoading: false, href: '/dashboards/operations-manager' },
+        { title: 'Marketing Admins', count: 1, isLoading: false, href: '/dashboards/marketing-manager' },
+        { title: 'Finance Admins', count: 1, isLoading: false, href: '/dashboards/finance' },
+        { title: 'Support Admins', count: 1, isLoading: false, href: '/dashboards/support' },
+        { title: 'Legal & Compliance', count: 1, isLoading: false, href: '/dashboards/legal-compliance' },
+        { title: 'Content Management', count: 1, isLoading: false, href: '/dashboards/content-management' },
+        { title: 'User Management Admins', count: 1, isLoading: false, href: '#' },
+        { title: 'Analytics Team', count: 1, isLoading: false, href: '/dashboards/analytics' },
+        { title: 'Logistics Partners', count: 0, isLoading: false, href: '/dashboards/logistics' },
     ];
 
     const tradpayRoles = [
-        { name: 'TradPay Admins', count: 1, isLoading: false, href: '/dashboards/tradpay-admin' },
-        { name: 'TradCoin Airdrop Admins', count: 1, isLoading: false, href: '/dashboards/tradcoin-airdrop' },
+        { title: 'TradPay Admins', count: 1, isLoading: false, href: '/dashboards/tradpay-admin' },
+        { title: 'TradCoin Airdrop Admins', count: 1, isLoading: false, href: '/dashboards/tradcoin-airdrop' },
     ]
 
 
@@ -320,7 +320,7 @@ export default function SuperAdminDashboard() {
                             <h3 className="text-lg font-semibold mb-4">Customer Roles</h3>
                             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
                                 {customerRoles.map((role) => (
-                                    <RoleCard key={role.name} {...role} />
+                                    <RoleCard key={role.title} {...role} />
                                 ))}
                             </div>
                         </div>
@@ -328,7 +328,7 @@ export default function SuperAdminDashboard() {
                             <h3 className="text-lg font-semibold mb-4">Administrative Roles</h3>
                             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
                                 {adminRoles.map((role) => (
-                                    <RoleCard key={role.name} {...role} />
+                                    <RoleCard key={role.title} {...role} />
                                 ))}
                             </div>
                         </div>
@@ -336,7 +336,7 @@ export default function SuperAdminDashboard() {
                             <h3 className="text-lg font-semibold mb-4">TradPay & TradCoin Roles</h3>
                             <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
                                 {tradpayRoles.map((role) => (
-                                    <RoleCard key={role.name} {...role} />
+                                    <RoleCard key={role.title} {...role} />
                                 ))}
                             </div>
                         </div>
