@@ -148,7 +148,7 @@
         "verificationStatus": {
           "type": "string",
           "description": "The overall verification status of the manufacturer.",
-          "enum": ["Unsubmitted", "Pending Legal", "Pending Admin", "Action Required", "Verified"]
+          "enum": ["Unsubmitted", "Pending Legal", "Pending Admin", "Action Required", "Verified", "Restricted"]
         },
         "rejectionReason": {
             "type": "string",
@@ -196,6 +196,11 @@
           "type": "string",
           "description": "The date when the buyer registered on the platform.",
           "format": "date-time"
+        },
+        "verificationStatus": {
+          "type": "string",
+          "description": "The verification status of the buyer.",
+          "enum": ["Unsubmitted", "Pending Admin", "Action Required", "Verified"]
         }
       },
       "required": [
@@ -496,13 +501,37 @@
         "endDate",
         "discountPercentage"
       ]
+    },
+    "Dispute": {
+      "title": "Dispute",
+      "type": "object",
+      "description": "Represents a dispute between a buyer and a seller regarding an order.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the dispute." },
+        "orderId": { "type": "string", "description": "Reference to the Order ID." },
+        "buyerId": { "type": "string", "description": "Reference to the Buyer's UID." },
+        "manufacturerId": { "type": "string", "description": "Reference to the Manufacturer's UID." },
+        "reason": { "type": "string", "description": "The reason for filing the dispute." },
+        "status": {
+          "type": "string",
+          "description": "The current status of the dispute.",
+          "enum": ["Open", "Under Review", "Awaiting Buyer Response", "Awaiting Seller Response", "Resolved", "Closed"]
+        },
+        "openedDate": { "type": "string", "format": "date-time", "description": "When the dispute was opened." },
+        "resolution": { "type": "string", "description": "The final resolution of the dispute." }
+      },
+      "required": ["id", "orderId", "buyerId", "manufacturerId", "reason", "status", "openedDate"]
     }
   },
   "auth": {
     "providers": [
       "password",
       "google.com"
-    ]
+    ],
+    "claims": {
+        "admin": { "type": "boolean" },
+        "ops": { "type": "boolean" }
+    }
   },
   "firestore": {
     "structure": [
@@ -510,151 +539,77 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
-          "schema": {
-            "$ref": "#/backend/entities/UserProfile"
-          },
-          "description": "Stores public user profiles. The 'userId' is the document ID and corresponds to the user's UID.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The Firebase UID of the user."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/UserProfile" },
+          "description": "Stores public user profiles. The 'userId' is the document ID and corresponds to the user's UID."
         }
       },
       {
         "path": "/manufacturers/{manufacturerId}",
         "definition": {
           "entityName": "Manufacturer",
-          "schema": {
-            "$ref": "#/backend/entities/Manufacturer"
-          },
-          "description": "Stores manufacturer profiles. The 'manufacturerId' is the document ID and corresponds to the user's UID.",
-          "params": [
-            {
-              "name": "manufacturerId",
-              "description": "The Firebase UID of the manufacturer."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Manufacturer" },
+          "description": "Stores manufacturer profiles. The 'manufacturerId' is the document ID and corresponds to the user's UID."
         }
       },
       {
         "path": "/buyers/{buyerId}",
         "definition": {
           "entityName": "Buyer",
-          "schema": {
-            "$ref": "#/backend/entities/Buyer"
-          },
-          "description": "Stores buyer profiles. The 'buyerId' is the document ID and corresponds to the user's UID.",
-          "params": [
-            {
-              "name": "buyerId",
-              "description": "The Firebase UID of the buyer."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Buyer" },
+          "description": "Stores buyer profiles. The 'buyerId' is the document ID and corresponds to the user's UID."
         }
       },
       {
         "path": "/manufacturers/{manufacturerId}/products/{productId}",
         "definition": {
           "entityName": "Product",
-          "schema": {
-            "$ref": "#/backend/entities/Product"
-          },
-          "description": "Stores products owned by a manufacturer. The 'manufacturerId' identifies the owner.",
-          "params": [
-            {
-              "name": "manufacturerId",
-              "description": "The Firebase UID of the manufacturer who owns the product."
-            },
-            {
-              "name": "productId",
-              "description": "The unique ID of the product."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Product" },
+          "description": "Stores products owned by a manufacturer. The 'manufacturerId' identifies the owner."
         }
       },
       {
         "path": "/buyers/{buyerId}/orders/{orderId}",
         "definition": {
           "entityName": "Order",
-          "schema": {
-            "$ref": "#/backend/entities/Order"
-          },
-          "description": "Stores orders placed by a buyer. The 'buyerId' identifies the order owner.",
-          "params": [
-            {
-              "name": "buyerId",
-              "description": "The Firebase UID of the buyer who placed the order."
-            },
-            {
-              "name": "orderId",
-              "description": "The unique ID of the order."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Order" },
+          "description": "Stores orders placed by a buyer. The 'buyerId' identifies the order owner."
         }
       },
       {
         "path": "/buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}",
         "definition": {
           "entityName": "OrderItem",
-          "schema": {
-            "$ref": "#/backend/entities/OrderItem"
-          },
-          "description": "Stores order items within an order.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The ID of the order."
-            },
-            {
-              "name": "buyerId",
-              "description": "The Firebase UID of the buyer who placed the order."
-            },
-            {
-              "name": "orderItemId",
-              "description": "The unique ID of the order item."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/OrderItem" },
+          "description": "Stores order items within an order."
         }
       },
       {
         "path": "/quotations/{quotationId}",
         "definition": {
           "entityName": "Quotation",
-          "schema": {
-            "$ref": "#/backend/entities/Quotation"
-          },
-          "description": "Stores quotations. Includes denormalized 'buyerId' and 'manufacturerId' for authorization independence.",
-          "params": [
-            {
-              "name": "quotationId",
-              "description": "The unique ID of the quotation."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Quotation" },
+          "description": "Stores quotations. Includes denormalized 'buyerId' and 'manufacturerId' for authorization independence."
         }
       },
       {
         "path": "/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}",
         "definition": {
           "entityName": "MarketingCampaign",
-          "schema": {
-            "$ref": "#/backend/entities/MarketingCampaign"
-          },
-          "description": "Stores marketing campaigns owned by a manufacturer. The 'manufacturerId' identifies the owner.",
-          "params": [
-            {
-              "name": "manufacturerId",
-              "description": "The Firebase UID of the manufacturer who owns the campaign."
-            },
-            {
-              "name": "marketingCampaignId",
-              "description": "The unique ID of the marketing campaign."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/MarketingCampaign" },
+          "description": "Stores marketing campaigns owned by a manufacturer. The 'manufacturerId' identifies the owner."
+        }
+      },
+      {
+        "path": "/disputes/{disputeId}",
+        "definition": {
+          "entityName": "Dispute",
+          "schema": { "$ref": "#/backend/entities/Dispute" },
+          "description": "Top-level collection for all disputes for easy querying by admin roles."
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection.  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer (`/manufacturers/{manufacturerId}/products/{productId}`, `/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}`) to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership. Similarly, OrderItems are nested under Orders.\n    *   **Quotations**: Stored in a top-level collection `/quotations/{quotationId}` with denormalized `buyerId` and `manufacturerId`. This enables queries like \"Get all quotations for a manufacturer\" or \"Get all quotations for a buyer\" without complex collection group queries and enables rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` collection enables secure listing based on either party without complex queries. The path-based ownership structure for orders and marketing campaigns allows direct listing for a buyer and manufacturer.\n\nThis structure prioritizes security, scalability, and maintainability, aligning with best practices for Firestore data modeling."
+    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations & Disputes**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
   }
 }
+
+    

@@ -1,26 +1,86 @@
+
+'use client';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FileWarning, CheckCircle, Clock, Users, Package, BarChart, AlertCircle, Handshake } from "lucide-react";
+import { FileWarning, CheckCircle, Clock, Users, Package, BarChart, AlertCircle, Handshake, Loader2 } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
+import Link from "next/link";
+import { Skeleton } from "@/components/ui/skeleton";
 
-const pendingVerifications = [
-  { id: 'V001', entity: 'MegaPlastics Ltd', type: 'Seller', date: '2023-11-15' },
-  { id: 'V002', entity: 'FreshProduce Co.', type: 'Buyer', date: '2023-11-14' },
-];
+// Define types for our Firestore documents
+type VerificationEntity = {
+    id: string;
+    shopName?: string; // For manufacturers
+    companyName?: string; // For buyers
+    verificationStatus?: string;
+    registrationDate: any; // Firestore timestamp
+};
+type Order = {
+    id: string;
+    productName: string; // This might need to be denormalized or fetched
+    status: string;
+    totalAmount: number;
+    buyerId: string; // To look up customer name
+};
+type Dispute = {
+    id: string;
+    orderId: string;
+    buyerId: string;
+    manufacturerId: string;
+    reason: string;
+    status: string;
+};
 
-const recentOrders = [
-  { id: 'ORD-006', product: 'Steel Beams', status: 'Pending', total: 450000, customer: 'BuildRight Const.' },
-  { id: 'ORD-007', product: 'Organic Fertilizers', status: 'Shipped', total: 85000, customer: 'GreenFarms' },
-];
-
-const openDisputes = [
-    { id: 'D001', order: 'ORD-003', user: 'PlastiCo Kenya', reason: 'Incorrect product specifications', status: 'Awaiting response' },
-    { id: 'D002', order: 'ORD-005', user: 'PrintPack Solutions', reason: 'Order cancelled but charged', status: 'Under review' },
-];
 
 export default function OperationsManagerDashboard() {
+    const firestore = useFirestore();
+
+    // --- Data Fetching Hooks ---
+    const pendingVerificationsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        // This is a simplified query. In a real app you might query users and manufacturers separately.
+        return query(collection(firestore, 'manufacturers'), where('verificationStatus', '==', 'Pending Admin'));
+    }, [firestore]);
+    const { data: pendingVerifications, isLoading: isLoadingVerifications } = useCollection<VerificationEntity>(pendingVerificationsQuery);
+    
+    const recentOrdersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collectionGroup(firestore, 'orders'), orderBy('orderDate', 'desc'), limit(5));
+    }, [firestore]);
+    const { data: recentOrders, isLoading: isLoadingOrders } = useCollection<Order>(recentOrdersQuery);
+
+    const openDisputesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'disputes'), where('status', 'in', ['Open', 'Under Review']));
+    }, [firestore]);
+    const { data: openDisputes, isLoading: isLoadingDisputes } = useCollection<Dispute>(openDisputesQuery);
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'users');
+    }, [firestore]);
+    const { data: users, isLoading: isLoadingUsers } = useCollection(usersQuery);
+
+    const pendingOrdersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collectionGroup(firestore, 'orders'), where('status', '==', 'Pending Fulfillment'));
+    }, [firestore]);
+    const {data: pendingOrders, isLoading: isLoadingPendingOrders} = useCollection(pendingOrdersQuery);
+
+    // --- Render Helper Functions ---
+    const renderSkeletonRows = (count: number, columns: number) => Array.from({length: count}).map((_, i) => (
+        <TableRow key={`skel-${i}`}>
+            {Array.from({length: columns}).map((_, j) => (
+                 <TableCell key={`skel-cell-${j}`}><Skeleton className="h-5 w-full" /></TableCell>
+            ))}
+        </TableRow>
+    ));
+
     return (
         <Tabs defaultValue="overview">
             <TabsList className="grid w-full grid-cols-4">
@@ -45,8 +105,8 @@ export default function OperationsManagerDashboard() {
                                     <Users className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">1,257</div>
-                                    <p className="text-xs text-muted-foreground">+30 since last week</p>
+                                    {isLoadingUsers ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold">{users?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Across all roles</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -55,8 +115,8 @@ export default function OperationsManagerDashboard() {
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">84</div>
-                                    <p className="text-xs text-muted-foreground">2 new orders today</p>
+                                    {isLoadingPendingOrders ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold">{pendingOrders?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Awaiting fulfillment</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -65,8 +125,8 @@ export default function OperationsManagerDashboard() {
                                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-destructive">5</div>
-                                    <p className="text-xs text-muted-foreground">1 new dispute filed</p>
+                                    {isLoadingDisputes ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold text-destructive">{openDisputes?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Requiring mediation</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -81,28 +141,19 @@ export default function OperationsManagerDashboard() {
                             </Card>
                         </div>
                         <Card>
-                            <CardHeader>
-                                <CardTitle>Recent Orders</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle>Recent Orders</CardTitle></CardHeader>
                             <CardContent>
                                 <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>Order ID</TableHead>
-                                            <TableHead>Product</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Amount</TableHead>
-                                            <TableHead>Customer</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
+                                    <TableHeader><TableRow><TableHead>Order ID</TableHead><TableHead>Status</TableHead><TableHead>Amount</TableHead><TableHead>Customer</TableHead></TableRow></TableHeader>
                                     <TableBody>
-                                        {recentOrders.map(order => (
+                                        {isLoadingOrders ? renderSkeletonRows(3, 4) : 
+                                            !recentOrders || recentOrders.length === 0 ? <TableRow><TableCell colSpan={4} className="h-24 text-center">No recent orders.</TableCell></TableRow>
+                                            : recentOrders.map(order => (
                                             <TableRow key={order.id}>
                                                 <TableCell>{order.id}</TableCell>
-                                                <TableCell>{order.product}</TableCell>
                                                 <TableCell><Badge variant={order.status === 'Pending' ? 'destructive' : 'secondary'}>{order.status}</Badge></TableCell>
-                                                <TableCell>KES {order.total.toLocaleString()}</TableCell>
-                                                <TableCell>{order.customer}</TableCell>
+                                                <TableCell>KES {order.totalAmount.toLocaleString()}</TableCell>
+                                                <TableCell>{order.buyerId.substring(0, 12)}...</TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
@@ -116,32 +167,20 @@ export default function OperationsManagerDashboard() {
             {/* Approvals Tab */}
             <TabsContent value="approvals">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Pending Verifications</CardTitle>
-                        <CardDescription>Approve or reject new sellers and buyers waiting for platform access.</CardDescription>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Pending Verifications</CardTitle><CardDescription>Approve or reject new sellers and buyers waiting for platform access.</CardDescription></CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Entity Name</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Submission Date</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
+                            <TableHeader><TableRow><TableHead>Entity Name</TableHead><TableHead>Type</TableHead><TableHead>Submission Date</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {pendingVerifications.map((item) => (
+                                {isLoadingVerifications ? renderSkeletonRows(2, 4) :
+                                 !pendingVerifications || pendingVerifications.length === 0 ? <TableRow><TableCell colSpan={4} className="h-24 text-center">No pending verifications.</TableCell></TableRow>
+                                 : pendingVerifications.map((item) => (
                                     <TableRow key={item.id}>
-                                        <TableCell>{item.id}</TableCell>
-                                        <TableCell className="font-medium">{item.entity}</TableCell>
-                                        <TableCell>{item.type}</TableCell>
-                                        <TableCell>{item.date}</TableCell>
-                                        <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm">View Documents</Button>
-                                            <Button size="sm">Approve</Button>
-                                            <Button variant="destructive" size="sm">Reject</Button>
+                                        <TableCell className="font-medium">{item.shopName || item.companyName}</TableCell>
+                                        <TableCell>Manufacturer</TableCell>
+                                        <TableCell>{new Date(item.registrationDate?.seconds * 1000).toLocaleDateString()}</TableCell>
+                                        <TableCell>
+                                            <Button asChild variant="outline" size="sm"><Link href={`/dashboards/admin/verifications/${item.id}`}>Review Documents</Link></Button>
                                         </TableCell>
                                     </TableRow>
                                 ))}
@@ -154,33 +193,20 @@ export default function OperationsManagerDashboard() {
             {/* Disputes Tab */}
             <TabsContent value="disputes">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Open Disputes</CardTitle>
-                        <CardDescription>Mediate and resolve conflicts between buyers and sellers.</CardDescription>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Open Disputes</CardTitle><CardDescription>Mediate and resolve conflicts between buyers and sellers.</CardDescription></CardHeader>
                     <CardContent>
                         <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Dispute ID</TableHead>
-                                    <TableHead>Order ID</TableHead>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Reason</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Action</TableHead>
-                                </TableRow>
-                            </TableHeader>
+                            <TableHeader><TableRow><TableHead>Dispute ID</TableHead><TableHead>Order ID</TableHead><TableHead>Reason</TableHead><TableHead>Status</TableHead><TableHead>Action</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {openDisputes.map((dispute) => (
+                                {isLoadingDisputes ? renderSkeletonRows(1, 5) : 
+                                 !openDisputes || openDisputes.length === 0 ? <TableRow><TableCell colSpan={5} className="h-24 text-center">No open disputes.</TableCell></TableRow>
+                                 : openDisputes.map((dispute) => (
                                     <TableRow key={dispute.id}>
-                                        <TableCell>{dispute.id}</TableCell>
-                                        <TableCell>{dispute.order}</TableCell>
-                                        <TableCell>{dispute.user}</TableCell>
+                                        <TableCell>{dispute.id.substring(0, 10)}...</TableCell>
+                                        <TableCell>{dispute.orderId}</TableCell>
                                         <TableCell>{dispute.reason}</TableCell>
                                         <TableCell><Badge variant="outline">{dispute.status}</Badge></TableCell>
-                                        <TableCell>
-                                            <Button size="sm">Review Case</Button>
-                                        </TableCell>
+                                        <TableCell><Button size="sm">Review Case</Button></TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
@@ -188,45 +214,21 @@ export default function OperationsManagerDashboard() {
                     </CardContent>
                 </Card>
             </TabsContent>
+
              {/* Platform Health Tab */}
             <TabsContent value="platform-health">
                 <Card>
-                    <CardHeader>
-                        <CardTitle>Platform Health & Monitoring</CardTitle>
-                        <CardDescription>Overview of system status and performance metrics.</CardDescription>
-                    </CardHeader>
+                    <CardHeader><CardTitle>Platform Health & Monitoring</CardTitle><CardDescription>Overview of system status and performance metrics.</CardDescription></CardHeader>
                     <CardContent className="grid gap-4 md:grid-cols-2">
-                        <Card className="flex items-center p-4">
-                            <CheckCircle className="h-8 w-8 text-green-500 mr-4"/>
-                            <div>
-                                <p className="font-bold">API Status</p>
-                                <p className="text-sm text-green-500">All Systems Operational</p>
-                            </div>
-                        </Card>
-                         <Card className="flex items-center p-4">
-                            <Clock className="h-8 w-8 text-muted-foreground mr-4"/>
-                            <div>
-                                <p className="font-bold">Average Response Time</p>
-                                <p className="text-sm">120ms</p>
-                            </div>
-                        </Card>
-                        <Card className="flex items-center p-4">
-                            <FileWarning className="h-8 w-8 text-yellow-500 mr-4"/>
-                            <div>
-                                <p className="font-bold">Error Rate</p>
-                                <p className="text-sm">0.05%</p>
-                            </div>
-                        </Card>
-                        <Card className="flex items-center p-4">
-                            <Handshake className="h-8 w-8 text-blue-500 mr-4"/>
-                            <div>
-                                <p className="font-bold">Payment Gateway</p>
-                                <p className="text-sm text-green-500">Connected</p>
-                            </div>
-                        </Card>
+                        <Card className="flex items-center p-4"><CheckCircle className="h-8 w-8 text-green-500 mr-4"/><div><p className="font-bold">API Status</p><p className="text-sm text-green-500">All Systems Operational</p></div></Card>
+                        <Card className="flex items-center p-4"><Clock className="h-8 w-8 text-muted-foreground mr-4"/><div><p className="font-bold">Average Response Time</p><p className="text-sm">120ms</p></div></Card>
+                        <Card className="flex items-center p-4"><FileWarning className="h-8 w-8 text-yellow-500 mr-4"/><div><p className="font-bold">Error Rate</p><p className="text-sm">0.05%</p></div></Card>
+                        <Card className="flex items-center p-4"><Handshake className="h-8 w-8 text-blue-500 mr-4"/><div><p className="font-bold">Payment Gateway</p><p className="text-sm text-green-500">Connected</p></div></Card>
                     </CardContent>
                 </Card>
             </TabsContent>
         </Tabs>
     );
 }
+
+    
