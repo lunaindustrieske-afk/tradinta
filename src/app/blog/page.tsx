@@ -19,10 +19,10 @@ type BlogPost = {
 
 export default function BlogPage() {
   const firestore = useFirestore();
-  const { isUserLoading: isAuthLoading } = useUser(); // Get auth loading state
+  const { isUserLoading: isAuthLoading } = useUser();
 
   const postsQuery = useMemoFirebase(() => {
-    // Wait for both firestore and authentication to be ready
+    // Wait for both firestore and authentication to be ready before creating the query.
     if (!firestore || isAuthLoading) return null;
     return query(
       collection(firestore, 'blogPosts'),

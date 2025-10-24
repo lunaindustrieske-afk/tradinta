@@ -29,7 +29,9 @@ export default function BlogPostPage() {
 
     React.useEffect(() => {
         const fetchPost = async () => {
+            // Wait for both Firestore and authentication to be ready before fetching.
             if (!firestore || !slug || isAuthLoading) return;
+            
             setIsLoading(true);
 
             const postQuery = query(collection(firestore, 'blogPosts'), where('slug', '==', slug), limit(1));
