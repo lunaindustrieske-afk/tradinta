@@ -1,6 +1,6 @@
 'use client';
 
-import { useFirestore } from '@/firebase';
+import { useFirestore, useUser } from '@/firebase';
 import { collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { notFound, useParams } from 'next/navigation';
 import * as React from 'react';
@@ -21,13 +21,14 @@ export default function BlogPostPage() {
     const params = useParams();
     const slug = params.slug as string;
     const firestore = useFirestore();
+    const { isUserLoading: isAuthLoading } = useUser();
     
     const [post, setPost] = React.useState<BlogPost | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
         const fetchPost = async () => {
-            if (!firestore || !slug) return;
+            if (!firestore || !slug || isAuthLoading) return;
             setIsLoading(true);
 
             const postQuery = query(collection(firestore, 'blogPosts'), where('slug', '==', slug), limit(1));
@@ -42,9 +43,9 @@ export default function BlogPostPage() {
         }
 
         fetchPost();
-    }, [firestore, slug]);
+    }, [firestore, slug, isAuthLoading]);
 
-    if (isLoading) {
+    if (isLoading || isAuthLoading) {
         return (
             <div className="container max-w-3xl mx-auto py-12">
                 <Skeleton className="h-8 w-64 mb-8" />

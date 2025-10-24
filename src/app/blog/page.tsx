@@ -1,5 +1,5 @@
 'use client';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,16 +19,21 @@ type BlogPost = {
 
 export default function BlogPage() {
   const firestore = useFirestore();
+  const { isUserLoading: isAuthLoading } = useUser(); // Get auth loading state
+
   const postsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Wait for both firestore and authentication to be ready
+    if (!firestore || isAuthLoading) return null;
     return query(
       collection(firestore, 'blogPosts'),
       where('status', '==', 'published'),
       orderBy('publishedAt', 'desc')
     );
-  }, [firestore]);
+  }, [firestore, isAuthLoading]);
 
   const { data: posts, isLoading } = useCollection<BlogPost>(postsQuery);
+
+  const isDataLoading = isLoading || isAuthLoading;
 
   return (
     <div className="container mx-auto py-12">
@@ -40,7 +45,7 @@ export default function BlogPage() {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {isLoading
+        {isDataLoading
           ? Array.from({ length: 6 }).map((_, i) => (
               <Card key={i}>
                 <Skeleton className="h-48 w-full" />
@@ -82,7 +87,7 @@ export default function BlogPage() {
               </Card>
             ))}
       </div>
-       {posts && posts.length === 0 && !isLoading && (
+       {posts && posts.length === 0 && !isDataLoading && (
         <div className="text-center py-16 text-muted-foreground">
             <p>No articles published yet. Check back soon!</p>
         </div>
