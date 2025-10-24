@@ -6,6 +6,10 @@
       "type": "object",
       "description": "Represents a user's profile information.",
       "properties": {
+        "tradintaId": {
+          "type": "string",
+          "description": "A unique, 8-character, user-friendly identifier."
+        },
         "email": {
           "type": "string",
           "format": "email",
@@ -39,6 +43,7 @@
         }
       },
       "required": [
+        "tradintaId",
         "email",
         "role",
         "fullName",

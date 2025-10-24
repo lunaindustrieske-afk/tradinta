@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2 } from "lucide-react";
+import { nanoid } from "nanoid";
 
 
 function FactoryIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -87,6 +88,7 @@ export default function SignUpPage() {
       const user = userCredential.user;
 
       const userProfileData: {
+        tradintaId: string;
         email: string;
         role: string;
         fullName: string;
@@ -94,6 +96,7 @@ export default function SignUpPage() {
         registrationDate: any;
         referredBy?: string;
       } = {
+        tradintaId: nanoid(8),
         email: user.email!,
         role: role,
         fullName: fullName,
@@ -282,5 +285,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-    

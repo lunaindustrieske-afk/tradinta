@@ -124,6 +124,7 @@ export function TopNav() {
                                 <DropdownMenuItem asChild><Link href="/dashboards/finance">Finance</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/legal-compliance">Legal & Compliance</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/content-management">Content Management</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/user-management">User Management</Link></DropdownMenuItem>
                             </DropdownMenuSubContent>
                           </DropdownMenuPortal>
                         </DropdownMenuSub>
