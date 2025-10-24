@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -39,6 +40,7 @@ type SystemAlert = {
 
 export default function SuperAdminDashboard() {
     const firestore = useFirestore();
+    const [activeTab, setActiveTab] = React.useState('overview');
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -75,7 +77,11 @@ export default function SuperAdminDashboard() {
         }
         return users.map((user) => (
             <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.fullName}</TableCell>
+                <TableCell className="font-medium">
+                     <Link href={`/dashboards/admin/users/${user.id}`} className="hover:underline text-primary">
+                        {user.fullName}
+                     </Link>
+                </TableCell>
                 <TableCell>{user.role}</TableCell>
                 <TableCell><Badge variant="secondary">Active</Badge></TableCell>
                 <TableCell className="space-x-2">
@@ -112,7 +118,7 @@ export default function SuperAdminDashboard() {
 
 
     return (
-        <Tabs defaultValue="overview">
+        <Tabs value={activeTab} onValueChange={setActiveTab} defaultValue="overview">
             <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Platform Overview</TabsTrigger>
                 <TabsTrigger value="user-management">User Management</TabsTrigger>
@@ -128,7 +134,7 @@ export default function SuperAdminDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                             <Card>
+                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('user-management')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                                     <Users className="h-4 w-4 text-muted-foreground" />
@@ -138,7 +144,7 @@ export default function SuperAdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Across all roles</p>
                                 </CardContent>
                             </Card>
-                            <Card>
+                            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('activity-log')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
                                     <ShieldAlert className="h-4 w-4 text-muted-foreground" />
