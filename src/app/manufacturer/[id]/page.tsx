@@ -133,7 +133,7 @@ export default function ManufacturerPage({ params }: { params: { id: string } })
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {manufacturerProducts.map((product) => (
                                 <Card key={product.id} className="overflow-hidden group">
-                                    <Link href={`/products/${product.id}`}>
+                                    <Link href={`/products/${product.manufacturerId}/${product.slug}`}>
                                     <CardContent className="p-0">
                                     <div className="relative aspect-[4/3] overflow-hidden">
                                         <Image

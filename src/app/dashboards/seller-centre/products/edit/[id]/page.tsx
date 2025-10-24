@@ -43,6 +43,7 @@ import { PhotoUpload } from '@/components/photo-upload';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { generateSlug } from '@/lib/utils';
 
 type ProductData = {
     name: string;
@@ -55,6 +56,7 @@ type ProductData = {
     tags: string[];
     category: string;
     subcategory: string;
+    slug: string;
     status: 'draft' | 'published';
 };
 
@@ -178,6 +180,7 @@ export default function EditProductPage() {
     try {
         await updateDoc(productDocRef, {
             name,
+            slug: generateSlug(name),
             description,
             price: Number(price) || 0,
             moq: Number(moq) || 0,
@@ -474,3 +477,5 @@ export default function EditProductPage() {
     </div>
   );
 }
+
+    

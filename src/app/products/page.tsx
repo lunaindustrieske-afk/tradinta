@@ -207,7 +207,7 @@ export default function ProductsPage() {
             {filteredProducts.map((product) => (
               <Card key={product.id} className="overflow-hidden group flex flex-col">
                 <div className="flex-grow">
-                    <Link href={`/products/${product.id}`}>
+                    <Link href={`/products/${product.manufacturerId}/${product.slug}`}>
                         <CardContent className="p-0">
                           <div className="relative aspect-[4/3] overflow-hidden">
                             <Image
@@ -284,3 +284,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+    

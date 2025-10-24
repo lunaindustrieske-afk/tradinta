@@ -41,6 +41,7 @@ import {
 import { PhotoUpload } from '@/components/photo-upload';
 import { useFirestore, useUser } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { generateSlug } from '@/lib/utils';
 
 
 export default function NewProductPage() {
@@ -134,6 +135,7 @@ export default function NewProductPage() {
         await addDoc(productsCollectionRef, {
             manufacturerId: user.uid,
             name,
+            slug: generateSlug(name),
             description,
             price: Number(price) || 0,
             moq: Number(moq) || 0,
@@ -413,3 +415,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
