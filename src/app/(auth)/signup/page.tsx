@@ -271,7 +271,7 @@ export default function SignUpPage() {
       </div>
       <div className="relative hidden lg:block">
         <Image
-            src="https://picsum.photos/seed/signup-bg/1200/1800"
+            src="https://picsum.photos/seed/signup-new/1200/1800"
             alt="Silhouettes of factories and trade routes"
             fill
             className="object-cover"
@@ -282,3 +282,5 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+    

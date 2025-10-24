@@ -21,8 +21,13 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { TopNav } from '@/components/top-nav';
-import { Logo } from '@/components/logo';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 
 const categories = [
   'Packaging',
@@ -124,13 +129,39 @@ export default function HomePage() {
         <div className="flex flex-col gap-12 md:gap-20">
           {/* 1. Hero Section */}
           <section className="relative h-[500px] md:h-[600px] rounded-lg overflow-hidden -mt-8 -mx-4">
-            <Image
-              src="https://picsum.photos/seed/hero-trade/1600/900"
-              alt="African trade and manufacturing"
-              fill
-              className="object-cover"
-              data-ai-hint="industrial trade logistics"
-            />
+            <Carousel className="w-full h-full" opts={{ loop: true }}>
+              <CarouselContent className="h-full">
+                <CarouselItem>
+                  <Image
+                    src="https://picsum.photos/seed/hero-trade/1600/900"
+                    alt="African trade and manufacturing"
+                    fill
+                    className="object-cover"
+                    data-ai-hint="industrial trade logistics"
+                  />
+                </CarouselItem>
+                <CarouselItem>
+                   <Image
+                    src="https://picsum.photos/seed/hero-factory/1600/900"
+                    alt="Modern factory interior"
+                    fill
+                    className="object-cover"
+                    data-ai-hint="modern factory"
+                  />
+                </CarouselItem>
+                 <CarouselItem>
+                   <Image
+                    src="https://picsum.photos/seed/hero-logistics/1600/900"
+                    alt="Logistics and shipping containers"
+                    fill
+                    className="object-cover"
+                    data-ai-hint="shipping containers"
+                  />
+                </CarouselItem>
+              </CarouselContent>
+              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+            </Carousel>
             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
               <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-headline">
                 Powering Africa’s Manufacturers — Buy Direct. Sell Smart.
@@ -331,3 +362,5 @@ export default function HomePage() {
     </>
   );
 }
+
+    
