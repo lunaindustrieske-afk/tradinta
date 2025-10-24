@@ -275,6 +275,26 @@
             "type": "number",
             "description": "Minimum Order Quantity."
         },
+        "weight": {
+          "type": "string",
+          "description": "Weight of the product (e.g., '50kg')."
+        },
+        "dimensions": {
+          "type": "string",
+          "description": "Dimensions of the product (e.g., '80cm x 50cm x 15cm')."
+        },
+        "material": {
+          "type": "string",
+          "description": "The primary material of the product."
+        },
+        "certifications": {
+          "type": "string",
+          "description": "Compliance standards or certifications (e.g., 'KEBS Certified, ISO 9001')."
+        },
+        "packagingDetails": {
+          "type": "string",
+          "description": "Details about how the product is packaged."
+        },
         "createdAt": {
             "type": "string",
             "format": "date-time",

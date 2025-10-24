@@ -57,7 +57,12 @@ type ProductData = {
     category: string;
     subcategory: string;
     slug: string;
-    status: 'draft' | 'published';
+    status: 'draft' | 'published' | 'archived';
+    weight?: string;
+    dimensions?: string;
+    material?: string;
+    certifications?: string;
+    packagingDetails?: string;
 };
 
 export default function EditProductPage() {
@@ -98,6 +103,13 @@ export default function EditProductPage() {
   const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
   const [subcategories, setSubcategories] = React.useState<string[]>([]);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
+
+  // New fields
+  const [weight, setWeight] = React.useState('');
+  const [dimensions, setDimensions] = React.useState('');
+  const [material, setMaterial] = React.useState('');
+  const [certifications, setCertifications] = React.useState('');
+  const [packagingDetails, setPackagingDetails] = React.useState('');
   
   React.useEffect(() => {
     if (productData) {
@@ -110,6 +122,12 @@ export default function EditProductPage() {
         setStock(String(productData.stock || ''));
         setTags(productData.tags || []);
         
+        setWeight(productData.weight || '');
+        setDimensions(productData.dimensions || '');
+        setMaterial(productData.material || '');
+        setCertifications(productData.certifications || '');
+        setPackagingDetails(productData.packagingDetails || '');
+
         if (productData.category) {
             const category = categories.find(c => c.name === productData.category);
             if (category) {
@@ -170,7 +188,7 @@ export default function EditProductPage() {
     setFormKey(Date.now());
   };
 
-  const handleUpdateProduct = async () => {
+  const handleUpdateProduct = async (status: 'draft' | 'published') => {
     if (!productDocRef) {
         toast({ title: 'Error', description: 'Product reference is not available.', variant: 'destructive' });
         return;
@@ -190,6 +208,12 @@ export default function EditProductPage() {
             subcategory: selectedSubCategory || '',
             imageUrl,
             tags,
+            weight,
+            dimensions,
+            material,
+            certifications,
+            packagingDetails,
+            status, // update status
             updatedAt: serverTimestamp(),
         });
 
@@ -246,12 +270,13 @@ export default function EditProductPage() {
           Edit Product
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="outline" size="sm" onClick={() => router.push('/dashboards/seller-centre/products')}>
-            Cancel
-          </Button>
-          <Button size="sm" onClick={handleUpdateProduct} disabled={isSaving}>
+          <Button variant="outline" size="sm" onClick={() => handleUpdateProduct('draft')} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Changes
+            Save as Draft
+          </Button>
+          <Button size="sm" onClick={() => handleUpdateProduct('published')} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save and Publish
           </Button>
         </div>
       </div>
@@ -365,6 +390,35 @@ export default function EditProductPage() {
           </Card>
           <Card>
             <CardHeader>
+              <CardTitle>Specifications & Packaging</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="grid gap-3">
+                  <Label htmlFor="weight">Weight</Label>
+                  <Input id="weight" placeholder="e.g., 50kg" value={weight} onChange={(e) => setWeight(e.target.value)} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="dimensions">Dimensions</Label>
+                  <Input id="dimensions" placeholder="e.g., 80cm x 50cm x 15cm" value={dimensions} onChange={(e) => setDimensions(e.target.value)} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="material">Material</Label>
+                  <Input id="material" placeholder="e.g., Portland Cement Type I" value={material} onChange={(e) => setMaterial(e.target.value)} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="certifications">Standards</Label>
+                  <Input id="certifications" placeholder="e.g., KEBS Certified, ISO 9001" value={certifications} onChange={(e) => setCertifications(e.target.value)} />
+                </div>
+                <div className="grid gap-3 sm:col-span-2">
+                  <Label htmlFor="packagingDetails">Packaging Details</Label>
+                  <Textarea id="packagingDetails" placeholder="Describe the product packaging..." className="min-h-24" value={packagingDetails} onChange={(e) => setPackagingDetails(e.target.value)} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
               <CardTitle>Product Media</CardTitle>
               <CardDescription>
                 Upload high-quality images to showcase your product.
@@ -466,16 +520,15 @@ export default function EditProductPage() {
         </div>
       </div>
       <div className="flex items-center justify-center gap-2 md:hidden">
-         <Button variant="outline" size="sm" onClick={() => router.push('/dashboards/seller-centre/products')}>
-            Cancel
-          </Button>
-          <Button size="sm" onClick={handleUpdateProduct} disabled={isSaving}>
+         <Button variant="outline" size="sm" onClick={() => handleUpdateProduct('draft')} disabled={isSaving}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save Changes
+            Save as Draft
+          </Button>
+          <Button size="sm" onClick={() => handleUpdateProduct('published')} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save and Publish
           </Button>
       </div>
     </div>
   );
 }
-
-    

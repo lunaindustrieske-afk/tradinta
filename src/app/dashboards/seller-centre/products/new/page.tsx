@@ -74,6 +74,13 @@ export default function NewProductPage() {
   const [subcategories, setSubcategories] = React.useState<string[]>([]);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
 
+  // New fields
+  const [weight, setWeight] = React.useState('');
+  const [dimensions, setDimensions] = React.useState('');
+  const [material, setMaterial] = React.useState('');
+  const [certifications, setCertifications] = React.useState('');
+  const [packagingDetails, setPackagingDetails] = React.useState('');
+
   const handleCategoryChange = (value: string) => {
     const category = categories.find((c) => c.name === value);
     if (category) {
@@ -146,6 +153,11 @@ export default function NewProductPage() {
             imageUrl,
             tags,
             status,
+            weight,
+            dimensions,
+            material,
+            certifications,
+            packagingDetails,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -302,6 +314,35 @@ export default function NewProductPage() {
           </Card>
           <Card>
             <CardHeader>
+              <CardTitle>Specifications & Packaging</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="grid gap-3">
+                  <Label htmlFor="weight">Weight</Label>
+                  <Input id="weight" placeholder="e.g., 50kg" value={weight} onChange={(e) => setWeight(e.target.value)} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="dimensions">Dimensions</Label>
+                  <Input id="dimensions" placeholder="e.g., 80cm x 50cm x 15cm" value={dimensions} onChange={(e) => setDimensions(e.target.value)} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="material">Material</Label>
+                  <Input id="material" placeholder="e.g., Portland Cement Type I" value={material} onChange={(e) => setMaterial(e.target.value)} />
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="certifications">Standards</Label>
+                  <Input id="certifications" placeholder="e.g., KEBS Certified, ISO 9001" value={certifications} onChange={(e) => setCertifications(e.target.value)} />
+                </div>
+                <div className="grid gap-3 sm:col-span-2">
+                  <Label htmlFor="packagingDetails">Packaging Details</Label>
+                  <Textarea id="packagingDetails" placeholder="Describe the product packaging..." className="min-h-24" value={packagingDetails} onChange={(e) => setPackagingDetails(e.target.value)} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
               <CardTitle>Product Media</CardTitle>
               <CardDescription>
                 Upload high-quality images to showcase your product.
@@ -415,5 +456,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    

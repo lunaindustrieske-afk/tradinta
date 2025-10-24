@@ -1,10 +1,9 @@
 
 'use client';
 
-import React, from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as allProducts, manufacturers } from '@/app/lib/mock-data';
 import { notFound, useParams } from 'next/navigation';
 import {
   Star,
@@ -36,10 +35,31 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, getDocs } from 'firebase/firestore';
-import { type Product } from '@/lib/definitions';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
+import { type Manufacturer } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { allProducts } from '@/app/lib/mock-data'; // temp for related products
+
+type Product = {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  imageUrl: string;
+  imageHint: string;
+  rating: number;
+  reviewCount: number;
+  manufacturerId: string;
+  weight?: string;
+  dimensions?: string;
+  material?: string;
+  certifications?: string;
+  packagingDetails?: string;
+};
 
 const relatedProducts = allProducts.slice(1, 5); // This should be replaced with real data logic
 
@@ -50,7 +70,7 @@ export default function ProductDetailPage() {
     const firestore = useFirestore();
 
     const [product, setProduct] = React.useState<Product | null>(null);
-    const [manufacturer, setManufacturer] = React.useState<typeof manufacturers[0] | null>(null);
+    const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
@@ -68,7 +88,7 @@ export default function ProductDetailPage() {
             }
 
             const manufacturerDoc = manufSnapshot.docs[0];
-            const manufacturerData = { ...manufacturerDoc.data(), id: manufacturerDoc.id } as typeof manufacturers[0];
+            const manufacturerData = { ...manufacturerDoc.data(), id: manufacturerDoc.id } as Manufacturer;
             setManufacturer(manufacturerData);
 
             // 2. Find the product using the manufacturer UID and slug
@@ -211,7 +231,7 @@ export default function ProductDetailPage() {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                         <p className="text-muted-foreground">SKU</p>
-                        <p className="font-semibold">PROD-{product.id.substring(0, 4).toUpperCase()}</p>
+                        <p className="font-semibold">{product.sku || 'N/A'}</p>
                     </div>
                      <div>
                         <p className="text-muted-foreground">Category</p>
@@ -221,7 +241,7 @@ export default function ProductDetailPage() {
                     </div>
                     <div>
                         <p className="text-muted-foreground">Min. Order (MOQ)</p>
-                        <p className="font-semibold">50 Units</p>
+                        <p className="font-semibold">{product.moq || 1} Units</p>
                     </div>
                      <div>
                         <p className="text-muted-foreground">Lead Time</p>
@@ -289,20 +309,19 @@ export default function ProductDetailPage() {
                 </TabsList>
                 <TabsContent value="description" className="prose prose-sm max-w-none text-muted-foreground mt-4">
                     <p>{product.description}</p>
-                    <p>This industrial-grade cement is manufactured to the highest standards, ensuring optimal performance for all your construction needs. It provides excellent strength and durability for foundations, columns, beams, and slabs. Our automated production process guarantees consistency in every bag.</p>
                 </TabsContent>
                 <TabsContent value="specs" className="mt-4">
                      <Table>
                         <TableBody>
-                            <TableRow><TableCell className="font-medium text-muted-foreground">Weight</TableCell><TableCell>50kg per bag</TableCell></TableRow>
-                            <TableRow><TableCell className="font-medium text-muted-foreground">Dimensions</TableCell><TableCell>80cm x 50cm x 15cm</TableCell></TableRow>
-                            <TableRow><TableCell className="font-medium text-muted-foreground">Material</TableCell><TableCell>Portland Cement Type I</TableCell></TableRow>
-                            <TableRow><TableCell className="font-medium text-muted-foreground">Standards</TableCell><TableCell>KEBS Certified, ASTM C150</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Weight</TableCell><TableCell>{product.weight || 'N/A'}</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Dimensions</TableCell><TableCell>{product.dimensions || 'N/A'}</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Material</TableCell><TableCell>{product.material || 'N/A'}</TableCell></TableRow>
+                            <TableRow><TableCell className="font-medium text-muted-foreground">Standards</TableCell><TableCell>{product.certifications || 'N/A'}</TableCell></TableRow>
                         </TableBody>
                     </Table>
                 </TabsContent>
                  <TabsContent value="packaging" className="mt-4 text-sm text-muted-foreground">
-                    <p>Packed in durable, multi-wall paper bags with a moisture-resistant barrier to ensure product integrity during transport and storage. Each pallet contains 40 bags (2 metric tons), securely shrink-wrapped for stability.</p>
+                    <p>{product.packagingDetails || 'Standard packaging information not available.'}</p>
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4">
                     <h3 className="text-lg font-bold">Customer Reviews</h3>
@@ -339,7 +358,7 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
                     <Button asChild className="w-full">
-                        <Link href={`/manufacturer/${manufacturer.id}`}>View Shop</Link>
+                        <Link href={`/manufacturer/${manufacturer.shopId}`}>View Shop</Link>
                     </Button>
                 </CardContent>
             </Card>
