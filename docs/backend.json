@@ -582,6 +582,21 @@
         "lastUpdated": { "type": "string", "format": "date-time", "description": "Timestamp of the last update." }
       },
       "required": ["id", "title", "slug", "content"]
+    },
+    "SystemAlert": {
+      "title": "System Alert",
+      "type": "object",
+      "description": "Represents a system-level alert for administrative attention.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the alert." },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the alert was generated." },
+        "type": { "type": "string", "description": "A machine-readable key for the alert type (e.g., 'HIGH_ERROR_RATE')." },
+        "severity": { "type": "string", "enum": ["critical", "warning", "info"], "description": "The severity level of the alert." },
+        "message": { "type": "string", "description": "A human-readable summary of the alert." },
+        "status": { "type": "string", "enum": ["new", "acknowledged", "resolved"], "description": "The current status of the alert." },
+        "details": { "type": "object", "description": "An object containing additional data related to the alert." }
+      },
+      "required": ["id", "timestamp", "type", "severity", "message", "status"]
     }
   },
   "auth": {
@@ -699,8 +714,16 @@
           "schema": { "$ref": "#/backend/entities/SitePage" },
           "description": "Stores content for static pages like 'About Us', 'Privacy Policy', etc."
         }
+      },
+      {
+        "path": "/systemAlerts/{alertId}",
+        "definition": {
+          "entityName": "SystemAlert",
+          "schema": { "$ref": "#/backend/entities/SystemAlert" },
+          "description": "Top-level collection for all system-generated alerts for admin review."
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, & ActivityLogs**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
+    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages, SystemAlerts).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, ActivityLogs, SystemAlerts**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`, `/systemAlerts/{alertId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
   }
 }

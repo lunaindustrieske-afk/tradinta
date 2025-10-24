@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserPlus, ShieldAlert, BarChart, Settings, Users, Loader2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
@@ -28,6 +28,15 @@ type ActivityLog = {
     details: string;
 };
 
+type SystemAlert = {
+    id: string;
+    timestamp: any;
+    type: string;
+    severity: 'critical' | 'warning' | 'info';
+    message: string;
+    status: 'new' | 'acknowledged' | 'resolved';
+}
+
 export default function SuperAdminDashboard() {
     const firestore = useFirestore();
 
@@ -40,9 +49,15 @@ export default function SuperAdminDashboard() {
         if (!firestore) return null;
         return query(collection(firestore, 'activityLogs'), orderBy('timestamp', 'desc'), limit(50));
     }, [firestore]);
+    
+    const criticalAlertsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'systemAlerts'), where('status', '==', 'new'), where('severity', '==', 'critical'));
+    }, [firestore]);
 
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
     const { data: activityLogs, isLoading: isLoadingLogs } = useCollection<ActivityLog>(activityLogsQuery);
+    const { data: criticalAlerts, isLoading: isLoadingAlerts } = useCollection<SystemAlert>(criticalAlertsQuery);
 
     const renderUserRows = () => {
         if (isLoadingUsers) {
@@ -100,8 +115,8 @@ export default function SuperAdminDashboard() {
         <Tabs defaultValue="overview">
             <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Platform Overview</TabsTrigger>
-                <TabsTrigger value="admin-management">User Management</TabsTrigger>
-                <TabsTrigger value="system-health">Activity Log</TabsTrigger>
+                <TabsTrigger value="user-management">User Management</TabsTrigger>
+                <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
                 <TabsTrigger value="global-settings">Global Settings</TabsTrigger>
             </TabsList>
 
@@ -111,7 +126,7 @@ export default function SuperAdminDashboard() {
                         <CardTitle>Super Admin Dashboard</CardTitle>
                         <CardDescription>Full control of the platform. Oversee all operations, users, and configurations.</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-6">
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -125,12 +140,16 @@ export default function SuperAdminDashboard() {
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">System Alerts</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
                                     <ShieldAlert className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-green-600">0</div>
-                                    <p className="text-xs text-muted-foreground">No high severity alerts</p>
+                                    {isLoadingAlerts ? <Loader2 className="h-6 w-6 animate-spin" /> : 
+                                        <div className={`text-2xl font-bold ${criticalAlerts && criticalAlerts.length > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                            {criticalAlerts?.length || 0}
+                                        </div>
+                                    }
+                                    <p className="text-xs text-muted-foreground">New critical issues requiring attention</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -154,11 +173,46 @@ export default function SuperAdminDashboard() {
                                 </CardContent>
                             </Card>
                         </div>
+                        {criticalAlerts && criticalAlerts.length > 0 && (
+                            <Card className="border-destructive">
+                                <CardHeader>
+                                    <CardTitle className="text-destructive flex items-center gap-2">
+                                        <ShieldAlert /> Critical System Alerts
+                                    </CardTitle>
+                                    <CardDescription>The following issues require immediate attention.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>Message</TableHead>
+                                                <TableHead>Type</TableHead>
+                                                <TableHead>Time</TableHead>
+                                                <TableHead>Actions</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {criticalAlerts.map(alert => (
+                                                <TableRow key={alert.id}>
+                                                    <TableCell className="font-medium">{alert.message}</TableCell>
+                                                    <TableCell><Badge variant="destructive">{alert.type}</Badge></TableCell>
+                                                    <TableCell className="text-xs">{new Date(alert.timestamp?.seconds * 1000).toLocaleTimeString()}</TableCell>
+                                                    <TableCell className="space-x-2">
+                                                        <Button size="sm">Acknowledge</Button>
+                                                        <Button size="sm" variant="outline">View Details</Button>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </CardContent>
+                            </Card>
+                        )}
                     </CardContent>
                 </Card>
             </TabsContent>
             
-            <TabsContent value="admin-management">
+            <TabsContent value="user-management">
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
@@ -187,7 +241,7 @@ export default function SuperAdminDashboard() {
                 </Card>
             </TabsContent>
 
-            <TabsContent value="system-health">
+            <TabsContent value="activity-log">
                 <Card>
                     <CardHeader>
                         <CardTitle>Platform Activity Log</CardTitle>
