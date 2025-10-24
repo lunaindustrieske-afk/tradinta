@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -33,7 +34,12 @@ import { getAITagsAndDescription, type AIFormState } from '@/app/lib/actions';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { categories, Category } from '@/app/lib/categories';
-import { SelectGroup } from '@radix-ui/react-select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 export default function NewProductPage() {
   const { toast } = useToast();
@@ -45,25 +51,24 @@ export default function NewProductPage() {
 
   const [formKey, setFormKey] = React.useState(Date.now());
   const [isGenerating, setIsGenerating] = React.useState(false);
-  
-  const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
+
+  const [selectedCategory, setSelectedCategory] =
+    React.useState<Category | null>(null);
   const [subcategories, setSubcategories] = React.useState<string[]>([]);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
-
 
   const handleCategoryChange = (value: string) => {
     const category = categories.find((c) => c.name === value);
     if (category) {
-        setSelectedCategory(category);
-        setSubcategories(category.subcategories);
-        setSelectedSubCategory('');
+      setSelectedCategory(category);
+      setSubcategories(category.subcategories);
+      setSelectedSubCategory('');
     } else {
-        setSelectedCategory(null);
-        setSubcategories([]);
-        setSelectedSubCategory('');
+      setSelectedCategory(null);
+      setSubcategories([]);
+      setSelectedSubCategory('');
     }
-  }
-
+  };
 
   React.useEffect(() => {
     if (state.message) {
@@ -74,7 +79,7 @@ export default function NewProductPage() {
           description: 'Tags and description have been generated.',
         });
       } else if (state.errors) {
-         toast({
+        toast({
           title: 'Validation Error',
           description: state.message,
           variant: 'destructive',
@@ -93,10 +98,10 @@ export default function NewProductPage() {
     setIsGenerating(true);
     dispatch(formData);
   };
-  
+
   const resetForm = () => {
     setFormKey(Date.now());
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -112,9 +117,9 @@ export default function NewProductPage() {
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
           <Button variant="outline" size="sm">
-            Discard
+            Save as Draft
           </Button>
-          <Button size="sm">Save Product</Button>
+          <Button size="sm">Submit for Review</Button>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
@@ -138,7 +143,7 @@ export default function NewProductPage() {
                   />
                 </div>
                 <div className="grid gap-3">
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">Detailed Description</Label>
                   <Textarea
                     id="description"
                     placeholder="Provide a detailed description of your product, including features, benefits, and applications."
@@ -147,10 +152,95 @@ export default function NewProductPage() {
                 </div>
               </div>
             </CardContent>
+            <CardFooter>
+              <Accordion type="single" collapsible className="w-full">
+                <AccordionItem value="ai-tagging">
+                  <AccordionTrigger>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                      <span>AI Smart-Tagging & Description</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <form action={handleGenerate} key={formKey} className="p-4">
+                      <div className="grid gap-6">
+                        <div className="grid gap-3">
+                          <Label htmlFor="productName">Product Name</Label>
+                          <Input
+                            id="productName"
+                            name="productName"
+                            type="text"
+                            className="w-full"
+                            defaultValue={state.productName || ''}
+                            placeholder="e.g. Industrial Grade Cement"
+                          />
+                          {state.errors?.productName && (
+                            <p className="text-sm text-destructive">
+                              {state.errors.productName[0]}
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid gap-3">
+                          <Label htmlFor="productDetails">
+                            Product Details
+                          </Label>
+                          <Textarea
+                            id="productDetails"
+                            name="productDetails"
+                            defaultValue={state.productDetails || ''}
+                            placeholder="Provide key details for the AI. e.g., '50kg bag of high-strength Portland cement for construction projects. KEBS certified.'"
+                          />
+                          {state.errors?.productDetails && (
+                            <p className="text-sm text-destructive">
+                              {state.errors.productDetails[0]}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex justify-between">
+                            <Button type="button" variant="ghost" onClick={resetForm}>Reset</Button>
+                            <Button type="submit" disabled={isGenerating}>
+                            {isGenerating ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                                <Sparkles className="mr-2 h-4 w-4" />
+                            )}
+                            Generate with AI
+                            </Button>
+                        </div>
+                      </div>
+                    </form>
+                    {state.output && (
+                      <div className="p-4 border-t">
+                        <div className="grid gap-6">
+                          <div className="grid gap-3">
+                            <Label>Generated Tags</Label>
+                            <div className="flex flex-wrap gap-2">
+                              {state.output.tags.map((tag) => (
+                                <Badge key={tag} variant="secondary">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="grid gap-3">
+                            <Label>Generated Description</Label>
+                            <Textarea
+                              readOnly
+                              value={state.output.description}
+                              className="bg-muted"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </CardFooter>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Product Images</CardTitle>
+              <CardTitle>Product Media</CardTitle>
               <CardDescription>
                 Upload high-quality images to showcase your product.
               </CardDescription>
@@ -170,80 +260,6 @@ export default function NewProductPage() {
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>AI Smart-Tagging</CardTitle>
-              <CardDescription>
-                Use AI to automatically generate tags and a description for
-                better discoverability.
-              </CardDescription>
-            </CardHeader>
-            <form action={handleGenerate} key={formKey}>
-              <CardContent>
-                <div className="grid gap-6">
-                  <div className="grid gap-3">
-                    <Label htmlFor="productName">Product Name</Label>
-                    <Input
-                      id="productName"
-                      name="productName"
-                      type="text"
-                      className="w-full"
-                      defaultValue={state.productName || ''}
-                      placeholder="e.g. Industrial Grade Cement"
-                    />
-                     {state.errors?.productName && (
-                      <p className="text-sm text-destructive">{state.errors.productName[0]}</p>
-                    )}
-                  </div>
-                  <div className="grid gap-3">
-                    <Label htmlFor="productDetails">Product Details</Label>
-                    <Textarea
-                      id="productDetails"
-                      name="productDetails"
-                      defaultValue={state.productDetails || ''}
-                      placeholder="Provide key details for the AI. e.g., '50kg bag of high-strength Portland cement for construction projects. KEBS certified.'"
-                    />
-                    {state.errors?.productDetails && (
-                      <p className="text-sm text-destructive">{state.errors.productDetails[0]}</p>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="justify-between border-t px-6 py-4">
-                <Button type="button" variant="ghost" onClick={resetForm}>Reset</Button>
-                <Button type="submit" disabled={isGenerating}>
-                  {isGenerating ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Sparkles className="mr-2 h-4 w-4" />
-                  )}
-                  Generate with AI
-                </Button>
-              </CardFooter>
-            </form>
-             {state.output && (
-              <CardContent>
-                  <div className="grid gap-6">
-                    <div className="grid gap-3">
-                        <Label>Generated Tags</Label>
-                         <div className="flex flex-wrap gap-2">
-                            {state.output.tags.map(tag => (
-                                <Badge key={tag} variant="secondary">{tag}</Badge>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="grid gap-3">
-                        <Label>Generated Description</Label>
-                        <Textarea
-                            readOnly
-                            value={state.output.description}
-                            className="bg-muted"
-                        />
-                    </div>
-                  </div>
-              </CardContent>
-            )}
-          </Card>
         </div>
         <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
           <Card>
@@ -256,6 +272,10 @@ export default function NewProductPage() {
                   <Label htmlFor="price">Base Price (KES)</Label>
                   <Input id="price" type="number" placeholder="0.00" />
                 </div>
+                 <div className="grid gap-3">
+                  <Label htmlFor="moq">Minimum Order Quantity (MOQ)</Label>
+                  <Input id="moq" type="number" placeholder="1" />
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -265,6 +285,10 @@ export default function NewProductPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-6">
+                 <div className="grid gap-3">
+                  <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
+                  <Input id="sku" type="text" placeholder="SKU-123" />
+                </div>
                 <div className="grid gap-3">
                   <Label htmlFor="stock">Stock</Label>
                   <Input id="stock" type="number" placeholder="0" />
@@ -275,7 +299,7 @@ export default function NewProductPage() {
           <Card>
             <CardHeader>
               <CardTitle>Category</CardTitle>
-               <CardDescription>
+              <CardDescription>
                 Select a category and sub-category for your product.
               </CardDescription>
             </CardHeader>
@@ -288,28 +312,35 @@ export default function NewProductPage() {
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                        {categories.map((cat) => (
-                            <SelectItem key={cat.name} value={cat.name}>{cat.name}</SelectItem>
-                        ))}
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.name} value={cat.name}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                 </div>
-                 <div className="grid gap-3">
-                    <Label htmlFor="subcategory">Sub-category</Label>
-                    <Select
-                        value={selectedSubCategory}
-                        onValueChange={setSelectedSubCategory}
-                        disabled={!selectedCategory}
+                <div className="grid gap-3">
+                  <Label htmlFor="subcategory">Sub-category</Label>
+                  <Select
+                    value={selectedSubCategory}
+                    onValueChange={setSelectedSubCategory}
+                    disabled={!selectedCategory}
+                  >
+                    <SelectTrigger
+                      id="subcategory"
+                      aria-label="Select sub-category"
                     >
-                        <SelectTrigger id="subcategory" aria-label="Select sub-category">
-                        <SelectValue placeholder="Select sub-category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {subcategories.map(sub => (
-                                <SelectItem key={sub} value={sub}>{sub}</SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                      <SelectValue placeholder="Select sub-category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subcategories.map((sub) => (
+                        <SelectItem key={sub} value={sub}>
+                          {sub}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -318,10 +349,12 @@ export default function NewProductPage() {
       </div>
       <div className="flex items-center justify-center gap-2 md:hidden">
         <Button variant="outline" size="sm">
-          Discard
+          Save as Draft
         </Button>
-        <Button size="sm">Save Product</Button>
+        <Button size="sm">Submit for Review</Button>
       </div>
     </div>
   );
 }
+
+    

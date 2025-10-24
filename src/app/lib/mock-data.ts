@@ -106,7 +106,7 @@ export const products: Product[] = [
     stock: 1200,
     category: 'Building Materials',
     imageUrl: PlaceHolderImages.find(p => p.id === 'product1')?.imageUrl || '',
-    imageHint: 'construction cement',
+    imageHint: PlaceHolderImages.find(p => p.id === 'product1')?.imageHint || 'construction cement',
     rating: 4.8,
     reviewCount: 150,
     manufacturerId: 'mfg-1'
@@ -119,7 +119,7 @@ export const products: Product[] = [
     stock: 800,
     category: 'Food & Beverage',
     imageUrl: PlaceHolderImages.find(p => p.id === 'product2')?.imageUrl || '',
-    imageHint: 'flour sack',
+    imageHint: PlaceHolderImages.find(p => p.id === 'product2')?.imageHint || 'flour sack',
     rating: 4.9,
     reviewCount: 210,
     manufacturerId: 'mfg-2'
@@ -132,7 +132,7 @@ export const products: Product[] = [
     stock: 50,
     category: 'Plastics & Polymers',
     imageUrl: PlaceHolderImages.find(p => p.id === 'product3')?.imageUrl || '',
-    imageHint: 'plastic pellets',
+    imageHint: PlaceHolderImages.find(p => p.id === 'product3')?.imageHint || 'plastic pellets',
     rating: 4.7,
     reviewCount: 85,
     manufacturerId: 'mfg-3'
@@ -145,7 +145,7 @@ export const products: Product[] = [
     stock: 300,
     category: 'Packaging',
     imageUrl: PlaceHolderImages.find(p => p.id === 'product4')?.imageUrl || '',
-    imageHint: 'paper rolls',
+    imageHint: PlaceHolderImages.find(p => p.id === 'product4')?.imageHint || 'paper rolls',
     rating: 4.6,
     reviewCount: 120,
     manufacturerId: 'mfg-1' // Example
@@ -158,7 +158,7 @@ export const products: Product[] = [
     stock: 500,
     category: 'Food & Beverage',
     imageUrl: PlaceHolderImages.find(p => p.id === 'product5')?.imageUrl || '',
-    imageHint: 'cooking oil',
+    imageHint: PlaceHolderImages.find(p => p.id === 'product5')?.imageHint || 'cooking oil',
     rating: 4.8,
     reviewCount: 180,
     manufacturerId: 'mfg-2'
