@@ -3,207 +3,345 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is made by a signed-in user.
-     * @returns {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the resource.
-     * @param {string} userId - The user ID to compare against the request's authentication UID.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the resource and the resource exists.
-     *              This is for destructive operations.
-     * @param {string} userId - The user ID to compare against the request's authentication UID.
-     * @returns {boolean} True if the user is the owner and the resource exists, false otherwise.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(resource);
-    }
-
-    /**
-     * @description Enforces that the incoming resource data contains the correct owner ID on create.
-     * @param {string} userId - The user ID that should match the request's authentication UID.
-     * @returns {boolean} True if the owner ID in the data matches the authenticated user's ID, false otherwise.
-     */
-    function isCreatingWithOwnerId(userId) {
-        return isSignedIn() && request.resource.data.id == userId;
-    }
-
-    /**
-     * @description Enforces that the resource data's owner ID is immutable.
-     * @param {string} userId - The user ID that should match the request's authentication UID.
-     * @returns {boolean} True if the owner ID in the data matches the existing resource's owner ID, false otherwise.
-     */
-    function isOwnerIdImmutable(userId) {
-        return request.resource.data.id == resource.data.id;
-    }
-    
-    /**
-     * @description Rule for user profiles.
+     * @description Controls access to user profile data.
      * @path /users/{userId}
-     * @allow (create) - Authenticated user creates their own profile (userId matches auth.uid).
-     * @allow (get) - Authenticated user can get their own profile.
-     * @allow (update) - Authenticated user can update their own profile.
-     * @deny  (create) - Authenticated user tries to create a profile with a different userId.
-     * @deny  (delete) - No one can delete a user profile.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Signed-in user can create their own profile.
+     * @allow (get) Signed-in user can get their own profile.
+     * @allow (update) Signed-in user can update their own profile.
+     * @allow (delete) Signed-in user can delete their own profile.
+     * @deny (create) Non-signed-in user cannot create a profile.
+     * @deny (update) Signed-in user cannot update another user's profile.
+     * @deny (delete) Signed-in user cannot delete another user's profile.
+     * @deny (list) Listing all users is not allowed.
+     * @principle Enforces document ownership for user profiles.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Rules for manufacturer profiles.
+     * @description Controls access to manufacturer profile data.
      * @path /manufacturers/{manufacturerId}
-     * @allow (create) - Authenticated user creates their own profile (manufacturerId matches auth.uid).
-     * @allow (get) - Anyone can get a manufacturer profile.
-     * @allow (update) - Authenticated user can update their own profile.
-     * @deny (create) - Authenticated user tries to create a profile with a different manufacturerId.
-     * @deny (delete) - No one can delete a manufacturer profile.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Signed-in user can create their own manufacturer profile.
+     * @allow (get) Signed-in user can get their own manufacturer profile.
+     * @allow (update) Signed-in user can update their own manufacturer profile.
+     * @allow (delete) Signed-in user can delete their own manufacturer profile.
+     * @deny (create) Non-signed-in user cannot create a manufacturer profile.
+     * @deny (update) Signed-in user cannot update another manufacturer's profile.
+     * @deny (delete) Signed-in user cannot delete another manufacturer's profile.
+     * @deny (list) Listing all manufacturers is not allowed.
+     * @principle Enforces document ownership for manufacturer profiles.
      */
     match /manufacturers/{manufacturerId} {
-      allow get: if true;
+      allow get: if isSignedIn() && isOwner(manufacturerId);
       allow list: if false;
-      allow create: if isOwner(manufacturerId);
-      allow update: if isOwner(manufacturerId);
-      allow delete: if false;
+      allow create: if isSignedIn() && request.auth.uid == manufacturerId;
+      allow update: if isSignedIn() && isOwner(manufacturerId);
+      allow delete: if isSignedIn() && isOwner(manufacturerId);
     }
 
     /**
-     * @description Rules for buyer profiles.
+     * @description Controls access to buyer profile data.
      * @path /buyers/{buyerId}
-     * @allow (create) - Authenticated user creates their own profile (buyerId matches auth.uid).
-     * @allow (get) - Anyone can get a buyer profile.
-     * @allow (update) - Authenticated user can update their own profile.
-     * @deny (create) - Authenticated user tries to create a profile with a different buyerId.
-     * @deny (delete) - No one can delete a buyer profile.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Signed-in user can create their own buyer profile.
+     * @allow (get) Signed-in user can get their own buyer profile.
+     * @allow (update) Signed-in user can update their own buyer profile.
+     * @allow (delete) Signed-in user can delete their own buyer profile.
+     * @deny (create) Non-signed-in user cannot create a buyer profile.
+     * @deny (update) Signed-in user cannot update another buyer's profile.
+     * @deny (delete) Signed-in user cannot delete another buyer's profile.
+     * @deny (list) Listing all buyers is not allowed.
+     * @principle Enforces document ownership for buyer profiles.
      */
     match /buyers/{buyerId} {
-      allow get: if true;
+      allow get: if isSignedIn() && isOwner(buyerId);
       allow list: if false;
-      allow create: if isOwner(buyerId);
-      allow update: if isOwner(buyerId);
-      allow delete: if false;
+      allow create: if isSignedIn() && request.auth.uid == buyerId;
+      allow update: if isSignedIn() && isOwner(buyerId);
+      allow delete: if isSignedIn() && isOwner(buyerId);
     }
 
     /**
-     * @description Rules for products owned by a manufacturer.
+     * @description Controls access to products owned by a manufacturer.
      * @path /manufacturers/{manufacturerId}/products/{productId}
-     * @allow (create) - Manufacturer can create a product under their ID.
-     * @allow (get) - Anyone can get a product.
-     * @allow (update) - Manufacturer can update their own product.
-     * @deny (create) - Someone else tries to create a product under a different manufacturerId.
-     * @deny (delete) - Someone else tries to delete a product under a different manufacturerId.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Manufacturer can create products under their profile.
+     * @allow (get) Any signed-in user can read a product.
+     * @allow (update) Manufacturer can update products under their profile.
+     * @allow (delete) Manufacturer can delete products under their profile.
+     * @deny (create) Non-signed-in user cannot create a product.
+     * @deny (update) Signed-in user cannot update another manufacturer's product.
+     * @deny (delete) Signed-in user cannot delete another manufacturer's product.
+     * @deny (list) Listing all products for a manufacturer is allowed for the manufacturer.
+     * @principle Enforces manufacturer ownership for products.
      */
     match /manufacturers/{manufacturerId}/products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isOwner(manufacturerId);
-      allow update: if isOwner(manufacturerId);
-      allow delete: if isOwner(manufacturerId);
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && isOwner(manufacturerId);
+      allow create: if isSignedIn() && getManufacturerId() == manufacturerId;
+      allow update: if isSignedIn() && getManufacturerId() == manufacturerId;
+      allow delete: if isSignedIn() && getManufacturerId() == manufacturerId;
     }
 
     /**
-     * @description Rules for orders placed by a buyer.
+     * @description Controls access to orders placed by a buyer.
      * @path /buyers/{buyerId}/orders/{orderId}
-     * @allow (create) - Buyer can create an order under their ID.
-     * @allow (get) - Authenticated user can get an order.
-     * @allow (update) - Buyer can update their own order.
-     * @deny (create) - Someone else tries to create an order under a different buyerId.
-     * @deny (delete) - Someone else tries to delete an order under a different buyerId.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Buyer can create orders under their profile.
+     * @allow (get) Signed-in user can get their own order.
+     * @allow (update) Buyer can update orders under their profile.
+     * @allow (delete) Buyer can delete orders under their profile.
+     * @deny (create) Non-signed-in user cannot create an order.
+     * @deny (update) Signed-in user cannot update another buyer's order.
+     * @deny (delete) Signed-in user cannot delete another buyer's order.
+     * @deny (list) Listing all orders is allowed for the order owner.
+     * @principle Enforces buyer ownership for orders.
      */
     match /buyers/{buyerId}/orders/{orderId} {
-      allow get: if isOwner(buyerId);
-      allow list: if false;
-      allow create: if isOwner(buyerId);
-      allow update: if isOwner(buyerId);
-      allow delete: if isOwner(buyerId);
+      allow get: if isSignedIn() && isOwner(buyerId);
+      allow list: if isSignedIn() && isOwner(buyerId);
+      allow create: if isSignedIn() && getBuyerId() == buyerId;
+      allow update: if isSignedIn() && getBuyerId() == buyerId;
+      allow delete: if isSignedIn() && getBuyerId() == buyerId;
     }
 
     /**
-     * @description Rules for order items within an order.
+     * @description Controls access to order items within an order.
      * @path /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}
-     * @allow (create) - Buyer can create an order item under their order.
-     * @allow (get) - Authenticated user can get an order item.
-     * @allow (update) - Buyer can update their own order item.
-     * @deny (create) - Someone else tries to create an order item under a different orderId.
-     * @deny (delete) - Someone else tries to delete an order item under a different orderId.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Buyer can create order items under their order.
+     * @allow (get) Signed-in user can get their own order item.
+     * @allow (update) Buyer can update order items under their order.
+     * @allow (delete) Buyer can delete order items under their order.
+     * @deny (create) Non-signed-in user cannot create an order item.
+     * @deny (update) Signed-in user cannot update another buyer's order item.
+     * @deny (delete) Signed-in user cannot delete another buyer's order item.
+     * @deny (list) Listing all order items for an order is allowed for the order owner.
+     * @principle Enforces buyer ownership for order items.
      */
     match /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} {
-      allow get: if isOwner(buyerId);
-      allow list: if false;
-      allow create: if isOwner(buyerId);
-      allow update: if isOwner(buyerId);
-      allow delete: if isOwner(buyerId);
+      allow get: if isSignedIn() && isOrderOwner(buyerId, orderId);
+      allow list: if isSignedIn() && isOrderOwner(buyerId, orderId);
+      allow create: if isSignedIn() && isOrderOwner(buyerId, orderId) && getBuyerId() == buyerId;
+      allow update: if isSignedIn() && isOrderOwner(buyerId, orderId) && getBuyerId() == buyerId;
+      allow delete: if isSignedIn() && isOrderOwner(buyerId, orderId) && getBuyerId() == buyerId;
     }
 
     /**
-     * @description Rules for quotations.
+     * @description Controls access to quotations.
      * @path /quotations/{quotationId}
-     * @allow (create) - Authenticated user can create a quotation.
-     * @allow (get) - Authenticated user can get a quotation.
-     * @allow (update) - Authenticated user can update a quotation.
-     * @deny (delete) - No one can delete a quotation.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Signed-in user can create a quotation.
+     * @allow (get) Any signed-in user can read a quotation.
+     * @allow (update) Buyer or Manufacturer can update a quotation where they are involved.
+     * @allow (delete) Buyer or Manufacturer can delete a quotation where they are involved.
+     * @deny (create) Non-signed-in user cannot create a quotation.
+     * @deny (update) Signed-in user cannot update a quotation where they are not involved.
+     * @deny (delete) Signed-in user cannot delete a quotation where they are not involved.
+     * @deny (list) Listing all quotations is not allowed for non ops users.
+     * @principle Enforces that quotations can only be created, updated, or deleted by the involved buyer or manufacturer.
      */
     match /quotations/{quotationId} {
       allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if false;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && (request.resource.data.buyerId == request.auth.uid || request.resource.data.manufacturerId == request.auth.uid);
+      allow update: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      allow delete: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
     }
 
     /**
-     * @description Rules for marketing campaigns owned by a manufacturer.
+     * @description Controls access to marketing campaigns owned by a manufacturer.
      * @path /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}
-     * @allow (create) - Manufacturer can create a marketing campaign under their ID.
-     * @allow (get) - Authenticated user can get a marketing campaign.
-     * @allow (update) - Manufacturer can update their own marketing campaign.
-     * @deny (create) - Someone else tries to create a marketing campaign under a different manufacturerId.
-     * @deny (delete) - Someone else tries to delete a marketing campaign under a different manufacturerId.
-     * @principle Enforces document ownership for writes; reads are public.
+     * @allow (create) Manufacturer can create campaigns under their profile.
+     * @allow (get) Any signed-in user can read marketing campaign.
+     * @allow (update) Manufacturer can update campaigns under their profile.
+     * @allow (delete) Manufacturer can delete campaigns under their profile.
+     * @deny (create) Non-signed-in user cannot create a campaign.
+     * @deny (update) Signed-in user cannot update another manufacturer's campaign.
+     * @deny (delete) Signed-in user cannot delete another manufacturer's campaign.
+     * @deny (list) Listing all campaigns for a manufacturer is allowed for the manufacturer.
+     * @principle Enforces manufacturer ownership for marketing campaigns.
      */
     match /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId} {
       allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isOwner(manufacturerId);
-      allow update: if isOwner(manufacturerId);
-      allow delete: if isOwner(manufacturerId);
+      allow list: if isSignedIn() && isOwner(manufacturerId);
+      allow create: if isSignedIn() && getManufacturerId() == manufacturerId;
+      allow update: if isSignedIn() && getManufacturerId() == manufacturerId;
+      allow delete: if isSignedIn() && getManufacturerId() == manufacturerId;
     }
 
-     /**
-      * @description Rules for disputes.
-      * @path /disputes/{disputeId}
-      * @allow (create) - Authenticated user can create a dispute.
-      * @allow (get) - Authenticated user can get a dispute.
-      * @allow (update) - Authenticated user can update a dispute.
-      * @deny (delete) - No one can delete a dispute.
-      */
+    /**
+     * @description Controls access to disputes.
+     * @path /disputes/{disputeId}
+     * @allow (get) Any signed-in user can read dispute.
+     * @allow (create) Signed-in user can create dispute.
+     * @allow (update) Signed-in user can update dispute.
+     * @allow (delete) Signed-in user can delete dispute.
+     * @deny (create) Non-signed-in user cannot create a dispute.
+     * @deny (update) Signed-in user cannot update dispute where they are not involved.
+     * @deny (delete) Signed-in user cannot delete dispute where they are not involved.
+     * @deny (list) Listing all disputes is not allowed for non-ops users.
+     * @principle Enforces that disputes can only be created, updated, or deleted by the involved parties.
+     */
     match /disputes/{disputeId} {
       allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if false;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && (request.resource.data.buyerId == request.auth.uid || request.resource.data.manufacturerId == request.auth.uid);
+      allow update: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      allow delete: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
     }
+
+    /**
+     * @description Controls access to activity logs.
+     * @path /activityLogs/{logId}
+     * @allow (get) Signed-in user can get activity log.
+     * @allow (create) Signed-in user can create activity log.
+     * @allow (update) Signed-in user can update activity log.
+     * @allow (delete) Signed-in user can delete activity log.
+     * @deny (create) Non-signed-in user cannot create activity log.
+     * @deny (list) Listing all activity logs is not allowed for non-ops users.
+     * @principle Only users with the 'ops' claim can read or write activity logs.
+     */
+    match /activityLogs/{logId} {
+      allow get: if isSignedIn() && request.auth.token.ops == true;
+      allow list: if isSignedIn() && request.auth.token.ops == true;
+      allow create: if isSignedIn() && request.auth.token.ops == true;
+      allow update: if isSignedIn() && request.auth.token.ops == true;
+      allow delete: if isSignedIn() && request.auth.token.ops == true;
+    }
+
+    /**
+     * @description Controls access to homepage banners.
+     * @path /homepageBanners/{bannerId}
+     * @allow (get) Any user can read homepage banner.
+     * @allow (list) Any user can list homepage banners.
+     * @allow (create) TODO: Add authorization for banner creation.
+     * @allow (update) TODO: Add authorization for banner updates.
+     * @allow (delete) TODO: Add authorization for banner deletion.
+     * @principle Public read access with restricted write access (TODO).
+     */
+    match /homepageBanners/{bannerId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && request.auth.token.admin == true;  // TODO: Add authorization for banner creation
+      allow update: if isSignedIn() && request.auth.token.admin == true;  // TODO: Add authorization for banner updates
+      allow delete: if isSignedIn() && request.auth.token.admin == true;  // TODO: Add authorization for banner deletion
+    }
+
+    /**
+     * @description Controls access to blog posts.
+     * @path /blogPosts/{postId}
+     * @allow (get) Any user can read blog post.
+     * @allow (list) Any user can list blog posts.
+     * @allow (create) TODO: Add authorization for blog post creation.
+     * @allow (update) TODO: Add authorization for blog post updates.
+     * @allow (delete) TODO: Add authorization for blog post deletion.
+     * @principle Public read access with restricted write access (TODO).
+     */
+    match /blogPosts/{postId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && request.auth.token.editor == true;  // TODO: Add authorization for blog post creation
+      allow update: if isSignedIn() && request.auth.token.editor == true;  // TODO: Add authorization for blog post updates
+      allow delete: if isSignedIn() && request.auth.token.editor == true;  // TODO: Add authorization for blog post deletion
+    }
+
+    /**
+     * @description Controls access to site pages.
+     * @path /sitePages/{pageId}
+     * @allow (get) Any user can read site pages.
+     * @allow (list) Any user can list site pages.
+     * @allow (create) TODO: Add authorization for site page creation.
+     * @allow (update) TODO: Add authorization for site page updates.
+     * @allow (delete) TODO: Add authorization for site page deletion.
+     * @principle Public read access with restricted write access (TODO).
+     */
+    match /sitePages/{pageId} {
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && request.auth.token.admin == true;  // TODO: Add authorization for site page creation
+      allow update: if isSignedIn() && request.auth.token.admin == true;  // TODO: Add authorization for site page updates
+      allow delete: if isSignedIn() && request.auth.token.admin == true;  // TODO: Add authorization for site page deletion
+    }
+
+  }
+
+  /**
+   * @description Checks if the current user is signed in.
+   * @returns {boolean} True if the user is signed in, false otherwise.
+   * @example isSignedIn() == true
+   */
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  /**
+   * @description Checks if the provided userId matches the authenticated user's UID.
+   * @param {string} userId The user ID to compare against.
+   * @returns {boolean} True if the user IDs match, false otherwise.
+   * @example isOwner('user123') == true if request.auth.uid is 'user123'
+   */
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+    /**
+   * @description Checks if the user is the owner of a quotation (buyer or manufacturer).
+   * @param {string} buyerId The buyer ID associated with the quotation.
+   * @param {string} manufacturerId The manufacturer ID associated with the quotation.
+   * @returns {boolean} True if the user is either the buyer or the manufacturer, false otherwise.
+   */
+  function isQuotationOwner(buyerId, manufacturerId) {
+    return request.auth.uid == buyerId || request.auth.uid == manufacturerId;
+  }
+
+      /**
+   * @description Checks if the user is the owner of a dispute (buyer or manufacturer).
+   * @param {string} buyerId The buyer ID associated with the dispute.
+   * @param {string} manufacturerId The manufacturer ID associated with the dispute.
+   * @returns {boolean} True if the user is either the buyer or the manufacturer, false otherwise.
+   */
+  function isDisputeOwner(buyerId, manufacturerId) {
+    return request.auth.uid == buyerId || request.auth.uid == manufacturerId;
+  }
+
+  /**
+   * @description Checks if the user is the owner of the order.
+   * @param {string} buyerId The buyer ID of the order.
+   * @param {string} orderId The order ID.
+   * @returns {boolean} True if the user is the owner of the order, false otherwise.
+   */
+  function isOrderOwner(buyerId, orderId) {
+    return request.auth.uid == buyerId;
+  }
+
+
+  /**
+   * @description Checks if the user is the owner of an existing document.
+   * @param {string} userId The user ID to compare against the resource data.
+   * @returns {boolean} True if the user IDs match and the resource exists, false otherwise.
+   * @example isExistingOwner('user123') == true if request.auth.uid is 'user123' and the document exists
+   */
+  function isExistingOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  /**
+   * @description Checks if the user is the owner of an existing order document.
+   * @param {string} buyerId The buyer ID to compare against the resource data.
+   * @param {string} orderId The order ID
+   * @returns {boolean} True if the user IDs match and the resource exists, false otherwise.
+   * @example isExistingOrderOwner('user123') == true if request.auth.uid is 'user123' and the document exists
+   */
+    function isExistingOrderOwner(buyerId, orderId) {
+    return request.auth.uid == buyerId;
+  }
+
+  function getBuyerId() {
+    return request.auth.uid;
+  }
+
+   function getManufacturerId() {
+    return request.auth.uid;
   }
 }
