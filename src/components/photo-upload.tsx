@@ -49,21 +49,23 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           }
         );
 
+        const data = await response.json();
+
         if (!response.ok) {
-          throw new Error('Upload failed');
+            const errorMessage = data?.error?.message || 'Upload failed due to an unknown error.';
+            throw new Error(errorMessage);
         }
 
-        const data = await response.json();
         onUpload(data.secure_url);
         toast({
           title: 'Upload Successful',
           description: `${file.name} has been uploaded.`,
         });
-      } catch (error) {
-        console.error(error);
+      } catch (error: any) {
+        console.error("Detailed upload error:", error);
         toast({
           title: 'Upload Failed',
-          description: 'Something went wrong. Please try again.',
+          description: error.message || 'Something went wrong. Please check the console for details.',
           variant: 'destructive',
         });
       } finally {
