@@ -1,29 +1,107 @@
 
+'use client';
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, BarChart, Settings, Users } from "lucide-react";
+import { UserPlus, ShieldAlert, BarChart, Settings, Users, Loader2 } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, limit } from "firebase/firestore";
+import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
-const admins = [
-    { id: 'ADM01', name: 'Alice', role: 'Operations Manager', status: 'Active' },
-    { id: 'ADM02', name: 'Bob', role: 'Marketing Manager', status: 'Active' },
-    { id: 'ADM03', name: 'Charlie', role: 'Finance Officer', status: 'Inactive' },
-];
 
-const systemAlerts = [
-    { id: 'ALT01', severity: 'High', description: 'Payment gateway API has a 5% error rate.', time: '5m ago' },
-    { id: 'ALT02', severity: 'Medium', description: 'Database CPU utilization at 85%.', time: '30m ago' },
-];
+type UserProfile = {
+    id: string;
+    fullName: string;
+    role: string;
+    email: string;
+};
+
+type ActivityLog = {
+    id: string;
+    timestamp: any;
+    userEmail: string;
+    action: string;
+    details: string;
+};
 
 export default function SuperAdminDashboard() {
+    const firestore = useFirestore();
+
+    const usersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'));
+    }, [firestore]);
+
+    const activityLogsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'activityLogs'), orderBy('timestamp', 'desc'), limit(50));
+    }, [firestore]);
+
+    const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+    const { data: activityLogs, isLoading: isLoadingLogs } = useCollection<ActivityLog>(activityLogsQuery);
+
+    const renderUserRows = () => {
+        if (isLoadingUsers) {
+            return Array.from({ length: 3 }).map((_, i) => (
+                <TableRow key={`skel-user-${i}`}>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-9 w-48" /></TableCell>
+                </TableRow>
+            ));
+        }
+        if (!users || users.length === 0) {
+            return <TableRow><TableCell colSpan={4} className="h-24 text-center">No users found.</TableCell></TableRow>;
+        }
+        return users.map((user) => (
+            <TableRow key={user.id}>
+                <TableCell className="font-medium">{user.fullName}</TableCell>
+                <TableCell>{user.role}</TableCell>
+                <TableCell><Badge variant="secondary">Active</Badge></TableCell>
+                <TableCell className="space-x-2">
+                    <Button variant="outline" size="sm">Edit Permissions</Button>
+                    <Button variant="destructive" size="sm">Revoke Access</Button>
+                </TableCell>
+            </TableRow>
+        ));
+    };
+    
+    const renderLogRows = () => {
+        if (isLoadingLogs) {
+             return Array.from({ length: 4 }).map((_, i) => (
+                <TableRow key={`skel-log-${i}`}>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-9 w-24" /></TableCell>
+                </TableRow>
+            ));
+        }
+         if (!activityLogs || activityLogs.length === 0) {
+            return <TableRow><TableCell colSpan={4} className="h-24 text-center">No activity logs found.</TableCell></TableRow>;
+        }
+         return activityLogs.map((log) => (
+            <TableRow key={log.id}>
+                <TableCell><Badge variant="outline">{log.action}</Badge></TableCell>
+                <TableCell>{log.details}</TableCell>
+                <TableCell>{log.userEmail}</TableCell>
+                <TableCell className="text-xs text-muted-foreground">{new Date(log.timestamp?.seconds * 1000).toLocaleString()}</TableCell>
+            </TableRow>
+        ));
+    }
+
+
     return (
         <Tabs defaultValue="overview">
             <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Platform Overview</TabsTrigger>
-                <TabsTrigger value="admin-management">Admin Management</TabsTrigger>
-                <TabsTrigger value="system-health">System Health</TabsTrigger>
+                <TabsTrigger value="admin-management">User Management</TabsTrigger>
+                <TabsTrigger value="system-health">Activity Log</TabsTrigger>
                 <TabsTrigger value="global-settings">Global Settings</TabsTrigger>
             </TabsList>
 
@@ -37,12 +115,12 @@ export default function SuperAdminDashboard() {
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                              <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Admins</CardTitle>
+                                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
                                     <Users className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">12</div>
-                                    <p className="text-xs text-muted-foreground">3 Active Roles</p>
+                                    {isLoadingUsers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{users?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Across all roles</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -51,8 +129,8 @@ export default function SuperAdminDashboard() {
                                     <ShieldAlert className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold text-destructive">2</div>
-                                    <p className="text-xs text-muted-foreground">1 High Severity</p>
+                                    <div className="text-2xl font-bold text-green-600">0</div>
+                                    <p className="text-xs text-muted-foreground">No high severity alerts</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -62,7 +140,7 @@ export default function SuperAdminDashboard() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">KES 34.2M</div>
-                                    <p className="text-xs text-muted-foreground">Year-to-date</p>
+                                    <p className="text-xs text-muted-foreground">Year-to-date (mock)</p>
                                 </CardContent>
                             </Card>
                             <Card>
@@ -72,7 +150,7 @@ export default function SuperAdminDashboard() {
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-2xl font-bold">+15</div>
-                                    <p className="text-xs text-muted-foreground">10 Buyers, 5 Sellers</p>
+                                    <p className="text-xs text-muted-foreground">10 Buyers, 5 Sellers (mock)</p>
                                 </CardContent>
                             </Card>
                         </div>
@@ -85,8 +163,8 @@ export default function SuperAdminDashboard() {
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <div>
-                                <CardTitle>Admin User Management</CardTitle>
-                                <CardDescription>Manage admin accounts and their permissions.</CardDescription>
+                                <CardTitle>User Management</CardTitle>
+                                <CardDescription>Manage user accounts and their platform roles.</CardDescription>
                             </div>
                             <Button><UserPlus className="mr-2 h-4 w-4" /> Add New Admin</Button>
                         </div>
@@ -102,17 +180,7 @@ export default function SuperAdminDashboard() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {admins.map((admin) => (
-                                    <TableRow key={admin.id}>
-                                        <TableCell className="font-medium">{admin.name}</TableCell>
-                                        <TableCell>{admin.role}</TableCell>
-                                        <TableCell><Badge variant={admin.status === 'Active' ? 'default' : 'destructive'}>{admin.status}</Badge></TableCell>
-                                        <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm">Edit Permissions</Button>
-                                            <Button variant="destructive" size="sm">Revoke Access</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {renderUserRows()}
                             </TableBody>
                         </Table>
                     </CardContent>
@@ -122,30 +190,21 @@ export default function SuperAdminDashboard() {
             <TabsContent value="system-health">
                 <Card>
                     <CardHeader>
-                        <CardTitle>System Health & Alerts</CardTitle>
-                        <CardDescription>Monitor the real-time health and performance of the platform.</CardDescription>
+                        <CardTitle>Platform Activity Log</CardTitle>
+                        <CardDescription>A real-time feed of all significant actions performed by admins.</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Severity</TableHead>
-                                    <TableHead>Description</TableHead>
-                                    <TableHead>Timestamp</TableHead>
                                     <TableHead>Action</TableHead>
+                                    <TableHead className="w-[40%]">Details</TableHead>
+                                    <TableHead>Admin User</TableHead>
+                                    <TableHead>Timestamp</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {systemAlerts.map((alert) => (
-                                    <TableRow key={alert.id}>
-                                        <TableCell><Badge variant={alert.severity === 'High' ? 'destructive' : 'default'}>{alert.severity}</Badge></TableCell>
-                                        <TableCell>{alert.description}</TableCell>
-                                        <TableCell>{alert.time}</TableCell>
-                                        <TableCell>
-                                            <Button variant="outline" size="sm">Acknowledge</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                {renderLogRows()}
                             </TableBody>
                         </Table>
                     </CardContent>
@@ -168,4 +227,5 @@ export default function SuperAdminDashboard() {
             </TabsContent>
         </Tabs>
     );
-}
+
+    
