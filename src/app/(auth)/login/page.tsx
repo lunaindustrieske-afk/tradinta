@@ -7,6 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Logo } from "@/components/logo";
 import Image from "next/image";
+import { useState } from "react";
+import { useAuth } from "@/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -52,6 +57,30 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   }
 
 export default function LoginPage() {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({
+        title: "Login Successful",
+        description: "Welcome back!",
+      });
+      router.push('/dashboards/seller-centre');
+    } catch (error: any) {
+      toast({
+        title: "Login Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
       <div className="relative hidden bg-gradient-to-br from-blue-700 to-orange-500 lg:block">
@@ -80,18 +109,20 @@ export default function LoginPage() {
               Welcome Back to Trade.
             </h2>
           </div>
-          <form className="mt-8 space-y-6" action="#" method="POST">
+          <form className="mt-8 space-y-6" onSubmit={handleLogin}>
             <div className="space-y-4 rounded-md shadow-sm">
               <div>
                 <Label htmlFor="email-phone">Email or Phone number</Label>
                 <Input
                   id="email-phone"
                   name="email-phone"
-                  type="text"
+                  type="email"
                   autoComplete="email"
                   required
                   className="mt-1"
                   placeholder="john.doe@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
               <div>
@@ -104,6 +135,8 @@ export default function LoginPage() {
                   required
                   className="mt-1"
                   placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                 />
               </div>
             </div>

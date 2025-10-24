@@ -11,6 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 import Image from "next/image";
+import { useAuth } from "@/firebase";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 function FactoryIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -48,6 +52,40 @@ function HandshakeIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export default function SignUpPage() {
   const [role, setRole] = useState("manufacturer");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const auth = useAuth();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password !== confirmPassword) {
+      toast({
+        title: "Passwords do not match",
+        description: "Please check your passwords and try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await createUserWithEmailAndPassword(auth, email, password);
+      // TODO: Create user profile in Firestore
+      toast({
+        title: "Account Created!",
+        description: "You have successfully signed up.",
+      });
+      router.push('/dashboards/seller-centre'); // Or redirect based on role
+    } catch (error: any) {
+      toast({
+        title: "Sign up failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
@@ -81,7 +119,7 @@ export default function SignUpPage() {
             </Label>
           </RadioGroup>
 
-          <form className="mt-8 space-y-4" action="#" method="POST">
+          <form className="mt-8 space-y-4" onSubmit={handleSignUp}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className={role === 'manufacturer' ? '' : 'md:col-span-2'}>
                     <Label htmlFor="full-name">Full Name</Label>
@@ -96,16 +134,16 @@ export default function SignUpPage() {
             </div>
             <div>
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" required className="mt-1" />
+                <Input id="email" name="email" type="email" required className="mt-1" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" name="password" type="password" required className="mt-1" />
+                    <Input id="password" name="password" type="password" required className="mt-1" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
                 <div>
                     <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input id="confirm-password" name="confirm-password" type="password" required className="mt-1" />
+                    <Input id="confirm-password" name="confirm-password" type="password" required className="mt-1" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
                 </div>
             </div>
              {role === 'manufacturer' && (
@@ -172,5 +210,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-    

@@ -20,19 +20,32 @@ import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { useUser, useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 function UserMenu() {
-    // This is a placeholder for a real authentication check
-    const isLoggedIn = false;
+    const { user, isUserLoading } = useUser();
+    const auth = useAuth();
+    const router = useRouter();
 
-    if (isLoggedIn) {
+    const handleLogout = async () => {
+      await signOut(auth);
+      router.push('/');
+    };
+
+    if (isUserLoading) {
+      return null; // Or a loading spinner
+    }
+
+    if (user) {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="secondary" size="icon" className="rounded-full">
                 <Avatar>
-                  <AvatarImage src="https://picsum.photos/seed/user/32/32" />
-                  <AvatarFallback>JD</AvatarFallback>
+                  <AvatarImage src={user.photoURL || "https://picsum.photos/seed/user-avatar/32/32"} />
+                  <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
                 </Avatar>
                 <span className="sr-only">Toggle user menu</span>
               </Button>
@@ -40,11 +53,11 @@ function UserMenu() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-               <DropdownMenuItem asChild><Link href="/dashboards">My Tradinta</Link></DropdownMenuItem>
+               <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">My Tradinta</Link></DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuItem>Support</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         );
