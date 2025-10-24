@@ -227,5 +227,4 @@ export default function SuperAdminDashboard() {
             </TabsContent>
         </Tabs>
     );
-
-    
+}
