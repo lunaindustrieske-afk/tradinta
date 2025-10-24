@@ -98,6 +98,9 @@ export function TopNav() {
                 <Link href="/products" className='font-medium text-muted-foreground transition-colors hover:text-primary'>
                     Products
                 </Link>
+                <Link href="/blog" className='font-medium text-muted-foreground transition-colors hover:text-primary'>
+                    Insights
+                </Link>
                  <Link href="/marketing-plans" className='font-medium text-muted-foreground transition-colors hover:text-primary'>
                     Marketing
                 </Link>
