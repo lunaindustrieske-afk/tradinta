@@ -63,8 +63,15 @@ export default function SuperAdminDashboard() {
 
      const buyersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'buyers'));
+        // Assuming buyers are just users with role 'buyer'
+        return query(collection(firestore, 'users'), where('role', '==', 'buyer'));
     }, [firestore]);
+    
+    const partnersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'users'), where('role', '==', 'partner'));
+    }, [firestore]);
+
 
     const productsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -90,50 +97,20 @@ export default function SuperAdminDashboard() {
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
     const { data: sellers, isLoading: isLoadingSellers } = useCollection(sellersQuery);
     const { data: buyers, isLoading: isLoadingBuyers } = useCollection(buyersQuery);
+    const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersQuery);
     const { data: products, isLoading: isLoadingProducts } = useCollection(productsQuery);
     const { data: orders, isLoading: isLoadingOrders } = useCollection(ordersQuery);
     const { data: activityLogs, isLoading: isLoadingLogs } = useCollection<ActivityLog>(activityLogsQuery);
     const { data: criticalAlerts, isLoading: isLoadingAlerts } = useCollection<SystemAlert>(criticalAlertsQuery);
 
-
-    const renderUserRows = () => {
-        if (isLoadingUsers) {
-            return Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={`skel-user-${i}`}>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-9 w-48" /></TableCell>
-                </TableRow>
-            ));
-        }
-        if (!users || users.length === 0) {
-            return <TableRow><TableCell colSpan={4} className="h-24 text-center">No users found.</TableCell></TableRow>;
-        }
-        return users.map((user) => (
-            <TableRow key={user.id}>
-                <TableCell className="font-medium">
-                     <Link href={`/dashboards/admin/users/${user.id}`} className="hover:underline text-primary">
-                        {user.fullName}
-                     </Link>
-                </TableCell>
-                <TableCell>{user.role}</TableCell>
-                <TableCell><Badge variant="secondary">Active</Badge></TableCell>
-                <TableCell className="space-x-2">
-                    <Button variant="outline" size="sm">Edit Permissions</Button>
-                    <Button variant="destructive" size="sm">Revoke Access</Button>
-                </TableCell>
-            </TableRow>
-        ));
-    };
     
     const renderLogRows = () => {
         if (isLoadingLogs) {
              return Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={`skel-log-${i}`}>
                     <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
                     <TableCell><Skeleton className="h-9 w-24" /></TableCell>
                 </TableRow>
             ));
@@ -150,6 +127,15 @@ export default function SuperAdminDashboard() {
             </TableRow>
         ));
     }
+
+    const userRoles = [
+        { name: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers },
+        { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers },
+        { name: 'Growth Partners / Influencers', count: partners?.length, isLoading: isLoadingPartners },
+        { name: 'Operations Admins', count: 0, isLoading: false },
+        { name: 'Marketing Admins', count: 0, isLoading: false },
+        { name: 'Finance Admins', count: 0, isLoading: false },
+    ]
 
 
     return (
@@ -298,24 +284,37 @@ export default function SuperAdminDashboard() {
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <div>
-                                <CardTitle>User Management</CardTitle>
-                                <CardDescription>Manage user accounts and their platform roles.</CardDescription>
+                                <CardTitle>User Role Management</CardTitle>
+                                <CardDescription>Manage user populations by their assigned role.</CardDescription>
                             </div>
-                            <Button><UserPlus className="mr-2 h-4 w-4" /> Add New Admin</Button>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Name</TableHead>
                                     <TableHead>Role</TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead>User Count</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {renderUserRows()}
+                                {userRoles.map((role) => (
+                                    <TableRow key={role.name}>
+                                        <TableCell className="font-medium">{role.name}</TableCell>
+                                        <TableCell>
+                                            {role.isLoading ? (
+                                                <Skeleton className="h-5 w-10" />
+                                            ) : (
+                                                <Badge variant="secondary">{role.count ?? 0}</Badge>
+                                            )}
+                                        </TableCell>
+                                        <TableCell className="space-x-2">
+                                            <Button variant="outline" size="sm">Manage Role</Button>
+                                            <Button size="sm"><UserPlus className="mr-2 h-4 w-4"/> Add User</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
                             </TableBody>
                         </Table>
                     </CardContent>
