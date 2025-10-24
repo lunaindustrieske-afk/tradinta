@@ -241,6 +241,41 @@
           "items": {
             "type": "string"
           }
+        },
+        "status": {
+            "type": "string",
+            "description": "The current status of the product.",
+            "enum": ["draft", "published", "archived"]
+        },
+        "category": {
+            "type": "string",
+            "description": "The main category of the product."
+        },
+        "subcategory": {
+            "type": "string",
+            "description": "The sub-category of the product."
+        },
+        "stock": {
+            "type": "number",
+            "description": "Available stock quantity."
+        },
+        "sku": {
+            "type": "string",
+            "description": "Stock Keeping Unit."
+        },
+        "moq": {
+            "type": "number",
+            "description": "Minimum Order Quantity."
+        },
+        "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of product creation."
+        },
+        "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of last product update."
         }
       },
       "required": [
@@ -248,7 +283,7 @@
         "manufacturerId",
         "name",
         "price",
-        "unit"
+        "status"
       ]
     },
     "Order": {

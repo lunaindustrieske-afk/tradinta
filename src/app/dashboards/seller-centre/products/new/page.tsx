@@ -3,10 +3,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
-  PlusCircle,
-  Upload,
   Sparkles,
   Loader2,
 } from 'lucide-react';
@@ -40,20 +39,38 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { PhotoUpload } from '@/components/photo-upload';
+import { useFirestore, useUser } from '@/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+
 
 export default function NewProductPage() {
   const { toast } = useToast();
+  const router = useRouter();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const initialState: AIFormState = { message: '', output: null, errors: null };
   const [state, dispatch] = useFormState(
     getAITagsAndDescription,
     initialState
   );
-
+  
   const [formKey, setFormKey] = React.useState(Date.now());
   const [isGenerating, setIsGenerating] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
 
-  const [selectedCategory, setSelectedCategory] =
-    React.useState<Category | null>(null);
+  // Form State
+  const [name, setName] = React.useState('');
+  const [description, setDescription] = React.useState('');
+  const [imageUrl, setImageUrl] = React.useState('');
+  const [price, setPrice] = React.useState('');
+  const [moq, setMoq] = React.useState('');
+  const [sku, setSku] = React.useState('');
+  const [stock, setStock] = React.useState('');
+  const [tags, setTags] = React.useState<string[]>([]);
+  
+  const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
   const [subcategories, setSubcategories] = React.useState<string[]>([]);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
 
@@ -78,6 +95,8 @@ export default function NewProductPage() {
           title: 'AI Magic Complete!',
           description: 'Tags and description have been generated.',
         });
+        setTags(state.output.tags);
+        setDescription(state.output.description);
       } else if (state.errors) {
         toast({
           title: 'Validation Error',
@@ -98,10 +117,56 @@ export default function NewProductPage() {
     setIsGenerating(true);
     dispatch(formData);
   };
-
+  
   const resetForm = () => {
     setFormKey(Date.now());
   };
+
+  const handleSaveProduct = async (status: 'draft' | 'published') => {
+    if (!user || !firestore) {
+        toast({ title: 'Error', description: 'User not authenticated or Firestore not available.', variant: 'destructive' });
+        return;
+    }
+
+    setIsSaving(true);
+    try {
+        const productsCollectionRef = collection(firestore, 'manufacturers', user.uid, 'products');
+        
+        await addDoc(productsCollectionRef, {
+            manufacturerId: user.uid,
+            name,
+            description,
+            price: Number(price) || 0,
+            moq: Number(moq) || 0,
+            sku,
+            stock: Number(stock) || 0,
+            category: selectedCategory?.name || '',
+            subcategory: selectedSubCategory || '',
+            imageUrl,
+            tags,
+            status,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+        });
+
+        toast({
+            title: 'Product Saved!',
+            description: `Your product has been saved as a ${status}.`,
+        });
+        router.push('/dashboards/seller-centre/products');
+
+    } catch (error) {
+        console.error("Error saving product:", error);
+        toast({
+            title: 'Save Failed',
+            description: 'There was an error saving your product. Please try again.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsSaving(false);
+    }
+  }
+
 
   return (
     <div className="space-y-6">
@@ -116,10 +181,14 @@ export default function NewProductPage() {
           Add New Product
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Save as Draft
           </Button>
-          <Button size="sm">Submit for Review</Button>
+          <Button size="sm" onClick={() => handleSaveProduct('published')} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Submit for Review
+          </Button>
         </div>
       </div>
       <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
@@ -140,6 +209,8 @@ export default function NewProductPage() {
                     type="text"
                     className="w-full"
                     placeholder="e.g. Industrial Grade Cement"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                   />
                 </div>
                 <div className="grid gap-3">
@@ -148,8 +219,22 @@ export default function NewProductPage() {
                     id="description"
                     placeholder="Provide a detailed description of your product, including features, benefits, and applications."
                     className="min-h-32"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                   />
                 </div>
+                {tags.length > 0 && (
+                    <div className="grid gap-3">
+                        <Label>Tags</Label>
+                        <div className="flex flex-wrap gap-2">
+                        {tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">
+                            {tag}
+                            </Badge>
+                        ))}
+                        </div>
+                    </div>
+                )}
               </div>
             </CardContent>
             <CardFooter>
@@ -171,7 +256,7 @@ export default function NewProductPage() {
                             name="productName"
                             type="text"
                             className="w-full"
-                            defaultValue={state.productName || ''}
+                            defaultValue={name}
                             placeholder="e.g. Industrial Grade Cement"
                           />
                           {state.errors?.productName && (
@@ -187,7 +272,7 @@ export default function NewProductPage() {
                           <Textarea
                             id="productDetails"
                             name="productDetails"
-                            defaultValue={state.productDetails || ''}
+                            defaultValue={description}
                             placeholder="Provide key details for the AI. e.g., '50kg bag of high-strength Portland cement for construction projects. KEBS certified.'"
                           />
                           {state.errors?.productDetails && (
@@ -209,30 +294,6 @@ export default function NewProductPage() {
                         </div>
                       </div>
                     </form>
-                    {state.output && (
-                      <div className="p-4 border-t">
-                        <div className="grid gap-6">
-                          <div className="grid gap-3">
-                            <Label>Generated Tags</Label>
-                            <div className="flex flex-wrap gap-2">
-                              {state.output.tags.map((tag) => (
-                                <Badge key={tag} variant="secondary">
-                                  {tag}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                          <div className="grid gap-3">
-                            <Label>Generated Description</Label>
-                            <Textarea
-                              readOnly
-                              value={state.output.description}
-                              className="bg-muted"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </AccordionContent>
                 </AccordionItem>
               </Accordion>
@@ -246,18 +307,11 @@ export default function NewProductPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-2">
-                <div className="grid w-full max-w-sm items-center gap-1.5">
-                  <Label
-                    htmlFor="picture"
-                    className="flex aspect-square w-full cursor-pointer items-center justify-center rounded-md border-2 border-dashed"
-                  >
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <span className="sr-only">Upload</span>
-                  </Label>
-                  <Input id="picture" type="file" className="sr-only" />
-                </div>
-              </div>
+                <PhotoUpload
+                    label="Main Product Image"
+                    onUpload={setImageUrl}
+                    initialUrl={imageUrl}
+                />
             </CardContent>
           </Card>
         </div>
@@ -270,11 +324,11 @@ export default function NewProductPage() {
               <div className="grid gap-6">
                 <div className="grid gap-3">
                   <Label htmlFor="price">Base Price (KES)</Label>
-                  <Input id="price" type="number" placeholder="0.00" />
+                  <Input id="price" type="number" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
                 </div>
                  <div className="grid gap-3">
                   <Label htmlFor="moq">Minimum Order Quantity (MOQ)</Label>
-                  <Input id="moq" type="number" placeholder="1" />
+                  <Input id="moq" type="number" placeholder="1" value={moq} onChange={(e) => setMoq(e.target.value)} />
                 </div>
               </div>
             </CardContent>
@@ -287,11 +341,11 @@ export default function NewProductPage() {
               <div className="grid gap-6">
                  <div className="grid gap-3">
                   <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
-                  <Input id="sku" type="text" placeholder="SKU-123" />
+                  <Input id="sku" type="text" placeholder="SKU-123" value={sku} onChange={(e) => setSku(e.target.value)} />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="stock">Stock</Label>
-                  <Input id="stock" type="number" placeholder="0" />
+                  <Input id="stock" type="number" placeholder="0" value={stock} onChange={(e) => setStock(e.target.value)} />
                 </div>
               </div>
             </CardContent>
@@ -348,10 +402,14 @@ export default function NewProductPage() {
         </div>
       </div>
       <div className="flex items-center justify-center gap-2 md:hidden">
-        <Button variant="outline" size="sm">
-          Save as Draft
+        <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Save as Draft
         </Button>
-        <Button size="sm">Submit for Review</Button>
+        <Button size="sm" onClick={() => handleSaveProduct('published')} disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Submit for Review
+        </Button>
       </div>
     </div>
   );
