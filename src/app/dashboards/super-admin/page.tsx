@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight } from "lucide-react";
+import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -62,7 +62,9 @@ export default function SuperAdminDashboard() {
     const activeTab = searchParams.get('tab') || 'overview';
 
     const handleTabChange = (value: string) => {
-        router.push(`${pathname}?tab=${value}`);
+        const params = new URLSearchParams(window.location.search);
+        params.set('tab', value);
+        router.push(`${pathname}?${params.toString()}`);
     };
 
     // --- Data Queries ---
@@ -150,14 +152,19 @@ export default function SuperAdminDashboard() {
     ];
 
     const adminRoles = [
-        { name: 'Operations Admins', count: 0, isLoading: false, icon: <Users />, href: '#' },
-        { name: 'Marketing Admins', count: 0, isLoading: false, icon: <Megaphone />, href: '#' },
-        { name: 'Finance Admins', count: 0, isLoading: false, icon: <Landmark />, href: '#' },
-        { name: 'Support Admins', count: 0, isLoading: false, icon: <LifeBuoy />, href: '#' },
-        { name: 'Legal & Compliance', count: 0, isLoading: false, icon: <Scale />, href: '#' },
-        { name: 'Content Management', count: 0, isLoading: false, icon: <FileText />, href: '#' },
-        { name: 'TradPay Admins', count: 0, isLoading: false, icon: <Wallet />, href: '#' },
+        { name: 'Operations Admins', count: 1, isLoading: false, icon: <Users />, href: '/dashboards/operations-manager' },
+        { name: 'Marketing Admins', count: 1, isLoading: false, icon: <Megaphone />, href: '/dashboards/marketing-manager' },
+        { name: 'Finance Admins', count: 1, isLoading: false, icon: <Landmark />, href: '/dashboards/finance' },
+        { name: 'Support Admins', count: 1, isLoading: false, icon: <LifeBuoy />, href: '/dashboards/support' },
+        { name: 'Legal & Compliance', count: 1, isLoading: false, icon: <Scale />, href: '/dashboards/legal-compliance' },
+        { name: 'Content Management', count: 1, isLoading: false, icon: <FileText />, href: '/dashboards/content-management' },
+        { name: 'User Management Admins', count: 1, isLoading: false, icon: <Users />, href: '#' },
     ];
+
+    const tradpayRoles = [
+        { name: 'TradPay Admins', count: 1, isLoading: false, icon: <Wallet />, href: '/dashboards/tradpay-admin' },
+        { name: 'TradCoin Airdrop Admins', count: 1, isLoading: false, icon: <Coins />, href: '/dashboards/tradcoin-airdrop' },
+    ]
 
 
     return (
@@ -322,11 +329,21 @@ export default function SuperAdminDashboard() {
                                 {adminRoles.map((role) => (
                                     <RoleCard key={role.name} {...role} />
                                 ))}
-                                <Card className="border-dashed flex flex-col items-center justify-center text-center p-6 hover:border-primary hover:text-primary transition-colors">
-                                     <UserPlus className="h-8 w-8 mb-2 text-muted-foreground" />
-                                     <h4 className="font-semibold text-sm">Create New Role</h4>
-                                </Card>
                             </div>
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-semibold mb-4">TradPay & TradCoin Roles</h3>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                {tradpayRoles.map((role) => (
+                                    <RoleCard key={role.name} {...role} />
+                                ))}
+                            </div>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                           <Card className="border-dashed flex flex-col items-center justify-center text-center p-6 hover:border-primary hover:text-primary transition-colors cursor-pointer">
+                                <UserPlus className="h-8 w-8 mb-2 text-muted-foreground" />
+                                <h4 className="font-semibold text-sm">Create New Role</h4>
+                           </Card>
                         </div>
                     </CardContent>
                 </Card>
@@ -373,3 +390,5 @@ export default function SuperAdminDashboard() {
         </Tabs>
     );
 }
+
+    
