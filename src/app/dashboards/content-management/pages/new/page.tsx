@@ -124,6 +124,9 @@ export default function NewSitePage() {
                             </TabsList>
                             <TabsContent value="edit">
                                 <Textarea id="content" className="min-h-96" value={content} onChange={(e) => setContent(e.target.value)} />
+                                 <p className="text-xs text-muted-foreground mt-2">
+                                  Use Markdown for formatting: <code className="bg-muted px-1 rounded"># H1</code>, <code className="bg-muted px-1 rounded">## H2</code>, <code className="bg-muted px-1 rounded">**bold**</code>, <code className="bg-muted px-1 rounded">*italic*</code>, <code className="bg-muted px-1 rounded">- List item</code>.
+                                </p>
                             </TabsContent>
                             <TabsContent value="preview">
                                 <div className="prose min-h-96 w-full rounded-md border border-input p-4" dangerouslySetInnerHTML={createMarkup(content)} />
