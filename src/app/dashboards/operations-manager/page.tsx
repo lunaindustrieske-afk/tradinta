@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -43,16 +42,9 @@ export default function OperationsManagerDashboard() {
     // --- Data Fetching Hooks ---
     const pendingVerificationsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // This is a simplified query. In a real app you might query users and manufacturers separately.
         return query(collection(firestore, 'manufacturers'), where('verificationStatus', '==', 'Pending Admin'));
     }, [firestore]);
     const { data: pendingVerifications, isLoading: isLoadingVerifications } = useCollection<VerificationEntity>(pendingVerificationsQuery);
-    
-    const recentOrdersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collectionGroup(firestore, 'orders'), orderBy('orderDate', 'desc'), limit(5));
-    }, [firestore]);
-    const { data: recentOrders, isLoading: isLoadingOrders } = useCollection<Order>(recentOrdersQuery);
 
     const openDisputesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -65,12 +57,6 @@ export default function OperationsManagerDashboard() {
         return collection(firestore, 'users');
     }, [firestore]);
     const { data: users, isLoading: isLoadingUsers } = useCollection(usersQuery);
-
-    const pendingOrdersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collectionGroup(firestore, 'orders'), where('status', '==', 'Pending Fulfillment'));
-    }, [firestore]);
-    const {data: pendingOrders, isLoading: isLoadingPendingOrders} = useCollection(pendingOrdersQuery);
 
     // --- Render Helper Functions ---
     const renderSkeletonRows = (count: number, columns: number) => Array.from({length: count}).map((_, i) => (
@@ -115,7 +101,8 @@ export default function OperationsManagerDashboard() {
                                     <Package className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    {isLoadingPendingOrders ? <Skeleton className="h-8 w-20" /> : <div className="text-2xl font-bold">{pendingOrders?.length || 0}</div>}
+                                    {/* This is now a placeholder */}
+                                    <div className="text-2xl font-bold">N/A</div>
                                     <p className="text-xs text-muted-foreground">Awaiting fulfillment</p>
                                 </CardContent>
                             </Card>
@@ -141,23 +128,11 @@ export default function OperationsManagerDashboard() {
                             </Card>
                         </div>
                         <Card>
-                            <CardHeader><CardTitle>Recent Orders</CardTitle></CardHeader>
+                            <CardHeader><CardTitle>Recent Activity</CardTitle></CardHeader>
                             <CardContent>
-                                <Table>
-                                    <TableHeader><TableRow><TableHead>Order ID</TableHead><TableHead>Status</TableHead><TableHead>Amount</TableHead><TableHead>Customer</TableHead></TableRow></TableHeader>
-                                    <TableBody>
-                                        {isLoadingOrders ? renderSkeletonRows(3, 4) : 
-                                            !recentOrders || recentOrders.length === 0 ? <TableRow><TableCell colSpan={4} className="h-24 text-center">No recent orders.</TableCell></TableRow>
-                                            : recentOrders.map(order => (
-                                            <TableRow key={order.id}>
-                                                <TableCell>{order.id}</TableCell>
-                                                <TableCell><Badge variant={order.status === 'Pending' ? 'destructive' : 'secondary'}>{order.status}</Badge></TableCell>
-                                                <TableCell>KES {order.totalAmount.toLocaleString()}</TableCell>
-                                                <TableCell>{order.buyerId.substring(0, 12)}...</TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                               <div className="text-center py-12 text-muted-foreground">
+                                    <p>Recent orders view is temporarily disabled for a system upgrade.</p>
+                                </div>
                             </CardContent>
                         </Card>
                     </CardContent>
@@ -230,5 +205,3 @@ export default function OperationsManagerDashboard() {
         </Tabs>
     );
 }
-
-    
