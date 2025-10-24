@@ -15,6 +15,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
+import { useFirestore } from '@/firebase';
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  limit,
+} from 'firebase/firestore';
 
 interface AddUserToRoleModalProps {
   isOpen: boolean;
@@ -22,39 +31,66 @@ interface AddUserToRoleModalProps {
   roleName: string;
 }
 
-export function AddUserToRoleModal({ isOpen, onOpenChange, roleName }: AddUserToRoleModalProps) {
+export function AddUserToRoleModal({
+  isOpen,
+  onOpenChange,
+  roleName,
+}: AddUserToRoleModalProps) {
   const { toast } = useToast();
+  const firestore = useFirestore();
   const [tradintaId, setTradintaId] = React.useState('');
   const [isAdding, setIsAdding] = React.useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!tradintaId) {
-      toast({ title: 'Error', description: 'Please enter a Tradinta ID.', variant: 'destructive' });
+    if (!tradintaId || !firestore) {
+      toast({
+        title: 'Error',
+        description: 'Please enter a Tradinta ID.',
+        variant: 'destructive',
+      });
       return;
     }
-    
-    setIsAdding(true);
-    
-    // In a real app, you would:
-    // 1. Query Firestore to find the user document with this tradintaId.
-    // 2. Get that user's Firebase Auth UID.
-    // 3. Set a custom claim for the role using a server-side function (e.g., a Firebase Function).
-    // For now, we'll just simulate the action.
-    
-    console.log(`Attempting to add user with Tradinta ID: ${tradintaId} to role: ${roleName}`);
 
-    // Simulate async action
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    toast({
-      title: 'Role Assignment Queued',
-      description: `User with ID ${tradintaId} will be assigned the role: ${roleName}.`,
-    });
-    
-    setIsAdding(false);
-    onOpenChange(false); // Close the modal
-    setTradintaId(''); // Reset input
+    setIsAdding(true);
+
+    try {
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, where('tradintaId', '==', tradintaId), limit(1));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        toast({
+          title: 'User Not Found',
+          description: `No user found with Tradinta ID: ${tradintaId}`,
+          variant: 'destructive',
+        });
+        setIsAdding(false);
+        return;
+      }
+
+      const userDoc = querySnapshot.docs[0];
+      await updateDoc(userDoc.ref, {
+        role: roleName, // This should match a value in your 'role' enum
+      });
+
+      toast({
+        title: 'Success!',
+        description: `${userDoc.data().fullName} has been assigned the role: ${roleName}.`,
+      });
+
+      onOpenChange(false); // Close the modal on success
+    } catch (error) {
+      console.error('Error assigning role:', error);
+      toast({
+        title: 'Assignment Failed',
+        description:
+          'An error occurred while assigning the role. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsAdding(false);
+    }
   };
 
   // Reset local state when modal is closed
@@ -83,7 +119,7 @@ export function AddUserToRoleModal({ isOpen, onOpenChange, roleName }: AddUserTo
               <Input
                 id="tradintaId"
                 value={tradintaId}
-                onChange={(e) => setTradintaId(e.target.value)}
+                onChange={(e) => setTradintaId(e.target.value.toUpperCase())}
                 className="col-span-3"
                 placeholder="e.g. A8B2C3D4"
                 maxLength={8}
@@ -93,8 +129,12 @@ export function AddUserToRoleModal({ isOpen, onOpenChange, roleName }: AddUserTo
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isAdding}>
-                {isAdding ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UserPlus className="mr-2 h-4 w-4" />}
-                {isAdding ? 'Adding...' : 'Add User'}
+              {isAdding ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <UserPlus className="mr-2 h-4 w-4" />
+              )}
+              {isAdding ? 'Assigning...' : 'Assign Role'}
             </Button>
           </DialogFooter>
         </form>

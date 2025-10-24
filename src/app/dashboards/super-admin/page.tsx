@@ -162,15 +162,15 @@ export default function SuperAdminDashboard() {
 
     const adminRoles = [
         { name: 'Super Admins', count: 1, isLoading: false },
-        { name: 'Admins', count: 1, isLoading: false },
-        { name: 'Operations Admins', count: 1, isLoading: false },
-        { name: 'Marketing Admins', count: 1, isLoading: false },
-        { name: 'Finance Admins', count: 1, isLoading: false },
-        { name: 'Support Admins', count: 1, isLoading: false },
+        { name: 'Admin', count: 1, isLoading: false },
+        { name: 'Operations', count: 1, isLoading: false },
+        { name: 'Marketing', count: 1, isLoading: false },
+        { name: 'Finance', count: 1, isLoading: false },
+        { name: 'Support', count: 1, isLoading: false },
         { name: 'Legal & Compliance', count: 1, isLoading: false },
         { name: 'Content Management', count: 1, isLoading: false },
-        { name: 'User Management Admins', count: 1, isLoading: false },
-        { name: 'Analytics Team', count: 1, isLoading: false },
+        { name: 'User Management', count: 1, isLoading: false },
+        { name: 'Analytics', count: 1, isLoading: false },
         { name: 'Logistics', count: 0, isLoading: false },
     ];
 
