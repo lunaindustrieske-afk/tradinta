@@ -1,27 +1,19 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import {
   ChevronLeft,
-  Upload,
+  Save,
   Globe,
   Link as LinkIcon,
-  Save,
-  Building,
-  FileText,
-  ShieldCheck,
-  Banknote,
-  Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -36,19 +28,124 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
 import { PhotoUpload } from '@/components/photo-upload';
+import { useFirestore, useUser } from '@/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function EditShopProfilePage() {
-  
-  // Dummy handlers for the upload component
-  const handleLogoUpload = (url: string) => console.log('Logo uploaded to:', url);
-  const handleBannerUpload = (url: string) => console.log('Banner uploaded to:', url);
-  const handleCertUpload = (url: string) => console.log('Certificate uploaded to:', url);
-  const handlePinUpload = (url: string) => console.log('KRA PIN uploaded to:', url);
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
 
+  // Form state
+  const [shopName, setShopName] = useState('');
+  const [shopTagline, setShopTagline] = useState('');
+  const [shopDescription, setShopDescription] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
+  const [bannerUrl, setBannerUrl] = useState('');
+  const [bizRegNo, setBizRegNo] = useState('');
+  const [kraPin, setKraPin] = useState('');
+  const [bizAddress, setBizAddress] = useState('');
+  const [bizPhone, setBizPhone] = useState('');
+  const [paymentPolicy, setPaymentPolicy] = useState('');
+  const [shippingPolicy, setShippingPolicy] = useState('');
+  const [returnPolicy, setReturnPolicy] = useState('');
+  const [certUrl, setCertUrl] = useState('');
+  const [kraPinUrl, setKraPinUrl] = useState('');
+  const [website, setWebsite] = useState('');
+  const [linkedin, setLinkedin] = useState('');
+  const [acceptsTradPay, setAcceptsTradPay] = useState(true);
+  const [issuesTradPoints, setIssuesTradPoints] = useState(false);
+  
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch existing data
+  useEffect(() => {
+    if (user && firestore) {
+      const fetchManufacturerData = async () => {
+        const manufRef = doc(firestore, 'manufacturers', user.uid);
+        const docSnap = await getDoc(manufRef);
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setShopName(data.shopName || '');
+          setShopTagline(data.tagline || '');
+          setShopDescription(data.description || '');
+          setLogoUrl(data.logoUrl || '');
+          setBannerUrl(data.bannerUrl || '');
+          setBizRegNo(data.businessLicenseNumber || '');
+          setKraPin(data.kraPin || '');
+          setBizAddress(data.address || '');
+          setBizPhone(data.phone || '');
+          setPaymentPolicy(data.paymentPolicy || '');
+          setShippingPolicy(data.shippingPolicy || '');
+          setReturnPolicy(data.returnPolicy || '');
+          setWebsite(data.website || '');
+          setLinkedin(data.linkedin || '');
+          setAcceptsTradPay(data.acceptsTradPay !== false);
+          setIssuesTradPoints(data.issuesTradPoints === true);
+          
+          if(data.certifications && data.certifications.length > 0) {
+             // Assuming for now cert and pin are the only two
+             setCertUrl(data.certifications.find((c: string) => c.includes('cert')) || '');
+             setKraPinUrl(data.certifications.find((c: string) => c.includes('pin')) || '');
+          }
+        }
+      };
+      fetchManufacturerData();
+    }
+  }, [user, firestore]);
+
+  const handleSaveChanges = async () => {
+    if (!user) {
+      toast({ title: "Not authenticated", description: "You must be logged in to save changes.", variant: "destructive" });
+      return;
+    }
+    
+    setIsLoading(true);
+
+    const manufacturerData = {
+      shopName,
+      tagline: shopTagline,
+      description: shopDescription,
+      logoUrl,
+      bannerUrl,
+      businessLicenseNumber: bizRegNo,
+      kraPin,
+      address: bizAddress,
+      phone: bizPhone,
+      paymentPolicy,
+      shippingPolicy,
+      returnPolicy,
+      website,
+      linkedin,
+      acceptsTradPay,
+      issuesTradPoints,
+      certifications: [certUrl, kraPinUrl].filter(Boolean), // Store URLs in an array
+    };
+    
+    try {
+      const manufRef = doc(firestore, 'manufacturers', user.uid);
+      await setDoc(manufRef, manufacturerData, { merge: true });
+      toast({
+        title: "Profile Updated",
+        description: "Your shop profile has been successfully saved.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Save Failed",
+        description: error.message || "An error occurred while saving.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  if (!user) {
+    return <div>Loading...</div>; // Or a proper loading component
+  }
 
   return (
     <div className="space-y-6">
@@ -79,9 +176,9 @@ export default function EditShopProfilePage() {
           <Button variant="outline" size="sm">
             Cancel
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleSaveChanges} disabled={isLoading}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>
@@ -100,29 +197,29 @@ export default function EditShopProfilePage() {
                 <div className="flex-shrink-0 w-32">
                    <PhotoUpload
                     label="Shop Logo"
-                    onUpload={handleLogoUpload}
-                    initialUrl="https://picsum.photos/seed/mfg1/128/128"
+                    onUpload={setLogoUrl}
+                    initialUrl={logoUrl}
                   />
                 </div>
                 <div className="flex-grow">
                   <PhotoUpload
                     label="Shop Banner"
-                    onUpload={handleBannerUpload}
-                    initialUrl="https://picsum.photos/seed/mfg1-cover/1600/400"
+                    onUpload={setBannerUrl}
+                    initialUrl={bannerUrl}
                   />
                 </div>
               </div>
                <div className="grid gap-3">
                   <Label htmlFor="shop-name">Shop Name</Label>
-                  <Input id="shop-name" defaultValue="Constructa Ltd" />
+                  <Input id="shop-name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="shop-tagline">Shop Tagline</Label>
-                  <Input id="shop-tagline" placeholder="e.g., Quality Building Materials for East Africa" />
+                  <Input id="shop-tagline" placeholder="e.g., Quality Building Materials for East Africa" value={shopTagline} onChange={(e) => setShopTagline(e.target.value)}/>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="shop-description">Shop Description</Label>
-                  <Textarea id="shop-description" className="min-h-32" placeholder="Tell buyers about your business..." defaultValue="Constructa Ltd is a leading supplier of high-quality building materials in East Africa. Established in 2010, we are committed to providing durable and reliable products for construction projects of all sizes." />
+                  <Textarea id="shop-description" className="min-h-32" placeholder="Tell buyers about your business..." value={shopDescription} onChange={(e) => setShopDescription(e.target.value)} />
                 </div>
             </CardContent>
           </Card>
@@ -134,19 +231,19 @@ export default function EditShopProfilePage() {
             <CardContent className="grid md:grid-cols-2 gap-6">
                 <div className="grid gap-3">
                     <Label htmlFor="biz-reg-no">Business Registration No.</Label>
-                    <Input id="biz-reg-no" defaultValue="BN-12345678" />
+                    <Input id="biz-reg-no" value={bizRegNo} onChange={(e) => setBizRegNo(e.target.value)} />
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="kra-pin">KRA PIN</Label>
-                    <Input id="kra-pin" defaultValue="A001234567B" />
+                    <Input id="kra-pin" value={kraPin} onChange={(e) => setKraPin(e.target.value)} />
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="biz-address">Physical Address</Label>
-                    <Input id="biz-address" defaultValue="Industrial Area, Nairobi, Kenya" />
+                    <Input id="biz-address" value={bizAddress} onChange={(e) => setBizAddress(e.target.value)} />
                 </div>
                  <div className="grid gap-3">
                     <Label htmlFor="biz-phone">Business Phone</Label>
-                    <Input id="biz-phone" type="tel" defaultValue="+254 712 345 678" />
+                    <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} />
                 </div>
             </CardContent>
           </Card>
@@ -158,15 +255,15 @@ export default function EditShopProfilePage() {
             <CardContent className="space-y-6">
                 <div className="grid gap-3">
                   <Label htmlFor="payment-policy">Payment Policy</Label>
-                  <Textarea id="payment-policy" placeholder="e.g., We accept TradPay, Bank Transfer, and LPO for approved clients. Payment is due upon order confirmation." />
+                  <Textarea id="payment-policy" placeholder="e.g., We accept TradPay, Bank Transfer, and LPO for approved clients. Payment is due upon order confirmation." value={paymentPolicy} onChange={(e) => setPaymentPolicy(e.target.value)} />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="shipping-policy">Shipping Policy</Label>
-                  <Textarea id="shipping-policy" placeholder="e.g., We ship within 3-5 business days. Delivery fees vary by location." />
+                  <Textarea id="shipping-policy" placeholder="e.g., We ship within 3-5 business days. Delivery fees vary by location." value={shippingPolicy} onChange={(e) => setShippingPolicy(e.target.value)} />
                 </div>
                  <div className="grid gap-3">
                   <Label htmlFor="return-policy">Return Policy</Label>
-                  <Textarea id="return-policy" placeholder="e.g., Returns accepted within 7 days for defective products only. Buyer is responsible for return shipping." />
+                  <Textarea id="return-policy" placeholder="e.g., Returns accepted within 7 days for defective products only. Buyer is responsible for return shipping." value={returnPolicy} onChange={(e) => setReturnPolicy(e.target.value)} />
                 </div>
             </CardContent>
           </Card>
@@ -181,11 +278,13 @@ export default function EditShopProfilePage() {
                 <CardContent className="space-y-4">
                     <PhotoUpload
                       label="Certificate of Incorporation"
-                      onUpload={handleCertUpload}
+                      onUpload={setCertUrl}
+                      initialUrl={certUrl}
                     />
                     <PhotoUpload
                       label="KRA PIN Certificate"
-                      onUpload={handlePinUpload}
+                      onUpload={setKraPinUrl}
+                      initialUrl={kraPinUrl}
                     />
                 </CardContent>
             </Card>
@@ -199,14 +298,14 @@ export default function EditShopProfilePage() {
                         <Label htmlFor="website">Website</Label>
                         <div className="relative">
                             <Globe className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input id="website" className="pl-8" placeholder="https://..." />
+                            <Input id="website" className="pl-8" placeholder="https://..." value={website} onChange={(e) => setWebsite(e.target.value)} />
                         </div>
                     </div>
                      <div className="grid gap-3">
                         <Label htmlFor="linkedin">LinkedIn</Label>
                          <div className="relative">
                             <LinkIcon className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input id="linkedin" className="pl-8" placeholder="linkedin.com/company/..." />
+                            <Input id="linkedin" className="pl-8" placeholder="linkedin.com/company/..." value={linkedin} onChange={(e) => setLinkedin(e.target.value)} />
                         </div>
                     </div>
                 </CardContent>
@@ -222,14 +321,14 @@ export default function EditShopProfilePage() {
                             <span>Accept TradPay</span>
                             <span className="font-normal text-xs text-muted-foreground">Enable secure escrow payments.</span>
                         </Label>
-                        <Switch id="tradpay-switch" defaultChecked />
+                        <Switch id="tradpay-switch" checked={acceptsTradPay} onCheckedChange={setAcceptsTradPay} />
                     </div>
                      <div className="flex items-center justify-between">
                         <Label htmlFor="tradpoints-switch" className="flex flex-col gap-1">
                             <span>Issue TradPoints</span>
                             <span className="font-normal text-xs text-muted-foreground">Reward buyers for purchases.</span>
                         </Label>
-                        <Switch id="tradpoints-switch" />
+                        <Switch id="tradpoints-switch" checked={issuesTradPoints} onCheckedChange={setIssuesTradPoints} />
                     </div>
                 </CardContent>
             </Card>
@@ -239,11 +338,13 @@ export default function EditShopProfilePage() {
           <Button variant="outline" size="sm">
             Cancel
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={handleSaveChanges} disabled={isLoading}>
             <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
     </div>
   );
 }
+
+    

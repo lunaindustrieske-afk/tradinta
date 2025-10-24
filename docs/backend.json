@@ -84,6 +84,40 @@
           "type": "string",
           "description": "The date when the manufacturer registered on the platform.",
           "format": "date-time"
+        },
+        "logoUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the shop's logo."
+        },
+        "bannerUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the shop's banner image."
+        },
+        "tagline": {
+          "type": "string",
+          "description": "A short, catchy phrase for the shop."
+        },
+        "paymentPolicy": {
+          "type": "string",
+          "description": "The shop's payment policy."
+        },
+        "shippingPolicy": {
+          "type": "string",
+          "description": "The shop's shipping policy."
+        },
+        "returnPolicy": {
+          "type": "string",
+          "description": "The shop's return policy."
+        },
+        "certifications": {
+          "type": "array",
+          "description": "URLs of uploaded certification documents.",
+          "items": {
+            "type": "string",
+            "format": "uri"
+          }
         }
       },
       "required": [
