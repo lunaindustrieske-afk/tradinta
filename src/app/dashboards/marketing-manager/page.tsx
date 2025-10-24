@@ -11,6 +11,7 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where } from "firebase/firestore";
 import type { Campaign } from '@/app/lib/definitions';
 import { Skeleton } from "@/components/ui/skeleton";
+import Link from "next/link";
 
 type UserProfile = {
     id: string;
@@ -104,7 +105,7 @@ export default function MarketingDashboard() {
             <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="campaigns">Campaign Management</TabsTrigger>
                 <TabsTrigger value="ambassadors">Growth Partner Network</TabsTrigger>
-                <TabsTrigger value="promotions">Promotions & Banners</TabsTrigger>
+                <TabsTrigger value="promotions">Site Content</TabsTrigger>
             </TabsList>
             
             <TabsContent value="campaigns">
@@ -166,14 +167,16 @@ export default function MarketingDashboard() {
             <TabsContent value="promotions">
                  <Card>
                     <CardHeader>
-                        <CardTitle>Homepage Banners & Promotions</CardTitle>
-                        <CardDescription>Manage featured listings and homepage ad banners.</CardDescription>
+                        <CardTitle>Site Content Management</CardTitle>
+                        <CardDescription>Manage homepage banners, blog posts, and other site content.</CardDescription>
                     </CardHeader>
-                     <CardContent>
-                        <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                           <Megaphone className="h-16 w-16 text-muted-foreground" />
-                           <p className="ml-4 text-muted-foreground">Banner Management Component Here</p>
-                       </div>
+                     <CardContent className="text-center py-12">
+                        <Megaphone className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold">Manage Content Centrally</h3>
+                        <p className="text-muted-foreground mt-2 mb-4">All site content, including homepage banners and blog posts, is managed in the Content Management dashboard.</p>
+                        <Button asChild>
+                            <Link href="/dashboards/content-management">Go to Content Management</Link>
+                        </Button>
                     </CardContent>
                 </Card>
             </TabsContent>
