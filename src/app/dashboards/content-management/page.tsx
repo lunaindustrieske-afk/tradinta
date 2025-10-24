@@ -1,21 +1,21 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import * as React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { LayoutTemplate, Newspaper, FileText, PlusCircle, MoreHorizontal, File, Loader2 } from "lucide-react";
+import { PlusCircle, MoreHorizontal } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import Link from 'next/link';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
@@ -24,6 +24,7 @@ type HomepageBanner = {
   title: string;
   status: 'draft' | 'published';
   imageUrl: string;
+  order: number;
 };
 
 type BlogPost = {
@@ -44,9 +45,9 @@ type SitePage = {
 export default function ContentManagementDashboard() {
     const firestore = useFirestore();
 
-    const bannersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'homepageBanners')) : null, [firestore]);
-    const postsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'blogPosts')) : null, [firestore]);
-    const pagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'sitePages')) : null, [firestore]);
+    const bannersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'homepageBanners'), orderBy('order', 'asc')) : null, [firestore]);
+    const postsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'blogPosts'), orderBy('publishedAt', 'desc')) : null, [firestore]);
+    const pagesQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'sitePages'), orderBy('title', 'asc')) : null, [firestore]);
 
     const { data: homepageBanners, isLoading: isLoadingBanners } = useCollection<HomepageBanner>(bannersQuery);
     const { data: blogPosts, isLoading: isLoadingPosts } = useCollection<BlogPost>(postsQuery);
@@ -76,30 +77,38 @@ export default function ContentManagementDashboard() {
                                 <CardTitle>Homepage Banners</CardTitle>
                                 <CardDescription>Manage promotional and informational banners on the homepage.</CardDescription>
                             </div>
-                            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Banner</Button>
+                            <Button asChild>
+                                <Link href="/dashboards/content-management/banners/new">
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Banner
+                                </Link>
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
                         <Table>
                             <TableHeader>
                                 <TableRow>
+                                    <TableHead>Order</TableHead>
                                     <TableHead>Title</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {isLoadingBanners ? renderSkeletonRows(2, 3) 
+                                {isLoadingBanners ? renderSkeletonRows(2, 4) 
                                 : homepageBanners && homepageBanners.length > 0 ? homepageBanners.map((banner) => (
                                     <TableRow key={banner.id}>
+                                        <TableCell>{banner.order}</TableCell>
                                         <TableCell className="font-medium">{banner.title}</TableCell>
                                         <TableCell><Badge variant={banner.status === 'published' ? 'secondary' : 'outline'}>{banner.status}</Badge></TableCell>
                                         <TableCell>
-                                            <Button variant="outline" size="sm">Edit</Button>
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/dashboards/content-management/banners/edit/${banner.id}`}>Edit</Link>
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))
-                                : <TableRow><TableCell colSpan={3} className="text-center h-24">No banners created yet.</TableCell></TableRow>
+                                : <TableRow><TableCell colSpan={4} className="text-center h-24">No banners created yet.</TableCell></TableRow>
                                 }
                             </TableBody>
                         </Table>
@@ -115,7 +124,11 @@ export default function ContentManagementDashboard() {
                                 <CardTitle>Blog Posts & Insights</CardTitle>
                                 <CardDescription>Create and manage articles for the Tradinta Insights section.</CardDescription>
                             </div>
-                            <Button><PlusCircle className="mr-2 h-4 w-4" /> Create New Post</Button>
+                            <Button asChild>
+                                <Link href="/dashboards/content-management/blog/new">
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Create New Post
+                                </Link>
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -134,11 +147,13 @@ export default function ContentManagementDashboard() {
                                 : blogPosts && blogPosts.length > 0 ? blogPosts.map((post) => (
                                     <TableRow key={post.id}>
                                         <TableCell className="font-medium">{post.title}</TableCell>
-                                        <TableCell><Badge variant={post.status === 'published' ? 'secondary' : 'outline'}>{post.status}</Badge></TableCell>
+                                        <TableCell><Badge variant={post.status === 'published' ? 'secondary' : post.status === 'archived' ? 'destructive' : 'outline'}>{post.status}</Badge></TableCell>
                                         <TableCell>{post.author}</TableCell>
                                         <TableCell>{post.publishedAt ? new Date(post.publishedAt?.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
-                                        <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm">Edit</Button>
+                                        <TableCell>
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/dashboards/content-management/blog/edit/${post.id}`}>Edit</Link>
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -158,7 +173,11 @@ export default function ContentManagementDashboard() {
                                 <CardTitle>Static Pages</CardTitle>
                                 <CardDescription>Edit content on pages like "About Us", "Privacy Policy", etc.</CardDescription>
                             </div>
-                            <Button><PlusCircle className="mr-2 h-4 w-4" /> Add New Page</Button>
+                            <Button asChild>
+                                <Link href="/dashboards/content-management/pages/new">
+                                    <PlusCircle className="mr-2 h-4 w-4" /> Add New Page
+                                </Link>
+                            </Button>
                         </div>
                     </CardHeader>
                     <CardContent>
@@ -179,7 +198,9 @@ export default function ContentManagementDashboard() {
                                         <TableCell className="font-mono text-xs">/{page.slug}</TableCell>
                                         <TableCell>{page.lastUpdated ? new Date(page.lastUpdated?.seconds * 1000).toLocaleString() : 'N/A'}</TableCell>
                                         <TableCell>
-                                            <Button variant="outline" size="sm">Edit</Button>
+                                             <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/dashboards/content-management/pages/edit/${page.id}`}>Edit</Link>
+                                            </Button>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -193,5 +214,3 @@ export default function ContentManagementDashboard() {
         </Tabs>
     );
 }
-
-    

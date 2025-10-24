@@ -9,7 +9,8 @@ import { Logo } from '@/components/logo';
 import Link from 'next/link';
 import { FirebaseClientProvider } from '@/firebase';
 import { useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
+import ErrorBoundary from '@/components/ui/error-boundary';
 
 
 export default function RootLayout({
@@ -19,6 +20,7 @@ export default function RootLayout({
 }>) {
 
   const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   useEffect(() => {
     const refCode = searchParams.get('ref');
@@ -34,6 +36,9 @@ export default function RootLayout({
   // Note: We cannot add metadata here because this is a client component.
   // We can move the metadata to a parent layout if needed.
 
+  const noFooterPaths = ['/login', '/signup'];
+  const showFooter = !noFooterPaths.includes(pathname);
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -45,45 +50,49 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
       </head>
       <body className="font-body antialiased">
-        <FirebaseClientProvider>
-          <TopNav />
-            <main>{children}</main>
-          <Toaster />
-          <footer className="border-t pt-8">
-          <div className="container mx-auto grid md:grid-cols-4 gap-8">
-              <div>
-                  <Logo />
-                  <p className="text-muted-foreground mt-2 text-sm">© {new Date().getFullYear()} Tradinta. All rights reserved.</p>
-              </div>
-              <div>
-                  <h4 className="font-semibold mb-2">Links</h4>
-                  <ul className="space-y-1 text-sm">
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">About</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">Contact</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">Privacy Policy</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">Terms of Service</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">Careers</Link></li>
-                  </ul>
-              </div>
-              <div>
-                  <h4 className="font-semibold mb-2">Follow Us</h4>
-                  <ul className="space-y-1 text-sm">
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">LinkedIn</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">YouTube</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">X / Twitter</Link></li>
-                      <li><Link href="#" className="text-muted-foreground hover:text-primary">Instagram</Link></li>
-                  </ul>
-              </div>
-              <div>
-                  <h4 className="font-semibold mb-2">Stay ahead with trade insights.</h4>
-                  {/* Newsletter signup form can be added here */}
-              </div>
-          </div>
-          <div className="container mx-auto mt-8 text-center text-sm text-muted-foreground">
-              <p>Payment partners: M-Pesa, Visa, Mastercard</p>
-          </div>
-        </footer>
-      </FirebaseClientProvider>
+        <ErrorBoundary>
+          <FirebaseClientProvider>
+            <TopNav />
+              <main>{children}</main>
+            <Toaster />
+            {showFooter && (
+              <footer className="border-t py-8">
+                <div className="container mx-auto grid md:grid-cols-4 gap-8">
+                    <div>
+                        <Logo />
+                        <p className="text-muted-foreground mt-2 text-sm">© {new Date().getFullYear()} Tradinta. All rights reserved.</p>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-2">Links</h4>
+                        <ul className="space-y-1 text-sm">
+                            <li><Link href="/about-us" className="text-muted-foreground hover:text-primary">About</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-primary">Contact</Link></li>
+                            <li><Link href="/privacy-policy" className="text-muted-foreground hover:text-primary">Privacy Policy</Link></li>
+                            <li><Link href="/terms-of-service" className="text-muted-foreground hover:text-primary">Terms of Service</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-primary">Careers</Link></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-2">Follow Us</h4>
+                        <ul className="space-y-1 text-sm">
+                            <li><Link href="#" className="text-muted-foreground hover:text-primary">LinkedIn</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-primary">YouTube</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-primary">X / Twitter</Link></li>
+                            <li><Link href="#" className="text-muted-foreground hover:text-primary">Instagram</Link></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 className="font-semibold mb-2">Stay ahead with trade insights.</h4>
+                        {/* Newsletter signup form can be added here */}
+                    </div>
+                </div>
+                <div className="container mx-auto mt-8 text-center text-sm text-muted-foreground">
+                    <p>Payment partners: M-Pesa, Visa, Mastercard</p>
+                </div>
+              </footer>
+            )}
+          </FirebaseClientProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );

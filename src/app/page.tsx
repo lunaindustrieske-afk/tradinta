@@ -11,6 +11,7 @@ import {
   BarChart,
   Coins,
   Building,
+  Loader2,
 } from 'lucide-react';
 import { products, manufacturers } from '@/app/lib/mock-data';
 import {
@@ -28,6 +29,23 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+
+type HomepageBanner = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  link: string;
+};
+
+type BlogPost = {
+  id: string;
+  title: string;
+  slug: string;
+};
 
 const categories = [
   'Packaging',
@@ -106,79 +124,77 @@ const trustMetrics = [
     { value: '4.8/5', label: 'Manufacturer Satisfaction' },
 ];
 
-const blogPosts = [
-    {
-        title: 'Kenya’s Manufacturing Trends 2025',
-        link: '#'
-    },
-    {
-        title: 'How to Digitize Your Factory Sales for Growth',
-        link: '#'
-    },
-    {
-        title: 'The Future of B2B Logistics in Africa',
-        link: '#'
-    }
-]
-
 export default function HomePage() {
+  const firestore = useFirestore();
+  const bannersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'homepageBanners'),
+      where('status', '==', 'published'),
+      orderBy('order', 'asc')
+    );
+  }, [firestore]);
+
+  const blogPostsQuery = useMemoFirebase(() => {
+    if(!firestore) return null;
+    return query(collection(firestore, 'blogPosts'), where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(3));
+  }, [firestore]);
+
+  const { data: banners, isLoading: isLoadingBanners } = useCollection<HomepageBanner>(bannersQuery);
+  const { data: blogPosts, isLoading: isLoadingBlogPosts } = useCollection<BlogPost>(blogPostsQuery);
+
+  const HeroCarousel = () => {
+    if (isLoadingBanners) {
+      return <Skeleton className="w-full h-full" />;
+    }
+    if (!banners || banners.length === 0) {
+      return (
+        <div className="w-full h-full flex items-center justify-center bg-muted">
+          <p>No promotional content available right now.</p>
+        </div>
+      );
+    }
+    return (
+      <Carousel className="w-full h-full" opts={{ loop: true }} >
+        <CarouselContent className="h-full">
+          {banners.map((banner) => (
+            <CarouselItem key={banner.id}>
+              <div className="relative w-full h-full">
+                <Image
+                  src={banner.imageUrl}
+                  alt={banner.title}
+                  fill
+                  className="object-cover"
+                />
+                 <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
+                  <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-headline">
+                    {banner.title}
+                  </h1>
+                  {banner.subtitle && <p className="text-lg md:text-xl text-primary-foreground max-w-3xl mb-8">
+                    {banner.subtitle}
+                  </p>}
+                  {banner.link && <Button size="lg" asChild>
+                    <Link href={banner.link}>Learn More</Link>
+                  </Button>}
+                </div>
+              </div>
+            </CarouselItem>
+          ))}
+        </CarouselContent>
+        <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+        <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+      </Carousel>
+    );
+  };
+
+
   return (
     <>
-      
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col gap-12 md:gap-20">
           {/* 1. Hero Section */}
           <section className="relative h-[500px] md:h-[600px] rounded-lg overflow-hidden -mt-8 -mx-4">
-            <Carousel className="w-full h-full" opts={{ loop: true }}>
-              <CarouselContent className="h-full">
-                <CarouselItem>
-                  <Image
-                    src="https://picsum.photos/seed/hero-trade/1600/900"
-                    alt="African trade and manufacturing"
-                    fill
-                    className="object-cover"
-                    data-ai-hint="industrial trade logistics"
-                  />
-                </CarouselItem>
-                <CarouselItem>
-                   <Image
-                    src="https://picsum.photos/seed/hero-factory/1600/900"
-                    alt="Modern factory interior"
-                    fill
-                    className="object-cover"
-                    data-ai-hint="modern factory"
-                  />
-                </CarouselItem>
-                 <CarouselItem>
-                   <Image
-                    src="https://picsum.photos/seed/hero-logistics/1600/900"
-                    alt="Logistics and shipping containers"
-                    fill
-                    className="object-cover"
-                    data-ai-hint="shipping containers"
-                  />
-                </CarouselItem>
-              </CarouselContent>
-              <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
-              <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
-            </Carousel>
-            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-headline">
-                Powering Africa’s Manufacturers — Buy Direct. Sell Smart.
-              </h1>
-              <p className="text-lg md:text-xl text-primary-foreground max-w-3xl mb-8">
-                Tradinta connects verified manufacturers, distributors, and buyers
-                across Africa with secure payments and marketing tools.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" asChild>
-                  <Link href="/signup">Open a Manufacturer Shop</Link>
-                </Button>
-                <Button size="lg" variant="secondary" asChild>
-                  <Link href="/products">Explore Verified Products</Link>
-                </Button>
-              </div>
-            </div>
+            <HeroCarousel />
           </section>
 
           {/* 2. Key Value Highlights */}
@@ -327,19 +343,25 @@ export default function HomePage() {
           {/* 9. News / Insights */}
           <section>
             <h2 className="text-3xl font-bold mb-6 text-center font-headline">News & Insights</h2>
-            <div className="grid md:grid-cols-3 gap-6">
-                {blogPosts.map(post => (
-                    <Card key={post.title} className="p-6">
-                        <CardTitle className="text-lg mb-2">{post.title}</CardTitle>
-                        <Button variant="link" asChild className="p-0 h-auto">
-                            <Link href={post.link}>Read More <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                        </Button>
-                    </Card>
-                ))}
+             <div className="grid md:grid-cols-3 gap-6">
+                {isLoadingBlogPosts ? (
+                    Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-40" />)
+                ) : blogPosts && blogPosts.length > 0 ? (
+                    blogPosts.map(post => (
+                        <Card key={post.id} className="p-6">
+                            <CardTitle className="text-lg mb-2">{post.title}</CardTitle>
+                            <Button variant="link" asChild className="p-0 h-auto">
+                                <Link href={`/blog/${post.slug}`}>Read More <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                            </Button>
+                        </Card>
+                    ))
+                ) : (
+                    <p className="md:col-span-3 text-center text-muted-foreground">No recent posts.</p>
+                )}
             </div>
             <div className="text-center mt-8">
                 <Button variant="outline" asChild>
-                    <Link href="#">Visit Tradinta Insights</Link>
+                    <Link href="/blog">Visit Tradinta Insights</Link>
                 </Button>
             </div>
           </section>
@@ -352,7 +374,7 @@ export default function HomePage() {
                   <Link href="/signup">Register as Manufacturer</Link>
                 </Button>
                 <Button size="lg" variant="secondary" asChild>
-                  <Link href="#">Browse Wholesale Offers</Link>
+                  <Link href="/products">Browse Wholesale Offers</Link>
                 </Button>
               </div>
           </section>
@@ -362,5 +384,3 @@ export default function HomePage() {
     </>
   );
 }
-
-    
