@@ -539,6 +539,49 @@
             "details": { "type": "string", "description": "A human-readable description of the action (e.g., 'Approved manufacturer TradCo Ltd (xyz123)')." }
         },
         "required": ["id", "timestamp", "userId", "userEmail", "action", "details"]
+    },
+    "HomepageBanner": {
+      "title": "Homepage Banner",
+      "type": "object",
+      "description": "Represents a single banner/slide in the homepage carousel.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the banner." },
+        "title": { "type": "string", "description": "The main headline for the banner." },
+        "subtitle": { "type": "string", "description": "The subtext or description for the banner." },
+        "imageUrl": { "type": "string", "format": "uri", "description": "URL of the banner background image." },
+        "link": { "type": "string", "description": "The destination URL when the banner is clicked." },
+        "status": { "type": "string", "enum": ["draft", "published"], "description": "The visibility status of the banner." },
+        "order": { "type": "number", "description": "The display order of the banner in the carousel." }
+      },
+      "required": ["id", "title", "imageUrl", "status"]
+    },
+    "BlogPost": {
+      "title": "Blog Post",
+      "type": "object",
+      "description": "Represents a single blog post or article in the 'Insights' section.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the post." },
+        "title": { "type": "string", "description": "The title of the blog post." },
+        "slug": { "type": "string", "description": "URL-friendly version of the title." },
+        "author": { "type": "string", "description": "The name of the post's author." },
+        "content": { "type": "string", "description": "The full content of the blog post in Markdown or HTML." },
+        "status": { "type": "string", "enum": ["draft", "published", "archived"], "description": "The visibility status of the post." },
+        "publishedAt": { "type": "string", "format": "date-time", "description": "When the post was published." }
+      },
+      "required": ["id", "title", "slug", "content", "status"]
+    },
+    "SitePage": {
+      "title": "Site Page",
+      "type": "object",
+      "description": "Represents a static content page like 'About Us' or 'Privacy Policy'.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the page." },
+        "title": { "type": "string", "description": "The title of the page." },
+        "slug": { "type": "string", "description": "The unique, URL-friendly identifier (e.g., 'about-us', 'privacy-policy')." },
+        "content": { "type": "string", "description": "The full content of the page in Markdown or HTML." },
+        "lastUpdated": { "type": "string", "format": "date-time", "description": "Timestamp of the last update." }
+      },
+      "required": ["id", "title", "slug", "content"]
     }
   },
   "auth": {
@@ -632,9 +675,33 @@
           "schema": { "$ref": "#/backend/entities/ActivityLog" },
           "description": "Top-level collection for all auditable admin actions."
         }
+      },
+      {
+        "path": "/homepageBanners/{bannerId}",
+        "definition": {
+          "entityName": "HomepageBanner",
+          "schema": { "$ref": "#/backend/entities/HomepageBanner" },
+          "description": "Stores data for the homepage carousel slides."
+        }
+      },
+      {
+        "path": "/blogPosts/{postId}",
+        "definition": {
+          "entityName": "BlogPost",
+          "schema": { "$ref": "#/backend/entities/BlogPost" },
+          "description": "Stores blog posts for the 'Insights' section."
+        }
+      },
+      {
+        "path": "/sitePages/{pageId}",
+        "definition": {
+          "entityName": "SitePage",
+          "schema": { "$ref": "#/backend/entities/SitePage" },
+          "description": "Stores content for static pages like 'About Us', 'Privacy Policy', etc."
+        }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, & ActivityLogs**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
+    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, & ActivityLogs**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
   }
 }
 
