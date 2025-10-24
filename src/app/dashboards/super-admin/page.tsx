@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal } from "lucide-react";
+import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -39,6 +39,21 @@ type SystemAlert = {
     status: 'new' | 'acknowledged' | 'resolved';
 }
 
+const RoleCard = ({ title, count, isLoading, icon, href }: { title: string, count?: number, isLoading: boolean, icon: React.ReactNode, href: string }) => (
+    <Link href={href}>
+        <Card className="hover:bg-muted/50 transition-colors h-full">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">{title}</CardTitle>
+                <div className="text-muted-foreground">{icon}</div>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <Skeleton className="h-8 w-16" /> : <div className="text-2xl font-bold">{count ?? 0}</div>}
+            </CardContent>
+        </Card>
+    </Link>
+);
+
+
 export default function SuperAdminDashboard() {
     const firestore = useFirestore();
     const router = useRouter();
@@ -63,7 +78,6 @@ export default function SuperAdminDashboard() {
 
      const buyersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // Assuming buyers are just users with role 'buyer'
         return query(collection(firestore, 'users'), where('role', '==', 'buyer'));
     }, [firestore]);
     
@@ -128,14 +142,22 @@ export default function SuperAdminDashboard() {
         ));
     }
 
-    const userRoles = [
-        { name: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers },
-        { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers },
-        { name: 'Growth Partners / Influencers', count: partners?.length, isLoading: isLoadingPartners },
-        { name: 'Operations Admins', count: 0, isLoading: false },
-        { name: 'Marketing Admins', count: 0, isLoading: false },
-        { name: 'Finance Admins', count: 0, isLoading: false },
-    ]
+    const customerRoles = [
+        { name: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers, icon: <Building />, href: '/dashboards/user-management/sellers' },
+        { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers, icon: <ShoppingCart />, href: '/dashboards/user-management/buyers' },
+        { name: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners, icon: <Handshake />, href: '/dashboards/user-management/partners' },
+        { name: 'Distributors', count: 0, isLoading: false, icon: <Users2 />, href: '#' },
+    ];
+
+    const adminRoles = [
+        { name: 'Operations Admins', count: 0, isLoading: false, icon: <Users />, href: '#' },
+        { name: 'Marketing Admins', count: 0, isLoading: false, icon: <Megaphone />, href: '#' },
+        { name: 'Finance Admins', count: 0, isLoading: false, icon: <Landmark />, href: '#' },
+        { name: 'Support Admins', count: 0, isLoading: false, icon: <LifeBuoy />, href: '#' },
+        { name: 'Legal & Compliance', count: 0, isLoading: false, icon: <Scale />, href: '#' },
+        { name: 'Content Management', count: 0, isLoading: false, icon: <FileText />, href: '#' },
+        { name: 'TradPay Admins', count: 0, isLoading: false, icon: <Wallet />, href: '#' },
+    ];
 
 
     return (
@@ -165,20 +187,20 @@ export default function SuperAdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Across all roles</p>
                                 </CardContent>
                             </Card>
-                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
+                            <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Sellers</CardTitle>
-                                    <User className="h-4 w-4 text-muted-foreground" />
+                                    <Building className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    {isLoadingSellers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{sellers?.length || 0}</div>}
+                                     {isLoadingSellers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{sellers?.length || 0}</div>}
                                     <p className="text-xs text-muted-foreground">Verified & pending</p>
                                 </CardContent>
                             </Card>
-                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
+                            <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Total Buyers</CardTitle>
-                                    <Users2 className="h-4 w-4 text-muted-foreground" />
+                                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
                                     {isLoadingBuyers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{buyers?.length || 0}</div>}
@@ -282,41 +304,30 @@ export default function SuperAdminDashboard() {
             <TabsContent value="user-management">
                 <Card>
                     <CardHeader>
-                        <div className="flex justify-between items-center">
-                            <div>
-                                <CardTitle>User Role Management</CardTitle>
-                                <CardDescription>Manage user populations by their assigned role.</CardDescription>
+                        <CardTitle>User Role Management</CardTitle>
+                        <CardDescription>Manage user populations by their assigned role.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <div>
+                            <h3 className="text-lg font-semibold mb-4">Customer Roles</h3>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                {customerRoles.map((role) => (
+                                    <RoleCard key={role.name} {...role} />
+                                ))}
                             </div>
                         </div>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>User Count</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {userRoles.map((role) => (
-                                    <TableRow key={role.name}>
-                                        <TableCell className="font-medium">{role.name}</TableCell>
-                                        <TableCell>
-                                            {role.isLoading ? (
-                                                <Skeleton className="h-5 w-10" />
-                                            ) : (
-                                                <Badge variant="secondary">{role.count ?? 0}</Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm">Manage Role</Button>
-                                            <Button size="sm"><UserPlus className="mr-2 h-4 w-4"/> Add User</Button>
-                                        </TableCell>
-                                    </TableRow>
+                         <div>
+                            <h3 className="text-lg font-semibold mb-4">Administrative Roles</h3>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                {adminRoles.map((role) => (
+                                    <RoleCard key={role.name} {...role} />
                                 ))}
-                            </TableBody>
-                        </Table>
+                                <Card className="border-dashed flex flex-col items-center justify-center text-center p-6 hover:border-primary hover:text-primary transition-colors">
+                                     <UserPlus className="h-8 w-8 mb-2 text-muted-foreground" />
+                                     <h4 className="font-semibold text-sm">Create New Role</h4>
+                                </Card>
+                            </div>
+                        </div>
                     </CardContent>
                 </Card>
             </TabsContent>
