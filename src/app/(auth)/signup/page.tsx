@@ -16,6 +16,8 @@ import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2 } from "lucide-react";
+
 
 function FactoryIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -58,6 +60,9 @@ export default function SignUpPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   const auth = useAuth();
   const firestore = useFirestore();
@@ -74,14 +79,13 @@ export default function SignUpPage() {
       });
       return;
     }
+    
+    setIsLoading(true);
 
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Create user profile in Firestore
-      const userDocRef = doc(firestore, "users", user.uid);
-      
       const userProfileData: {
         email: string;
         role: string;
@@ -99,6 +103,7 @@ export default function SignUpPage() {
         userProfileData.businessName = businessName;
       }
 
+      const userDocRef = doc(firestore, "users", user.uid);
       await setDoc(userDocRef, userProfileData);
 
       toast({
@@ -106,7 +111,6 @@ export default function SignUpPage() {
         description: "You have successfully signed up.",
       });
 
-      // Redirect based on role
       switch (role) {
         case 'manufacturer':
           router.push('/dashboards/seller-centre');
@@ -115,7 +119,7 @@ export default function SignUpPage() {
           router.push('/dashboards/buyer');
           break;
         case 'partner':
-           router.push('/dashboards/investor-partner'); // Or a specific influencer dashboard
+           router.push('/dashboards/investor-partner');
            break;
         default:
           router.push('/dashboards/seller-centre');
@@ -127,6 +131,8 @@ export default function SignUpPage() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -164,29 +170,40 @@ export default function SignUpPage() {
 
           <form className="mt-8 space-y-4" onSubmit={handleSignUp}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className={role === 'manufacturer' ? '' : 'md:col-span-2'}>
+                <div className={`relative ${role === 'manufacturer' ? '' : 'md:col-span-2'}`}>
                     <Label htmlFor="full-name">Full Name</Label>
-                    <Input id="full-name" name="full-name" type="text" required className="mt-1" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+                    <User className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
+                    <Input id="full-name" name="full-name" type="text" required className="mt-1 pl-10" value={fullName} onChange={(e) => setFullName(e.target.value)} />
                 </div>
                 {role === 'manufacturer' && (
-                    <div>
+                    <div className="relative">
                         <Label htmlFor="business-name">Business Name</Label>
-                        <Input id="business-name" name="business-name" type="text" required className="mt-1" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
+                        <Building className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
+                        <Input id="business-name" name="business-name" type="text" required className="mt-1 pl-10" value={businessName} onChange={(e) => setBusinessName(e.target.value)} />
                     </div>
                 )}
             </div>
-            <div>
+            <div className="relative">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" name="email" type="email" required className="mt-1" value={email} onChange={(e) => setEmail(e.target.value)} />
+                <Mail className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
+                <Input id="email" name="email" type="email" required className="mt-1 pl-10" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" name="password" type="password" required className="mt-1" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <KeyRound className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
+                    <Input id="password" name="password" type={showPassword ? "text" : "password"} required className="mt-1 pl-10 pr-10" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-[2.4rem] text-muted-foreground">
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                 </div>
-                <div>
+                <div className="relative">
                     <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input id="confirm-password" name="confirm-password" type="password" required className="mt-1" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    <KeyRound className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
+                    <Input id="confirm-password" name="confirm-password" type={showConfirmPassword ? "text" : "password"} required className="mt-1 pl-10 pr-10" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                     <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-[2.4rem] text-muted-foreground">
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
                 </div>
             </div>
              {role === 'manufacturer' && (
@@ -227,8 +244,9 @@ export default function SignUpPage() {
                 </Label>
               </div>
             
-            <Button type="submit" className="w-full">
-              Create Account
+            <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
 
@@ -252,5 +270,6 @@ export default function SignUpPage() {
       </div>
     </div>
   );
+}
 
     

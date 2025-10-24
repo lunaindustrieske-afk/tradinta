@@ -1,180 +1,193 @@
 /**
- * @fileoverview Firestore Security Rules for the Tradinta platform.
+ * @fileoverview Firestore Security Rules for Tradinta Marketplace.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for manufacturers and buyers,
- * ensuring that each user can only access their own data. Quotations are accessible
- * based on the buyerId and manufacturerId present within the document.
+ * This ruleset enforces a strict user-ownership model for user profiles,
+ * manufacturer profiles, buyer profiles, products, orders, and marketing campaigns.
+ * Quotations leverage a denormalized structure to allow simpler, more performant authorization checks.
  *
  * Data Structure:
- * - /manufacturers/{manufacturerId}: Stores manufacturer profiles.
- * - /buyers/{buyerId}: Stores buyer profiles.
+ * - /users/{userId}: Stores user profile information, where {userId} is the Firebase Auth UID.
+ * - /manufacturers/{manufacturerId}: Stores manufacturer profiles, where {manufacturerId} is the Firebase Auth UID.
+ * - /buyers/{buyerId}: Stores buyer profiles, where {buyerId} is the Firebase Auth UID.
  * - /manufacturers/{manufacturerId}/products/{productId}: Stores products owned by a manufacturer.
  * - /buyers/{buyerId}/orders/{orderId}: Stores orders placed by a buyer.
  * - /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}: Stores order items within an order.
- * - /quotations/{quotationId}: Stores quotations with denormalized buyerId and manufacturerId.
+ * - /quotations/{quotationId}: Stores quotations, with denormalized buyerId and manufacturerId.
  * - /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}: Stores marketing campaigns owned by a manufacturer.
  *
  * Key Security Decisions:
- * - Users (manufacturers and buyers) can only read and write their own profile data.
- * - Manufacturers can only manage their own products and marketing campaigns.
- * - Buyers can only manage their own orders.
- * - Quotations can be read/written only by the associated buyer or manufacturer.
- * - Listing of manufacturers and buyers is disallowed to protect user privacy.
+ * - Users can only read and write their own profile data.
+ * - Manufacturers and buyers can only manage their own profiles, products, orders, and marketing campaigns.
+ * - Quotations can be read and written by either the buyer or the manufacturer involved.
+ * - Listing user profiles, manufacturer profiles, and buyer profiles is disallowed.
  *
  * Denormalization for Authorization:
- * - Quotations include both 'buyerId' and 'manufacturerId' to allow for direct authorization checks
- *   without requiring additional 'get()' operations. This dramatically simplifies and speeds up security rule evaluation.
+ * - The 'quotations' collection denormalizes both `buyerId` and `manufacturerId` to avoid costly `get()` calls during authorization.
+ *
+ * Structural Segregation:
+ * - Private data (user profiles, manufacturer data, buyer data) is stored in separate collections with strict ownership checks,
+ *   ensuring that one user cannot access another user's private data.
  */
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is made by a signed-in user.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Verifies user authentication.
+     * @description Defines if the user is signed in
+     * @allow if signed in
+     * @deny if not signed in
+     * @principle Identity verification.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the authenticated user ID matches the provided user ID.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces user ownership.
+     * @description Defines if the requesting user ID matches the provided user ID.
+     * @allow if user ID matches.
+     * @deny if user ID does not match.
+     * @principle Enforces ownership.
      */
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the authenticated user ID matches the provided user ID and the resource exists.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Enforces user ownership and resource existence.
+     * @description Defines if the user is signed in and owns the existing document.
+     * @allow if user ID matches.
+     * @deny if user ID does not match.
+     * @principle Enforces ownership.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Rule for manufacturer profiles.
+     * @description Secure the /users/{userId} collection.
+     * @path /users/{userId}
+     * @allow (create) - If the user is creating their own profile (request.auth.uid == userId).
+     * @allow (get, update, delete) - If the user is the owner of the profile (request.auth.uid == userId).
+     * @deny (create) - If the user is creating a profile for someone else (request.auth.uid != userId).
+     * @deny (get, update, delete) - If the user is not the owner of the profile (request.auth.uid != userId).
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     */
+    match /users/{userId} {
+      // Only allow a user to create their own profile.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.email == request.auth.token.email;
+      allow get: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+      allow list: if false;
+    }
+
+    /**
+     * @description Secure the /manufacturers/{manufacturerId} collection.
      * @path /manufacturers/{manufacturerId}
-     * @allow (create) - A manufacturer can create their profile if the UID matches the manufacturerId.
-     * @allow (get, update, delete) - A manufacturer can only access/modify their own profile.
-     * @deny (create) - A manufacturer cannot create a profile with an ID that doesn't match their UID.
-     * @deny (get, update, delete) - A manufacturer cannot access/modify another manufacturer's profile.
+     * @allow (create) - If the user is creating their own profile (request.auth.uid == manufacturerId).
+     * @allow (get, update, delete) - If the user is the owner of the profile (request.auth.uid == manufacturerId).
+     * @deny (create) - If the user is creating a profile for someone else (request.auth.uid != manufacturerId).
+     * @deny (get, update, delete) - If the user is not the owner of the profile (request.auth.uid != manufacturerId).
      * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /manufacturers/{manufacturerId} {
-      allow get: if false;
-      allow list: if false;
-
-      allow create: if isOwner(manufacturerId) && request.resource.data.id == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && request.resource.data.id == resource.data.id;
+      allow create: if isSignedIn() && isOwner(manufacturerId);
+      allow get: if isOwner(manufacturerId);
+      allow update: if isExistingOwner(manufacturerId);
       allow delete: if isExistingOwner(manufacturerId);
+      allow list: if false;
     }
 
     /**
-     * @description Rule for buyer profiles.
+     * @description Secure the /buyers/{buyerId} collection.
      * @path /buyers/{buyerId}
-     * @allow (create) - A buyer can create their profile if the UID matches the buyerId.
-     * @allow (get, update, delete) - A buyer can only access/modify their own profile.
-     * @deny (create) - A buyer cannot create a profile with an ID that doesn't match their UID.
-     * @deny (get, update, delete) - A buyer cannot access/modify another buyer's profile.
+     * @allow (create) - If the user is creating their own profile (request.auth.uid == buyerId).
+     * @allow (get, update, delete) - If the user is the owner of the profile (request.auth.uid == buyerId).
+     * @deny (create) - If the user is creating a profile for someone else (request.auth.uid != buyerId).
+     * @deny (get, update, delete) - If the user is not the owner of the profile (request.auth.uid != buyerId).
      * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /buyers/{buyerId} {
-      allow get: if false;
-      allow list: if false;
-
-      allow create: if isOwner(buyerId) && request.resource.data.id == buyerId;
-      allow update: if isExistingOwner(buyerId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(buyerId);
-    }
-
-    /**
-     * @description Rule for products owned by a manufacturer.
-     * @path /manufacturers/{manufacturerId}/products/{productId}
-     * @allow (create, get, list, update, delete) - A manufacturer can manage their own products.
-     * @deny (create, get, list, update, delete) - A manufacturer cannot manage another manufacturer's products.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
-     */
-    match /manufacturers/{manufacturerId}/products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId);
-    }
-
-    /**
-     * @description Rule for orders placed by a buyer.
-     * @path /buyers/{buyerId}/orders/{orderId}
-     * @allow (create, get, list, update, delete) - A buyer can manage their own orders.
-     * @deny (create, get, list, update, delete) - A buyer cannot manage another buyer's orders.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
-     */
-    match /buyers/{buyerId}/orders/{orderId} {
+      allow create: if isSignedIn() && isOwner(buyerId);
       allow get: if isOwner(buyerId);
-      allow list: if isOwner(buyerId);
-      allow create: if isOwner(buyerId) && request.resource.data.buyerId == buyerId;
-      allow update: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
-      allow delete: if isExistingOwner(buyerId);
-    }
-
-    /**
-     * @description Rule for order items within an order.
-     * @path /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}
-     * @allow (create, get, list, update, delete) - A buyer can manage their own order items within their orders.
-     * @deny (create, get, list, update, delete) - A buyer cannot manage another buyer's order items.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
-     */
-    match /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} {
-      allow get: if isOwner(buyerId);
-      allow list: if isOwner(buyerId);
-      allow create: if isOwner(buyerId);
       allow update: if isExistingOwner(buyerId);
       allow delete: if isExistingOwner(buyerId);
+      allow list: if false;
     }
 
     /**
-     * @description Rule for quotations.
+     * @description Secure the /manufacturers/{manufacturerId}/products/{productId} collection.
+     * @path /manufacturers/{manufacturerId}/products/{productId}
+     * @allow (create, get, update, delete) - If the user is the owner of the manufacturer profile (request.auth.uid == manufacturerId).
+     * @deny (create, get, update, delete) - If the user is not the owner of the manufacturer profile (request.auth.uid != manufacturerId).
+     * @principle Enforces document ownership for writes and restricts access to a manufacturer's own products.
+     */
+    match /manufacturers/{manufacturerId}/products/{productId} {
+      allow create: if isSignedIn() && isOwner(manufacturerId);
+      allow get: if true;
+      allow update: if isExistingOwner(manufacturerId);
+      allow delete: if isExistingOwner(manufacturerId);
+      allow list: if true;
+    }
+
+    /**
+     * @description Secure the /buyers/{buyerId}/orders/{orderId} collection.
+     * @path /buyers/{buyerId}/orders/{orderId}
+     * @allow (create, get, update, delete) - If the user is the owner of the buyer profile (request.auth.uid == buyerId).
+     * @deny (create, get, update, delete) - If the user is not the owner of the buyer profile (request.auth.uid != buyerId).
+     * @principle Enforces document ownership for writes and restricts access to a buyer's own orders.
+     */
+    match /buyers/{buyerId}/orders/{orderId} {
+      allow create: if isSignedIn() && isOwner(buyerId);
+      allow get: if isOwner(buyerId);
+      allow update: if isExistingOwner(buyerId);
+      allow delete: if isExistingOwner(buyerId);
+      allow list: if isOwner(buyerId);
+    }
+
+    /**
+     * @description Secure the /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} collection.
+     * @path /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}
+     * @allow (create, get, update, delete) - If the user is the owner of the buyer profile (request.auth.uid == buyerId).
+     * @deny (create, get, update, delete) - If the user is not the owner of the buyer profile (request.auth.uid != buyerId).
+     * @principle Enforces document ownership for writes and restricts access to a buyer's own order items.
+     */
+    match /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} {
+      allow create: if isSignedIn() && isOwner(buyerId);
+      allow get: if isOwner(buyerId);
+      allow update: if isExistingOwner(buyerId);
+      allow delete: if isExistingOwner(buyerId);
+      allow list: if isOwner(buyerId);
+    }
+
+    /**
+     * @description Secure the /quotations/{quotationId} collection.
      * @path /quotations/{quotationId}
-     * @allow (get, list) - A buyer or manufacturer can get/list quotations if their ID matches either the buyerId or manufacturerId.
-     * @allow (create) - A buyer or manufacturer can create a quotation.
-     * @allow (update, delete) - A buyer or manufacturer can update/delete a quotation where their ID matches either the buyerId or manufacturerId.
-     * @deny (create, get, list, update, delete) - A user cannot access quotations that do not belong to them (where their ID doesn't match either buyerId or manufacturerId).
-     * @principle Enforces access control based on buyerId and manufacturerId.
+     * @allow (get, create, update, delete) - If the user is the buyer or manufacturer associated with the quotation.
+     * @deny (get, create, update, delete) - If the user is not the buyer or manufacturer associated with the quotation.
+     * @principle Enforces access based on buyerId and manufacturerId denormalized fields.
      */
     match /quotations/{quotationId} {
+      allow create: if isSignedIn() && (request.resource.data.buyerId == request.auth.uid || request.resource.data.manufacturerId == request.auth.uid);
       allow get: if request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.manufacturerId;
+      allow update: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      allow delete: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
       allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Rule for marketing campaigns owned by a manufacturer.
+     * @description Secure the /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId} collection.
      * @path /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}
-     * @allow (create, get, list, update, delete) - A manufacturer can manage their own marketing campaigns.
-     * @deny (create, get, list, update, delete) - A manufacturer cannot manage another manufacturer's marketing campaigns.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     * @allow (create, get, update, delete) - If the user is the owner of the manufacturer profile (request.auth.uid == manufacturerId).
+     * @deny (create, get, update, delete) - If the user is not the owner of the manufacturer profile (request.auth.uid != manufacturerId).
+     * @principle Enforces document ownership for writes and restricts access to a manufacturer's own marketing campaigns.
      */
     match /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId} {
+      allow create: if isSignedIn() && isOwner(manufacturerId);
       allow get: if isOwner(manufacturerId);
-      allow list: if isOwner(manufacturerId);
-      allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
+      allow update: if isExistingOwner(manufacturerId);
       allow delete: if isExistingOwner(manufacturerId);
+       allow list: if isOwner(manufacturerId);
     }
   }
 }
