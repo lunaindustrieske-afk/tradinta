@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,9 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, BarChart, Settings, Users, Loader2 } from "lucide-react";
+import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
@@ -42,9 +41,30 @@ export default function SuperAdminDashboard() {
     const firestore = useFirestore();
     const [activeTab, setActiveTab] = React.useState('overview');
 
+    // --- Data Queries ---
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'users'));
+    }, [firestore]);
+
+     const sellersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'manufacturers'));
+    }, [firestore]);
+
+     const buyersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'buyers'));
+    }, [firestore]);
+
+    const productsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collectionGroup(firestore, 'products'));
+    }, [firestore]);
+
+     const ordersQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collectionGroup(firestore, 'orders'));
     }, [firestore]);
 
     const activityLogsQuery = useMemoFirebase(() => {
@@ -57,9 +77,15 @@ export default function SuperAdminDashboard() {
         return query(collection(firestore, 'systemAlerts'), where('status', '==', 'new'), where('severity', '==', 'critical'));
     }, [firestore]);
 
+    // --- Data Hooks ---
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
+    const { data: sellers, isLoading: isLoadingSellers } = useCollection(sellersQuery);
+    const { data: buyers, isLoading: isLoadingBuyers } = useCollection(buyersQuery);
+    const { data: products, isLoading: isLoadingProducts } = useCollection(productsQuery);
+    const { data: orders, isLoading: isLoadingOrders } = useCollection(ordersQuery);
     const { data: activityLogs, isLoading: isLoadingLogs } = useCollection<ActivityLog>(activityLogsQuery);
     const { data: criticalAlerts, isLoading: isLoadingAlerts } = useCollection<SystemAlert>(criticalAlertsQuery);
+
 
     const renderUserRows = () => {
         if (isLoadingUsers) {
@@ -144,6 +170,26 @@ export default function SuperAdminDashboard() {
                                     <p className="text-xs text-muted-foreground">Across all roles</p>
                                 </CardContent>
                             </Card>
+                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('user-management')}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Sellers</CardTitle>
+                                    <User className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    {isLoadingSellers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{sellers?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Verified & pending</p>
+                                </CardContent>
+                            </Card>
+                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('user-management')}>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Buyers</CardTitle>
+                                    <Users2 className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    {isLoadingBuyers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{buyers?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Registered buyers</p>
+                                </CardContent>
+                            </Card>
                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => setActiveTab('activity-log')}>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
@@ -155,20 +201,30 @@ export default function SuperAdminDashboard() {
                                             {criticalAlerts?.length || 0}
                                         </div>
                                     }
-                                    <p className="text-xs text-muted-foreground">New critical issues requiring attention</p>
+                                    <p className="text-xs text-muted-foreground">New critical issues</p>
                                 </CardContent>
                             </Card>
                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Platform GMV</CardTitle>
-                                    <BarChart className="h-4 w-4 text-muted-foreground" />
+                                    <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                                    <Package className="h-4 w-4 text-muted-foreground" />
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="text-2xl font-bold">KES 34.2M</div>
-                                    <p className="text-xs text-muted-foreground">Year-to-date (mock)</p>
+                                     {isLoadingProducts ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{products?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Published items</p>
                                 </CardContent>
                             </Card>
                             <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    {isLoadingOrders ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{orders?.length || 0}</div>}
+                                    <p className="text-xs text-muted-foreground">Across all time</p>
+                                </CardContent>
+                            </Card>
+                             <Card>
                                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                                     <CardTitle className="text-sm font-medium">New Users Today</CardTitle>
                                     <UserPlus className="h-4 w-4 text-muted-foreground" />
@@ -176,6 +232,16 @@ export default function SuperAdminDashboard() {
                                 <CardContent>
                                     <div className="text-2xl font-bold">+15</div>
                                     <p className="text-xs text-muted-foreground">10 Buyers, 5 Sellers (mock)</p>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                    <CardTitle className="text-sm font-medium">Live Visitors</CardTitle>
+                                    <Signal className="h-4 w-4 text-muted-foreground" />
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-2xl font-bold">N/A</div>
+                                    <p className="text-xs text-muted-foreground">Requires analytics integration</p>
                                 </CardContent>
                             </Card>
                         </div>
@@ -279,7 +345,7 @@ export default function SuperAdminDashboard() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                        <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                           <Settings className="h-16 w-16 text-muted-foreground" />
+                           <Users className="h-16 w-16 text-muted-foreground" />
                            <p className="ml-4 text-muted-foreground">Global Settings Component Here</p>
                        </div>
                     </CardContent>
