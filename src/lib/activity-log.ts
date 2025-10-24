@@ -42,5 +42,3 @@ export const logActivity = async (
     console.error('Failed to write activity log:', error);
   }
 };
-
-    
