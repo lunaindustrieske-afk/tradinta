@@ -6,30 +6,26 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Star, BarChart, LifeBuoy, Loader2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
+import { collection, query, where, doc } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
 
 type Manufacturer = {
     id: string;
     shopName: string;
     industry?: string;
     registrationDate: any; // Firestore timestamp
-    verificationStatus: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
+    verificationStatus: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified' | 'Restricted';
     rating?: number;
     sales?: number; // This would need to be calculated/stored
 };
 
-const sellerPerformance = [
-    { id: 'S001', name: 'Constructa Ltd', rating: 4.8, sales: 15, status: 'Active' },
-    { id: 'S002', name: 'SuperBake Bakery', rating: 4.9, sales: 22, status: 'Active' },
-    { id: 'S003', name: 'PlastiCo Kenya', rating: 4.7, sales: 8, status: 'Restricted' },
-];
-
 export default function AdminDashboard() {
     const firestore = useFirestore();
+    const { toast } = useToast();
 
     const pendingVerificationsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -45,11 +41,32 @@ export default function AdminDashboard() {
          if (!firestore) return null;
         return query(
             collection(firestore, 'manufacturers'),
-            where('verificationStatus', '==', 'Verified')
+            where('verificationStatus', 'in', ['Verified', 'Restricted'])
         )
     }, [firestore]);
 
     const { data: allSellers, isLoading: isLoadingSellers } = useCollection<Manufacturer>(allSellersQuery);
+
+    const handleRestrictSeller = (sellerId: string, sellerName: string) => {
+        if (!firestore) return;
+        const sellerRef = doc(firestore, 'manufacturers', sellerId);
+        updateDocumentNonBlocking(sellerRef, { verificationStatus: 'Restricted' });
+        toast({
+            title: "Seller Restricted",
+            description: `${sellerName} has been restricted.`,
+            variant: "destructive",
+        });
+    };
+
+     const handleUnrestrictSeller = (sellerId: string, sellerName: string) => {
+        if (!firestore) return;
+        const sellerRef = doc(firestore, 'manufacturers', sellerId);
+        updateDocumentNonBlocking(sellerRef, { verificationStatus: 'Verified' });
+        toast({
+            title: "Seller Unrestricted",
+            description: `${sellerName}'s restrictions have been lifted.`,
+        });
+    };
 
 
     const renderVerificationRows = () => {
@@ -106,7 +123,15 @@ export default function AdminDashboard() {
                 <TableCell><Badge variant={seller.verificationStatus === 'Verified' ? 'secondary' : 'destructive'}>{seller.verificationStatus}</Badge></TableCell>
                 <TableCell className="space-x-2">
                     <Button variant="outline" size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
-                    <Button variant="destructive" size="sm" disabled={seller.verificationStatus === 'Verified'}>Restrict</Button>
+                    {seller.verificationStatus === 'Verified' ? (
+                        <Button variant="destructive" size="sm" onClick={() => handleRestrictSeller(seller.id, seller.shopName)}>
+                            <AlertTriangle className="mr-1 h-4 w-4" /> Restrict
+                        </Button>
+                    ) : (
+                         <Button variant="secondary" size="sm" onClick={() => handleUnrestrictSeller(seller.id, seller.shopName)}>
+                           Lift Restriction
+                        </Button>
+                    )}
                 </TableCell>
             </TableRow>
         ));
@@ -183,7 +208,7 @@ export default function AdminDashboard() {
                                    <p className="font-semibold">Seller Handbook</p>
                                    <p className="text-sm text-muted-foreground">The complete guide to selling on Tradinta.</p>
                                </div>
-                               <Button variant="outline">Manage Content</Button>
+                               <Button variant="outline" asChild><Link href="/dashboards/content-management">Manage Content</Link></Button>
                            </CardContent>
                         </Card>
                         <Card>
@@ -192,7 +217,7 @@ export default function AdminDashboard() {
                                    <p className="font-semibold">Video Tutorials</p>
                                    <p className="text-sm text-muted-foreground">Training videos for product uploads, marketing, and more.</p>
                                </div>
-                               <Button variant="outline">Upload/Edit Videos</Button>
+                                <Button variant="outline" asChild><Link href="/dashboards/content-management">Upload/Edit Videos</Link></Button>
                            </CardContent>
                         </Card>
                     </CardContent>

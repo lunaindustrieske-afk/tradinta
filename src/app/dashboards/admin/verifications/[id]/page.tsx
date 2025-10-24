@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 
 type Manufacturer = {
   id: string;
@@ -71,10 +72,23 @@ export default function VerificationDetailPage() {
         reason?: string
     ) => {
         if (!manufRef) return;
+
+        if (status === 'Action Required' && !reason?.trim()) {
+            toast({
+                title: "Rejection Reason Required",
+                description: "Please provide a reason for rejecting the application.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setIsUpdating(true);
         const dataToUpdate: Partial<Manufacturer> = { verificationStatus: status };
         if (reason) {
             dataToUpdate.rejectionReason = reason;
+        } else {
+             // Clear rejection reason if not rejecting
+            dataToUpdate.rejectionReason = '';
         }
 
         updateDocumentNonBlocking(manufRef, dataToUpdate);
@@ -135,7 +149,7 @@ export default function VerificationDetailPage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" disabled={isUpdating} onClick={() => handleUpdateStatus('Action Required', rejectionReason || 'Please review our policies and resubmit.')}>
+                    <Button variant="destructive" disabled={isUpdating} onClick={() => handleUpdateStatus('Action Required', rejectionReason || 'Please review our policies and resubmit.')}>
                         {isUpdating ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <X className="mr-2 h-4 w-4" />}
                         Reject
                     </Button>
@@ -195,7 +209,7 @@ export default function VerificationDetailPage() {
                             <CardTitle>Submitted Documents</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
-                            {manufacturer.certifications && manufacturer.certifications.length > 0 ? (
+                            {manufacturer.certifications && manufacturer.certifications.length > 0 && manufacturer.certifications.some(c => c) ? (
                                 manufacturer.certifications.map((certUrl, index) => certUrl && (
                                     <Button key={index} variant="outline" asChild className="w-full justify-between">
                                         <a href={certUrl} target="_blank" rel="noopener noreferrer">
