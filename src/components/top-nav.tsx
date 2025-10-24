@@ -115,7 +115,7 @@ export function TopNav() {
                             <DropdownMenuSubContent>
                                <DropdownMenuItem asChild><Link href="/dashboards/admin">Admin</Link></DropdownMenuItem>
                                <DropdownMenuItem asChild><Link href="/dashboards/operations-manager">Operations Manager</Link></DropdownMenuItem>
-                                <DropdownMenuItem asChild><Link href="/dashboards/marketing">Marketing</Link></DropdownMenuItem>
+                                <DropdownMenuItem asChild><Link href="/dashboards/marketing-manager">Marketing Manager</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/support">Support</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/finance">Finance</Link></DropdownMenuItem>
                                 <DropdownMenuItem asChild><Link href="/dashboards/legal-compliance">Legal & Compliance</Link></DropdownMenuItem>
@@ -135,7 +135,7 @@ export function TopNav() {
                         <DropdownMenuSeparator />
                          <DropdownMenuItem asChild><Link href="/dashboards/logistics">Logistics Dashboard</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/analytics">Analytics Dashboard</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link href="/dashboards/investor-partner">Investor/Partner View</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/investor-partner">Growth Partner</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/super-admin">Super Admin</Link></DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -149,3 +149,5 @@ export function TopNav() {
     </header>
   );
 }
+
+    

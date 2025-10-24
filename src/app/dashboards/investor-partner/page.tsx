@@ -24,11 +24,11 @@ const userGrowthData = [
   { name: 'Jun', Users: 1550 },
 ];
 
-export default function InvestorPartnerDashboard() {
+export default function GrowthPartnerDashboard() {
     return (
         <Card>
             <CardHeader>
-                <CardTitle>Investor / Partner Dashboard</CardTitle>
+                <CardTitle>Growth Partner Dashboard</CardTitle>
                 <CardDescription>Read-only view of key performance indicators and platform growth metrics.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -124,3 +124,5 @@ export default function InvestorPartnerDashboard() {
         </Card>
     );
 }
+
+    
