@@ -119,7 +119,7 @@ export default function SignUpPage() {
           router.push('/dashboards/buyer');
           break;
         case 'partner':
-           router.push('/dashboards/investor-partner');
+           router.push('/dashboards/growth-partner');
            break;
         default:
           router.push('/dashboards/seller-centre');
@@ -271,5 +271,3 @@ export default function SignUpPage() {
     </div>
   );
 }
-
-    

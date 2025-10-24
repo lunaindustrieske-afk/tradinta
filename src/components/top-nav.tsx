@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from 'next/link';
@@ -135,7 +136,8 @@ export function TopNav() {
                         <DropdownMenuSeparator />
                          <DropdownMenuItem asChild><Link href="/dashboards/logistics">Logistics Dashboard</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/analytics">Analytics Dashboard</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link href="/dashboards/investor-partner">Growth Partner</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/investor-partner">Investor Dashboard</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link href="/dashboards/growth-partner">Growth Partner</Link></DropdownMenuItem>
                         <DropdownMenuItem asChild><Link href="/dashboards/super-admin">Super Admin</Link></DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -149,5 +151,3 @@ export function TopNav() {
     </header>
   );
 }
-
-    
