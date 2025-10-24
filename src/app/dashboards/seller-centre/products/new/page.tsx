@@ -28,7 +28,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { useFormState } from 'react-dom';
 import { getAITagsAndDescription, type AIFormState } from '@/app/lib/actions';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
@@ -51,7 +50,7 @@ export default function NewProductPage() {
   const firestore = useFirestore();
 
   const initialState: AIFormState = { message: '', output: null, errors: null };
-  const [state, dispatch] = useFormState(
+  const [state, dispatch] = React.useActionState(
     getAITagsAndDescription,
     initialState
   );
@@ -414,5 +413,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    
