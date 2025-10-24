@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -13,6 +14,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { AddUserToRoleModal } from '@/components/add-user-to-role-modal';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 
 
 type UserProfile = {
@@ -391,18 +395,96 @@ export default function SuperAdminDashboard() {
                 </TabsContent>
 
                 <TabsContent value="global-settings">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Platform-Wide Settings</CardTitle>
-                            <CardDescription>Manage global configurations like transaction fees and feature flags.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                        <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                            <Settings className="h-16 w-16 text-muted-foreground" />
-                            <p className="ml-4 text-muted-foreground">Global Settings Component Here</p>
-                        </div>
-                        </CardContent>
-                    </Card>
+                    <div className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Platform-Wide Settings</CardTitle>
+                                <CardDescription>Manage global configurations like transaction fees and feature flags.</CardDescription>
+                            </CardHeader>
+                        </Card>
+
+                        <Card>
+                            <CardHeader><CardTitle>Financial Settings</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="tx-fee">Platform Transaction Fee (%)</Label>
+                                        <p className="text-xs text-muted-foreground">The percentage fee applied to all transactions processed through TradPay.</p>
+                                    </div>
+                                    <Input id="tx-fee" type="number" className="w-24" defaultValue="2.5" />
+                                </div>
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="payout-threshold">Minimum Payout Amount (KES)</Label>
+                                        <p className="text-xs text-muted-foreground">The minimum balance a seller must have to request a payout.</p>
+                                    </div>
+                                    <Input id="payout-threshold" type="number" className="w-32" defaultValue="5000" />
+                                </div>
+                            </CardContent>
+                            <CardFooter>
+                                <Button>Save Financial Settings</Button>
+                            </CardFooter>
+                        </Card>
+
+                        <Card>
+                            <CardHeader><CardTitle>Feature Flags</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="tradpay-enabled">Enable TradPay System</Label>
+                                        <p className="text-xs text-muted-foreground">Master switch to enable or disable the TradPay wallet and escrow system.</p>
+                                    </div>
+                                    <Switch id="tradpay-enabled" defaultChecked={true} />
+                                </div>
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="tradcoin-enabled">Enable TradCoin Airdrop</Label>
+                                        <p className="text-xs text-muted-foreground">Allow users to convert earned TradPoints into TradCoin tokens.</p>
+                                    </div>
+                                    <Switch id="tradcoin-enabled" defaultChecked={false} />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card>
+                            <CardHeader><CardTitle>Security & Compliance</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="session-timeout">User Session Timeout (hours)</Label>
+                                        <p className="text-xs text-muted-foreground">Automatically log out inactive users after this period.</p>
+                                    </div>
+                                    <Input id="session-timeout" type="number" className="w-24" defaultValue="24" />
+                                </div>
+                                <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="retention-policy">Data Retention Policy (days)</Label>
+                                        <p className="text-xs text-muted-foreground">How long to keep inactive user data before anonymization. (0 = forever)</p>
+                                    </div>
+                                    <Input id="retention-policy" type="number" className="w-24" defaultValue="0" />
+                                </div>
+                            </CardContent>
+                            <CardFooter>
+                                <Button>Save Security Settings</Button>
+                            </CardFooter>
+                        </Card>
+
+                         <Card className="border-destructive">
+                            <CardHeader>
+                                <CardTitle className="text-destructive">System Maintenance</CardTitle>
+                                <CardDescription>These are high-impact actions. Proceed with caution.</CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="flex flex-row items-center justify-between rounded-lg border border-destructive/50 p-4">
+                                    <div className="space-y-0.5">
+                                        <Label htmlFor="maintenance-mode">Enable Maintenance Mode</Label>
+                                        <p className="text-xs text-destructive/80">This will make the entire public-facing site unavailable to visitors and non-admin users.</p>
+                                    </div>
+                                    <Switch id="maintenance-mode" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
                 </TabsContent>
             </Tabs>
         </>
