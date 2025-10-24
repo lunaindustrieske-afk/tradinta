@@ -92,6 +92,7 @@ export default function SignUpPage() {
         fullName: string;
         businessName?: string;
         registrationDate: any;
+        referredBy?: string;
       } = {
         email: user.email!,
         role: role,
@@ -102,6 +103,11 @@ export default function SignUpPage() {
       if (role === 'manufacturer') {
         userProfileData.businessName = businessName;
       }
+      
+      const referralCode = localStorage.getItem('referralCode');
+      if (referralCode) {
+        userProfileData.referredBy = referralCode;
+      }
 
       const userDocRef = doc(firestore, "users", user.uid);
       await setDoc(userDocRef, userProfileData);
@@ -110,6 +116,11 @@ export default function SignUpPage() {
         title: "Account Created!",
         description: "You have successfully signed up.",
       });
+      
+      // Clear the referral code after it has been used
+      if (referralCode) {
+        localStorage.removeItem('referralCode');
+      }
 
       switch (role) {
         case 'manufacturer':

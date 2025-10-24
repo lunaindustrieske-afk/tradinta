@@ -1,3 +1,6 @@
+
+'use client';
+
 import type { Metadata } from 'next';
 import { Toaster } from "@/components/ui/toaster"
 import './globals.css';
@@ -5,21 +8,37 @@ import { TopNav } from '@/components/top-nav';
 import { Logo } from '@/components/logo';
 import Link from 'next/link';
 import { FirebaseClientProvider } from '@/firebase';
+import { useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 
-
-export const metadata: Metadata = {
-  title: 'Tradinta',
-  description: 'Powering Africa’s Manufacturers Through Digital Trade',
-};
 
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      // Only set the referral code if one isn't already set.
+      // This attributes the user to the first referrer they came from.
+      if (!localStorage.getItem('referralCode')) {
+        localStorage.setItem('referralCode', refCode);
+      }
+    }
+  }, [searchParams]);
+
+  // Note: We cannot add metadata here because this is a client component.
+  // We can move the metadata to a parent layout if needed.
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <title>Tradinta</title>
+        <meta name="description" content="Powering Africa’s Manufacturers Through Digital Trade" />
         <link rel="icon" href="https://i.postimg.cc/NGkTK7Jc/Gemini-Generated-Image-e6p14ne6p14ne6p1-removebg-preview.png" sizes="any" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
