@@ -7,11 +7,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins } from "lucide-react";
+import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
+import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 
@@ -149,9 +149,12 @@ export default function SuperAdminDashboard() {
         { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers, icon: <ShoppingCart />, href: '/dashboards/user-management/buyers' },
         { name: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners, icon: <Handshake />, href: '/dashboards/user-management/partners' },
         { name: 'Distributors', count: 0, isLoading: false, icon: <Users2 />, href: '#' },
+        { name: 'Logistics Partners', count: 0, isLoading: false, icon: <Truck />, href: '/dashboards/logistics' },
     ];
 
     const adminRoles = [
+        { name: 'Super Admins', count: 1, isLoading: false, icon: <ShieldAlert />, href: '#' },
+        { name: 'Admins', count: 1, isLoading: false, icon: <User />, href: '/dashboards/admin' },
         { name: 'Operations Admins', count: 1, isLoading: false, icon: <Users />, href: '/dashboards/operations-manager' },
         { name: 'Marketing Admins', count: 1, isLoading: false, icon: <Megaphone />, href: '/dashboards/marketing-manager' },
         { name: 'Finance Admins', count: 1, isLoading: false, icon: <Landmark />, href: '/dashboards/finance' },
@@ -159,6 +162,7 @@ export default function SuperAdminDashboard() {
         { name: 'Legal & Compliance', count: 1, isLoading: false, icon: <Scale />, href: '/dashboards/legal-compliance' },
         { name: 'Content Management', count: 1, isLoading: false, icon: <FileText />, href: '/dashboards/content-management' },
         { name: 'User Management Admins', count: 1, isLoading: false, icon: <Users />, href: '#' },
+        { name: 'Analytics Team', count: 1, isLoading: false, icon: <BarChart />, href: '/dashboards/analytics' },
     ];
 
     const tradpayRoles = [
