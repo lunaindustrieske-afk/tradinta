@@ -13,6 +13,7 @@ import { collection, query, where, orderBy, limit, collectionGroup } from "fireb
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { AddUserToRoleModal } from '@/components/add-user-to-role-modal';
 
 
 type UserProfile = {
@@ -39,15 +40,17 @@ type SystemAlert = {
     status: 'new' | 'acknowledged' | 'resolved';
 }
 
-const RoleCard = ({ title, count, isLoading, href }: { title: string, count?: number, isLoading: boolean, href: string }) => (
-    <Link href={href}>
-        <Card className="hover:bg-muted/50 transition-colors">
-            <CardHeader className="flex flex-row items-center justify-between p-4">
-                <CardTitle className="text-sm font-medium">{title}</CardTitle>
-                {isLoading ? <Skeleton className="h-5 w-8" /> : <Badge variant="secondary">{count ?? 0}</Badge>}
-            </CardHeader>
-        </Card>
-    </Link>
+const RoleCard = ({ title, count, isLoading, onAddUser }: { title: string, count?: number, isLoading: boolean, onAddUser: () => void }) => (
+    <Card className="hover:bg-muted/50 transition-colors flex items-center p-3 justify-between">
+        <div className="flex flex-col">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            {isLoading ? <Skeleton className="h-5 w-8 mt-1" /> : <p className="text-xs text-muted-foreground">{count ?? 0} Members</p>}
+        </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onAddUser}>
+            <UserPlus className="h-4 w-4" />
+            <span className="sr-only">Add user to {title}</span>
+        </Button>
+    </Card>
 );
 
 
@@ -57,6 +60,15 @@ export default function SuperAdminDashboard() {
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const activeTab = searchParams.get('tab') || 'overview';
+    
+    // State for the modal
+    const [isModalOpen, setIsModalOpen] = React.useState(false);
+    const [selectedRole, setSelectedRole] = React.useState('');
+
+    const handleAddUserClick = (role: string) => {
+        setSelectedRole(role);
+        setIsModalOpen(true);
+    };
 
     const handleTabChange = (value: string) => {
         const params = new URLSearchParams(window.location.search);
@@ -142,251 +154,258 @@ export default function SuperAdminDashboard() {
     }
 
     const customerRoles = [
-        { title: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers, href: '/dashboards/user-management/sellers' },
-        { title: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers, href: '/dashboards/user-management/buyers' },
-        { title: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners, href: '/dashboards/user-management/partners' },
-        { title: 'Distributors', count: 0, isLoading: false, href: '#' },
+        { name: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers },
+        { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers },
+        { name: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners },
+        { name: 'Distributors', count: 0, isLoading: false },
     ];
 
     const adminRoles = [
-        { title: 'Super Admins', count: 1, isLoading: false, href: '#' },
-        { title: 'Admins', count: 1, isLoading: false, href: '/dashboards/admin' },
-        { title: 'Operations Admins', count: 1, isLoading: false, href: '/dashboards/operations-manager' },
-        { title: 'Marketing Admins', count: 1, isLoading: false, href: '/dashboards/marketing-manager' },
-        { title: 'Finance Admins', count: 1, isLoading: false, href: '/dashboards/finance' },
-        { title: 'Support Admins', count: 1, isLoading: false, href: '/dashboards/support' },
-        { title: 'Legal & Compliance', count: 1, isLoading: false, href: '/dashboards/legal-compliance' },
-        { title: 'Content Management', count: 1, isLoading: false, href: '/dashboards/content-management' },
-        { title: 'User Management Admins', count: 1, isLoading: false, href: '#' },
-        { title: 'Analytics Team', count: 1, isLoading: false, href: '/dashboards/analytics' },
-        { title: 'Logistics Partners', count: 0, isLoading: false, href: '/dashboards/logistics' },
+        { name: 'Super Admins', count: 1, isLoading: false },
+        { name: 'Admins', count: 1, isLoading: false },
+        { name: 'Operations Admins', count: 1, isLoading: false },
+        { name: 'Marketing Admins', count: 1, isLoading: false },
+        { name: 'Finance Admins', count: 1, isLoading: false },
+        { name: 'Support Admins', count: 1, isLoading: false },
+        { name: 'Legal & Compliance', count: 1, isLoading: false },
+        { name: 'Content Management', count: 1, isLoading: false },
+        { name: 'User Management Admins', count: 1, isLoading: false },
+        { name: 'Analytics Team', count: 1, isLoading: false },
+        { name: 'Logistics', count: 0, isLoading: false },
     ];
 
     const tradpayRoles = [
-        { title: 'TradPay Admins', count: 1, isLoading: false, href: '/dashboards/tradpay-admin' },
-        { title: 'TradCoin Airdrop Admins', count: 1, isLoading: false, href: '/dashboards/tradcoin-airdrop' },
+        { name: 'TradPay Admins', count: 1, isLoading: false },
+        { name: 'TradCoin Airdrop Admins', count: 1, isLoading: false },
     ]
 
 
     return (
-        <Tabs value={activeTab} onValueChange={handleTabChange}>
-            <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="overview">Platform Overview</TabsTrigger>
-                <TabsTrigger value="user-management">User Management</TabsTrigger>
-                <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
-                <TabsTrigger value="global-settings">Global Settings</TabsTrigger>
-            </TabsList>
+        <>
+            <AddUserToRoleModal 
+                isOpen={isModalOpen}
+                onOpenChange={setIsModalOpen}
+                roleName={selectedRole}
+            />
+            <Tabs value={activeTab} onValueChange={handleTabChange}>
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="overview">Platform Overview</TabsTrigger>
+                    <TabsTrigger value="user-management">User Management</TabsTrigger>
+                    <TabsTrigger value="activity-log">Activity Log</TabsTrigger>
+                    <TabsTrigger value="global-settings">Global Settings</TabsTrigger>
+                </TabsList>
 
-            <TabsContent value="overview">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Super Admin Dashboard</CardTitle>
-                        <CardDescription>Full control of the platform. Oversee all operations, users, and configurations.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                             <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Users</CardTitle>
-                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    {isLoadingUsers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{users?.length || 0}</div>}
-                                    <p className="text-xs text-muted-foreground">Across all roles</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Sellers</CardTitle>
-                                    <Building className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                     {isLoadingSellers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{sellers?.length || 0}</div>}
-                                    <p className="text-xs text-muted-foreground">Verified & pending</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Buyers</CardTitle>
-                                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    {isLoadingBuyers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{buyers?.length || 0}</div>}
-                                    <p className="text-xs text-muted-foreground">Registered buyers</p>
-                                </CardContent>
-                            </Card>
-                            <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('activity-log')}>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
-                                    <ShieldAlert className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    {isLoadingAlerts ? <Loader2 className="h-6 w-6 animate-spin" /> : 
-                                        <div className={`text-2xl font-bold ${criticalAlerts && criticalAlerts.length > 0 ? 'text-destructive' : 'text-green-600'}`}>
-                                            {criticalAlerts?.length || 0}
-                                        </div>
-                                    }
-                                    <p className="text-xs text-muted-foreground">New critical issues</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Products</CardTitle>
-                                    <Package className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                     {isLoadingProducts ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{products?.length || 0}</div>}
-                                    <p className="text-xs text-muted-foreground">Published items</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-                                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    {isLoadingOrders ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{orders?.length || 0}</div>}
-                                    <p className="text-xs text-muted-foreground">Across all time</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">New Users Today</CardTitle>
-                                    <UserPlus className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">+15</div>
-                                    <p className="text-xs text-muted-foreground">10 Buyers, 5 Sellers (mock)</p>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                    <CardTitle className="text-sm font-medium">Live Visitors</CardTitle>
-                                    <Signal className="h-4 w-4 text-muted-foreground" />
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-2xl font-bold">N/A</div>
-                                    <p className="text-xs text-muted-foreground">Requires analytics integration</p>
-                                </CardContent>
-                            </Card>
-                        </div>
-                        {criticalAlerts && criticalAlerts.length > 0 && (
-                            <Card className="border-destructive">
-                                <CardHeader>
-                                    <CardTitle className="text-destructive flex items-center gap-2">
-                                        <ShieldAlert /> Critical System Alerts
-                                    </CardTitle>
-                                    <CardDescription>The following issues require immediate attention.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Message</TableHead>
-                                                <TableHead>Type</TableHead>
-                                                <TableHead>Time</TableHead>
-                                                <TableHead>Actions</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {criticalAlerts.map(alert => (
-                                                <TableRow key={alert.id}>
-                                                    <TableCell className="font-medium">{alert.message}</TableCell>
-                                                    <TableCell><Badge variant="destructive">{alert.type}</Badge></TableCell>
-                                                    <TableCell className="text-xs">{new Date(alert.timestamp?.seconds * 1000).toLocaleTimeString()}</TableCell>
-                                                    <TableCell className="space-x-2">
-                                                        <Button size="sm">Acknowledge</Button>
-                                                        <Button size="sm" variant="outline">View Details</Button>
-                                                    </TableCell>
+                <TabsContent value="overview">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Super Admin Dashboard</CardTitle>
+                            <CardDescription>Full control of the platform. Oversee all operations, users, and configurations.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                                <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('user-management')}>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+                                        <Users className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isLoadingUsers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{users?.length || 0}</div>}
+                                        <p className="text-xs text-muted-foreground">Across all roles</p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Sellers</CardTitle>
+                                        <Building className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isLoadingSellers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{sellers?.length || 0}</div>}
+                                        <p className="text-xs text-muted-foreground">Verified & pending</p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Buyers</CardTitle>
+                                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isLoadingBuyers ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{buyers?.length || 0}</div>}
+                                        <p className="text-xs text-muted-foreground">Registered buyers</p>
+                                    </CardContent>
+                                </Card>
+                                <Card className="cursor-pointer hover:bg-muted/50" onClick={() => handleTabChange('activity-log')}>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Critical Alerts</CardTitle>
+                                        <ShieldAlert className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isLoadingAlerts ? <Loader2 className="h-6 w-6 animate-spin" /> : 
+                                            <div className={`text-2xl font-bold ${criticalAlerts && criticalAlerts.length > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                                                {criticalAlerts?.length || 0}
+                                            </div>
+                                        }
+                                        <p className="text-xs text-muted-foreground">New critical issues</p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Products</CardTitle>
+                                        <Package className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isLoadingProducts ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{products?.length || 0}</div>}
+                                        <p className="text-xs text-muted-foreground">Published items</p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        {isLoadingOrders ? <Loader2 className="h-6 w-6 animate-spin" /> : <div className="text-2xl font-bold">{orders?.length || 0}</div>}
+                                        <p className="text-xs text-muted-foreground">Across all time</p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">New Users Today</CardTitle>
+                                        <UserPlus className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">+15</div>
+                                        <p className="text-xs text-muted-foreground">10 Buyers, 5 Sellers (mock)</p>
+                                    </CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                        <CardTitle className="text-sm font-medium">Live Visitors</CardTitle>
+                                        <Signal className="h-4 w-4 text-muted-foreground" />
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-2xl font-bold">N/A</div>
+                                        <p className="text-xs text-muted-foreground">Requires analytics integration</p>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                            {criticalAlerts && criticalAlerts.length > 0 && (
+                                <Card className="border-destructive">
+                                    <CardHeader>
+                                        <CardTitle className="text-destructive flex items-center gap-2">
+                                            <ShieldAlert /> Critical System Alerts
+                                        </CardTitle>
+                                        <CardDescription>The following issues require immediate attention.</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Message</TableHead>
+                                                    <TableHead>Type</TableHead>
+                                                    <TableHead>Time</TableHead>
+                                                    <TableHead>Actions</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </CardContent>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {criticalAlerts.map(alert => (
+                                                    <TableRow key={alert.id}>
+                                                        <TableCell className="font-medium">{alert.message}</TableCell>
+                                                        <TableCell><Badge variant="destructive">{alert.type}</Badge></TableCell>
+                                                        <TableCell className="text-xs">{new Date(alert.timestamp?.seconds * 1000).toLocaleTimeString()}</TableCell>
+                                                        <TableCell className="space-x-2">
+                                                            <Button size="sm">Acknowledge</Button>
+                                                            <Button size="sm" variant="outline">View Details</Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                
+                <TabsContent value="user-management">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>User Role Management</CardTitle>
+                            <CardDescription>Assign roles and manage permissions for all users on the platform.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4">Customer Roles</h3>
+                                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                    {customerRoles.map((role) => (
+                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick(role.name)} />
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4">Administrative Roles</h3>
+                                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                    {adminRoles.map((role) => (
+                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick(role.name)} />
+                                    ))}
+                                </div>
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-semibold mb-4">TradPay & TradCoin Roles</h3>
+                                <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                    {tradpayRoles.map((role) => (
+                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick(role.name)} />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <Card className="border-dashed flex flex-col items-center justify-center text-center p-4 hover:border-primary hover:text-primary transition-colors cursor-pointer min-h-[60px]">
+                                    <h4 className="font-semibold text-sm">Create New Role</h4>
                             </Card>
-                        )}
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            
-            <TabsContent value="user-management">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>User Role Management</CardTitle>
-                        <CardDescription>Manage user populations by their assigned role.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">Customer Roles</h3>
-                            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-                                {customerRoles.map((role) => (
-                                    <RoleCard key={role.title} {...role} />
-                                ))}
                             </div>
-                        </div>
-                         <div>
-                            <h3 className="text-lg font-semibold mb-4">Administrative Roles</h3>
-                            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-                                {adminRoles.map((role) => (
-                                    <RoleCard key={role.title} {...role} />
-                                ))}
-                            </div>
-                        </div>
-                        <div>
-                            <h3 className="text-lg font-semibold mb-4">TradPay & TradCoin Roles</h3>
-                            <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
-                                {tradpayRoles.map((role) => (
-                                    <RoleCard key={role.title} {...role} />
-                                ))}
-                            </div>
-                        </div>
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                           <Card className="border-dashed flex flex-col items-center justify-center text-center p-4 hover:border-primary hover:text-primary transition-colors cursor-pointer min-h-[60px]">
-                                <h4 className="font-semibold text-sm">Create New Role</h4>
-                           </Card>
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
 
-            <TabsContent value="activity-log">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Platform Activity Log</CardTitle>
-                        <CardDescription>A real-time feed of all significant actions performed by admins.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Action</TableHead>
-                                    <TableHead className="w-[40%]">Details</TableHead>
-                                    <TableHead>Admin User</TableHead>
-                                    <TableHead>Timestamp</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {renderLogRows()}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </TabsContent>
+                <TabsContent value="activity-log">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Platform Activity Log</CardTitle>
+                            <CardDescription>A real-time feed of all significant actions performed by admins.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Action</TableHead>
+                                        <TableHead className="w-[40%]">Details</TableHead>
+                                        <TableHead>Admin User</TableHead>
+                                        <TableHead>Timestamp</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {renderLogRows()}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
 
-            <TabsContent value="global-settings">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Platform-Wide Settings</CardTitle>
-                        <CardDescription>Manage global configurations like transaction fees and feature flags.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                       <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                           <Users className="h-16 w-16 text-muted-foreground" />
-                           <p className="ml-4 text-muted-foreground">Global Settings Component Here</p>
-                       </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-        </Tabs>
+                <TabsContent value="global-settings">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Platform-Wide Settings</CardTitle>
+                            <CardDescription>Manage global configurations like transaction fees and feature flags.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                        <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
+                            <Users className="h-16 w-16 text-muted-foreground" />
+                            <p className="ml-4 text-muted-foreground">Global Settings Component Here</p>
+                        </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
+        </>
     );
 }
