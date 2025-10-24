@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck } from "lucide-react";
+import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck, Shield, BookUser, Settings, FileWarning } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -133,10 +132,10 @@ export default function SuperAdminDashboard() {
         if (isLoadingLogs) {
              return Array.from({ length: 4 }).map((_, i) => (
                 <TableRow key={`skel-log-${i}`}>
-                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-full" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-9 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                 </TableRow>
             ));
         }
@@ -161,7 +160,7 @@ export default function SuperAdminDashboard() {
     ];
 
     const adminRoles = [
-        { name: 'Super Admins', count: 1, isLoading: false },
+        { name: 'Super Admin', count: 1, isLoading: false },
         { name: 'Admin', count: 1, isLoading: false },
         { name: 'Operations', count: 1, isLoading: false },
         { name: 'Marketing', count: 1, isLoading: false },
@@ -399,7 +398,7 @@ export default function SuperAdminDashboard() {
                         </CardHeader>
                         <CardContent className="space-y-4">
                         <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                            <Users className="h-16 w-16 text-muted-foreground" />
+                            <Settings className="h-16 w-16 text-muted-foreground" />
                             <p className="ml-4 text-muted-foreground">Global Settings Component Here</p>
                         </div>
                         </CardContent>
