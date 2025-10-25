@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -29,12 +28,14 @@ interface AddUserToRoleModalProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   roleName: string;
+  roleValue: string;
 }
 
 export function AddUserToRoleModal({
   isOpen,
   onOpenChange,
   roleName,
+  roleValue,
 }: AddUserToRoleModalProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
@@ -71,7 +72,7 @@ export function AddUserToRoleModal({
 
       const userDoc = querySnapshot.docs[0];
       await updateDoc(userDoc.ref, {
-        role: roleName, // This should match a value in your 'role' enum
+        role: roleValue,
       });
 
       toast({

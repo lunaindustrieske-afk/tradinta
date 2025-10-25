@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -66,9 +65,9 @@ export default function SuperAdminDashboard() {
     
     // State for the modal
     const [isModalOpen, setIsModalOpen] = React.useState(false);
-    const [selectedRole, setSelectedRole] = React.useState('');
+    const [selectedRole, setSelectedRole] = React.useState({ name: '', value: '' });
 
-    const handleAddUserClick = (role: string) => {
+    const handleAddUserClick = (role: {name: string, value: string}) => {
         setSelectedRole(role);
         setIsModalOpen(true);
     };
@@ -157,29 +156,29 @@ export default function SuperAdminDashboard() {
     }
 
     const customerRoles = [
-        { name: 'Sellers / Manufacturers', count: sellers?.length, isLoading: isLoadingSellers },
-        { name: 'Registered Buyers', count: buyers?.length, isLoading: isLoadingBuyers },
-        { name: 'Growth Partners', count: partners?.length, isLoading: isLoadingPartners },
-        { name: 'Distributors', count: 0, isLoading: false },
+        { name: 'Sellers / Manufacturers', value: 'manufacturer', count: sellers?.length, isLoading: isLoadingSellers },
+        { name: 'Registered Buyers', value: 'buyer', count: buyers?.length, isLoading: isLoadingBuyers },
+        { name: 'Growth Partners', value: 'partner', count: partners?.length, isLoading: isLoadingPartners },
+        { name: 'Distributors', value: 'distributor', count: 0, isLoading: false },
     ];
 
     const adminRoles = [
-        { name: 'Super Admin', count: 1, isLoading: false },
-        { name: 'Admin', count: users?.filter(u => u.role === 'admin').length, isLoading: isLoadingUsers },
-        { name: 'Operations', count: users?.filter(u => u.role === 'operations-manager').length, isLoading: isLoadingUsers },
-        { name: 'Marketing', count: users?.filter(u => u.role === 'marketing-manager').length, isLoading: isLoadingUsers },
-        { name: 'Finance', count: users?.filter(u => u.role === 'finance').length, isLoading: isLoadingUsers },
-        { name: 'Support', count: users?.filter(u => u.role === 'support').length, isLoading: isLoadingUsers },
-        { name: 'Legal & Compliance', count: users?.filter(u => u.role === 'legal-compliance').length, isLoading: isLoadingUsers },
-        { name: 'Content Management', count: users?.filter(u => u.role === 'content-management').length, isLoading: isLoadingUsers },
-        { name: 'User Management', count: users?.filter(u => u.role === 'user-management').length, isLoading: isLoadingUsers },
-        { name: 'Analytics', count: users?.filter(u => u.role === 'analytics').length, isLoading: isLoadingUsers },
-        { name: 'Logistics', count: users?.filter(u => u.role === 'logistics').length, isLoading: isLoadingUsers },
+        { name: 'Super Admin', value: 'super-admin', count: 1, isLoading: false },
+        { name: 'Admin', value: 'admin', count: users?.filter(u => u.role === 'admin').length, isLoading: isLoadingUsers },
+        { name: 'Operations', value: 'operations-manager', count: users?.filter(u => u.role === 'operations-manager').length, isLoading: isLoadingUsers },
+        { name: 'Marketing', value: 'marketing-manager', count: users?.filter(u => u.role === 'marketing-manager').length, isLoading: isLoadingUsers },
+        { name: 'Finance', value: 'finance', count: users?.filter(u => u.role === 'finance').length, isLoading: isLoadingUsers },
+        { name: 'Support', value: 'support', count: users?.filter(u => u.role === 'support').length, isLoading: isLoadingUsers },
+        { name: 'Legal & Compliance', value: 'legal-compliance', count: users?.filter(u => u.role === 'legal-compliance').length, isLoading: isLoadingUsers },
+        { name: 'Content Management', value: 'content-management', count: users?.filter(u => u.role === 'content-management').length, isLoading: isLoadingUsers },
+        { name: 'User Management', value: 'user-management', count: users?.filter(u => u.role === 'user-management').length, isLoading: isLoadingUsers },
+        { name: 'Analytics', value: 'analytics', count: users?.filter(u => u.role === 'analytics').length, isLoading: isLoadingUsers },
+        { name: 'Logistics', value: 'logistics', count: users?.filter(u => u.role === 'logistics').length, isLoading: isLoadingUsers },
     ];
 
     const tradpayRoles = [
-        { name: 'TradPay Admins', count: users?.filter(u => u.role === 'tradpay-admin').length, isLoading: isLoadingUsers },
-        { name: 'TradCoin Airdrop Admins', count: users?.filter(u => u.role === 'tradcoin-airdrop').length, isLoading: isLoadingUsers },
+        { name: 'TradPay Admins', value: 'tradpay-admin', count: users?.filter(u => u.role === 'tradpay-admin').length, isLoading: isLoadingUsers },
+        { name: 'TradCoin Airdrop Admins', value: 'tradcoin-airdrop', count: users?.filter(u => u.role === 'tradcoin-airdrop').length, isLoading: isLoadingUsers },
     ]
 
 
@@ -188,7 +187,8 @@ export default function SuperAdminDashboard() {
             <AddUserToRoleModal 
                 isOpen={isModalOpen}
                 onOpenChange={setIsModalOpen}
-                roleName={selectedRole}
+                roleName={selectedRole.name}
+                roleValue={selectedRole.value}
             />
             <Tabs value={activeTab} onValueChange={handleTabChange}>
                 <TabsList className="grid w-full grid-cols-4">
@@ -341,7 +341,7 @@ export default function SuperAdminDashboard() {
                                 <h3 className="text-lg font-semibold mb-4">Customer Roles</h3>
                                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
                                     {customerRoles.map((role) => (
-                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick(role.name)} />
+                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick({name: role.name, value: role.value})} />
                                     ))}
                                 </div>
                             </div>
@@ -349,7 +349,7 @@ export default function SuperAdminDashboard() {
                                 <h3 className="text-lg font-semibold mb-4">Administrative Roles</h3>
                                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
                                     {adminRoles.map((role) => (
-                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick(role.name)} />
+                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick({name: role.name, value: role.value})} />
                                     ))}
                                 </div>
                             </div>
@@ -357,7 +357,7 @@ export default function SuperAdminDashboard() {
                                 <h3 className="text-lg font-semibold mb-4">TradPay & TradCoin Roles</h3>
                                 <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
                                     {tradpayRoles.map((role) => (
-                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick(role.name)} />
+                                        <RoleCard key={role.name} title={role.name} count={role.count} isLoading={role.isLoading} onAddUser={() => handleAddUserClick({name: role.name, value: role.value})} />
                                     ))}
                                 </div>
                             </div>
