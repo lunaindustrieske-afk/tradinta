@@ -36,6 +36,8 @@ import {
   AlertTriangle,
   ShieldCheck,
   Loader2,
+  Wallet,
+  BookCopy,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -232,6 +234,45 @@ export default function SellerDashboardPage() {
           </CardDescription>
         </CardHeader>
       </Card>
+      
+      <Card>
+        <CardHeader>
+            <CardTitle>Quick Access</CardTitle>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre/products">
+                    <Package className="w-6 h-6 mb-2" />
+                    Manage Products
+                </Link>
+            </Button>
+             <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre/orders">
+                    <ShoppingCart className="w-6 h-6 mb-2" />
+                    View Orders
+                </Link>
+            </Button>
+             <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre#wallet">
+                    <Wallet className="w-6 h-6 mb-2" />
+                    Wallet & Payouts
+                </Link>
+            </Button>
+             <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre/quotations">
+                    <BookCopy className="w-6 h-6 mb-2" />
+                    Quotations
+                </Link>
+            </Button>
+             <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre/messages">
+                    <MessageSquare className="w-6 h-6 mb-2" />
+                    Messages
+                </Link>
+            </Button>
+        </CardContent>
+      </Card>
+
 
       {/* KPI Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -413,7 +454,7 @@ export default function SellerDashboardPage() {
           {user && <VerificationStatusCard manufacturerId={user.uid} />}
 
           {/* Wallet Card */}
-          <Card>
+          <Card id="wallet">
             <CardHeader>
               <CardTitle>My Wallet</CardTitle>
             </CardHeader>
@@ -522,3 +563,5 @@ export default function SellerDashboardPage() {
     </div>
   );
 }
+
+    
