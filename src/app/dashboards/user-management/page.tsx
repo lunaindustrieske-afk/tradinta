@@ -28,6 +28,7 @@ import {
   Loader2,
   File,
   AlertTriangle,
+  ShieldCheck,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
@@ -392,22 +393,56 @@ function UserManagementContent() {
     );
 }
 
+const PermissionGate = ({ role, onProceed }: { role: string | null, onProceed: () => void }) => {
+  const hasAccess = role === 'user-management' || role === 'admin' || role === 'super-admin';
+
+  if (!hasAccess) {
+    return <PermissionDenied />;
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Permission Check Complete</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
+            <ShieldCheck className="h-8 w-8 text-green-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">Your role:</p>
+              <p className="font-bold text-lg">{role}</p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">You have the correct permissions to view the User Management Dashboard.</p>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full" onClick={onProceed}>
+            Proceed to Dashboard
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
 
 export default function UserManagementPage() {
-    const { user, isUserLoading, role } = useUser();
+    const { isUserLoading, role } = useUser();
+    const [gatePassed, setGatePassed] = React.useState(false);
     
     if (isUserLoading) {
         return (
             <div className="flex items-center justify-center min-h-[400px]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-4 text-muted-foreground">Verifying your permissions...</p>
             </div>
         );
     }
 
-    if (role !== 'user-management' && role !== 'admin' && role !== 'super-admin') {
-        return <PermissionDenied />;
+    if (!gatePassed) {
+      return <PermissionGate role={role} onProceed={() => setGatePassed(true)} />;
     }
 
     return <UserManagementContent />;
 }
-

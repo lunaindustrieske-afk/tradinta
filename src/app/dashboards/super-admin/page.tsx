@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck, Shield, BookUser, Settings, FileWarning } from "lucide-react";
+import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck, Shield, BookUser, Settings, FileWarning, ShieldCheck } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -493,21 +493,55 @@ function SuperAdminDashboardContent() {
     );
 }
 
+const PermissionGate = ({ role, onProceed }: { role: string | null, onProceed: () => void }) => {
+  const hasAccess = role === 'super-admin';
+
+  if (!hasAccess) {
+    return <PermissionDenied />;
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Permission Check Complete</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
+            <ShieldCheck className="h-8 w-8 text-green-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">Your role:</p>
+              <p className="font-bold text-lg">{role}</p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">You have the correct permissions to view the Super Admin Dashboard.</p>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full" onClick={onProceed}>
+            Proceed to Dashboard
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
 
 export default function SuperAdminDashboardPage() {
-  const { user, isUserLoading, role } = useUser();
-
+  const { isUserLoading, role } = useUser();
+  const [gatePassed, setGatePassed] = React.useState(false);
+  
   if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Verifying your permissions...</p>
       </div>
     );
   }
 
-  // Allow access ONLY if the user's role is 'super-admin'.
-  if (role !== 'super-admin') {
-    return <PermissionDenied />;
+  if (!gatePassed) {
+    return <PermissionGate role={role} onProceed={() => setGatePassed(true)} />;
   }
 
   return <SuperAdminDashboardContent />;

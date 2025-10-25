@@ -1,6 +1,7 @@
 
 'use client';
 
+import * as React from 'react';
 import {
   Card,
   CardHeader,
@@ -59,7 +60,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Review } from '@/app/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { PermissionDenied } from '@/components/ui/permission-denied';
-import * as React from 'react';
 
 const products = [
   { id: 'PROD-001', name: 'Industrial Grade Cement', stock: 1200, status: 'Live' },
@@ -509,22 +509,55 @@ function SellerDashboardContent() {
   );
 }
 
+const PermissionGate = ({ role, onProceed }: { role: string | null, onProceed: () => void }) => {
+  const hasAccess = role === 'manufacturer' || role === 'super-admin';
+
+  if (!hasAccess) {
+    return <PermissionDenied />;
+  }
+
+  return (
+    <div className="flex items-center justify-center min-h-[400px]">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>Permission Check Complete</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
+            <ShieldCheck className="h-8 w-8 text-green-600" />
+            <div>
+              <p className="text-sm text-muted-foreground">Your role:</p>
+              <p className="font-bold text-lg">{role}</p>
+            </div>
+          </div>
+          <p className="text-sm text-muted-foreground">You have the correct permissions to view the Seller Centre.</p>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full" onClick={onProceed}>
+            Proceed to Dashboard
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
 export default function SellerDashboardPage() {
-  const { user, isUserLoading, role } = useUser();
+  const { isUserLoading, role } = useUser();
+  const [gatePassed, setGatePassed] = React.useState(false);
 
   if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Verifying your permissions...</p>
       </div>
     );
   }
 
-  // Allow access if the user's role is loaded and is either 'manufacturer' OR 'super-admin'
-  if (role !== 'manufacturer' && role !== 'super-admin') {
-    return <PermissionDenied />;
+  if (!gatePassed) {
+    return <PermissionGate role={role} onProceed={() => setGatePassed(true)} />;
   }
-
-  // If the user has the correct role, render the dashboard
+  
   return <SellerDashboardContent />;
 }
