@@ -129,7 +129,7 @@ function SellerDashboardContent() {
     const firestore = useFirestore();
 
     const reviewsQuery = useMemoFirebase(() => {
-        if (!user || !firestore) return null;
+        if (!firestore || !user?.uid) return null;
         // Query all 'reviews' collection groups where the manufacturerId matches
         return query(
             collectionGroup(firestore, 'reviews'), 
@@ -137,7 +137,7 @@ function SellerDashboardContent() {
             orderBy('createdAt', 'desc'),
             limit(5)
         );
-    }, [firestore, user]);
+    }, [firestore, user?.uid]);
 
     const { data: reviews, isLoading: isLoadingReviews } = useCollection<Review>(reviewsQuery);
 
@@ -395,3 +395,5 @@ export default function SellerDashboardPage() {
     // If the user has the correct role, render the dashboard
     return <SellerDashboardContent />;
 }
+
+    
