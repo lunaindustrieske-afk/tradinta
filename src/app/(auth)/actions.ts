@@ -58,18 +58,55 @@ export async function handleRequestPasswordReset(
 
     const resetLink = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${token}`;
 
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Tradinta Password</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                  <td align="center" style="padding: 20px 0;">
+                      <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                          <tr>
+                              <td align="center" style="padding: 40px 20px; border-bottom: 1px solid #eeeeee;">
+                                  <img src="https://i.postimg.cc/NGkTK7Jc/Gemini-Generated-Image-e6p14ne6p14ne6p1-removebg-preview.png" alt="Tradinta Logo" width="150">
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding: 40px 30px;">
+                                  <h1 style="color: #333333; font-size: 24px;">Password Reset Request</h1>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">Hello ${user.displayName || 'there'},</p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">We received a request to reset the password for your Tradinta account. To proceed, please click the button below:</p>
+                                  <p style="text-align: center; margin: 30px 0;">
+                                      <a href="${resetLink}" style="background-color: #1D4ED8; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reset Your Password</a>
+                                  </p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">This link is valid for one hour. If you did not request a password reset, you can safely ignore this email. Your account security has not been compromised.</p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5; margin-top: 30px;">Thanks,<br>The Tradinta Team</p>
+                              </td>
+                          </tr>
+                           <tr>
+                              <td style="padding: 20px 30px; font-size: 12px; color: #999999; text-align: center; border-top: 1px solid #eeeeee;">
+                                  <p>If you're having trouble with the button above, copy and paste this URL into your web browser:</p>
+                                  <p><a href="${resetLink}" style="color: #1D4ED8; text-decoration: none;">${resetLink}</a></p>
+                                  <p style="margin-top: 20px;">© ${new Date().getFullYear()} Tradinta. All rights reserved.</p>
+                              </td>
+                          </tr>
+                      </table>
+                  </td>
+              </tr>
+          </table>
+      </body>
+      </html>
+    `;
+
     await sendTransactionalEmail({
       to: email,
       subject: 'Reset Your Tradinta Password',
-      htmlContent: `
-        <h1>Password Reset Request</h1>
-        <p>Hello ${user.displayName || 'there'},</p>
-        <p>We received a request to reset your password. Click the link below to set a new password:</p>
-        <a href="${resetLink}" style="background-color:#29ABE2; color:white; padding:10px 15px; text-decoration:none; border-radius:5px;">Reset Password</a>
-        <p>This link will expire in 1 hour.</p>
-        <p>If you did not request this, you can safely ignore this email.</p>
-        <p>Thanks,<br/>The Tradinta Team</p>
-      `,
+      htmlContent: emailHtml,
     });
 
     return {
@@ -88,7 +125,7 @@ export async function handleRequestPasswordReset(
      // Catch errors from sendTransactionalEmail
     if (error.message && error.message.includes('ZeptoMail API Error')) {
       return {
-        message: error.message,
+        message: 'Could not send reset email. ' + error.message,
         success: false,
       };
     }
