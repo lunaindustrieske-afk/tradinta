@@ -67,8 +67,7 @@ export default function GrowthPartnerDashboard() {
 
   const campaignsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    // Corrected query path
-    return collection(firestore, 'users', user.uid, 'growthPartnerCampaigns');
+    return query(collection(firestore, 'users', user.uid, 'growthPartnerCampaigns'));
   }, [user, firestore]);
 
   const { data: campaigns, isLoading: isLoadingCampaigns } = useCollection(campaignsQuery);
