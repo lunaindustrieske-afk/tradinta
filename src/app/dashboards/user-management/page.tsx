@@ -23,15 +23,28 @@ import {
   Shield,
   Building,
   ShoppingCart,
-  UserPlus,
   Search,
   Loader2,
+  File,
+  AlertTriangle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 type UserProfile = {
   id: string;
@@ -70,9 +83,10 @@ const SummaryCard = ({
 
 export default function UserManagementPage() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [isSearching, setIsSearching] = React.useState(false);
-  const [searchResults, setSearchResults] = React.useState<UserProfile[]>([]);
+  const [displayedUsers, setDisplayedUsers] = React.useState<UserProfile[]>([]);
 
   // --- Data Fetching for Summary Cards ---
   const usersQuery = useMemoFirebase(
@@ -142,15 +156,15 @@ export default function UserManagementPage() {
     },
   ];
 
-  const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSearch = async (event?: React.FormEvent<HTMLFormElement>) => {
+    event?.preventDefault();
     const searchTerm = searchQuery.trim();
     if (!firestore || !searchTerm) {
-      setSearchResults([]);
+      setDisplayedUsers([]);
       return;
     }
     setIsSearching(true);
-    setSearchResults([]);
+    setDisplayedUsers([]);
 
     let userFound: UserProfile | null = null;
 
@@ -178,12 +192,60 @@ export default function UserManagementPage() {
     }
 
     if (userFound) {
-      setSearchResults([userFound]);
+      setDisplayedUsers([userFound]);
     }
 
     setIsSearching(false);
   };
   
+  const handleLoadAll = async () => {
+    if (!firestore) return;
+    setIsSearching(true);
+    setDisplayedUsers([]);
+
+    const allUsersQuery = query(collection(firestore, 'users'), where('role', '!=', 'super-admin'));
+    const querySnapshot = await getDocs(allUsersQuery);
+    const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+    
+    setDisplayedUsers(usersList);
+    setIsSearching(false);
+  };
+
+  const handleExportCsv = () => {
+    if (displayedUsers.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "Please search for users or load all users before exporting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const headers = ['Tradinta ID', 'Full Name', 'Email', 'Role', 'Status'];
+    const rows = displayedUsers.map(user => 
+      [
+        user.tradintaId || 'N/A',
+        `"${user.fullName || ''}"`,
+        user.email,
+        user.role,
+        user.status || 'Active'
+      ].join(',')
+    );
+    
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "tradinta_users.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Successful",
+      description: `${displayedUsers.length} users exported to CSV.`
+    });
+  };
 
   const renderTableRows = () => {
     if (isSearching) {
@@ -196,17 +258,17 @@ export default function UserManagementPage() {
       );
     }
 
-    if (searchResults.length === 0) {
+    if (displayedUsers.length === 0) {
       return (
         <TableRow>
           <TableCell colSpan={6} className="h-24 text-center">
-            No users found. Enter an email or Tradinta ID to search.
+            No users found. Enter an email or Tradinta ID to search, or load all users.
           </TableCell>
         </TableRow>
       );
     }
 
-    return searchResults.map((user) => (
+    return displayedUsers.map((user) => (
       <TableRow key={user.id}>
         <TableCell className="font-mono text-xs">
           {user.tradintaId || 'N/A'}
@@ -258,9 +320,9 @@ export default function UserManagementPage() {
         <CardHeader>
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
             <div>
-              <CardTitle>Find Users</CardTitle>
+              <CardTitle>Find & Manage Users</CardTitle>
               <CardDescription>
-                Search for users by their email or Tradinta ID.
+                Search for specific users or load the complete user list.
               </CardDescription>
             </div>
             <form onSubmit={handleSearch} className="flex items-center gap-2 w-full md:w-auto">
@@ -281,6 +343,30 @@ export default function UserManagementPage() {
           </div>
         </CardHeader>
         <CardContent>
+          <div className="flex justify-end gap-2 mb-4">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                        <AlertTriangle className="mr-2 h-4 w-4"/> Load All Users
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Loading all users can be slow and may cause performance issues on your browser if the user base is very large. Proceed with caution.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLoadAll}>Continue</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            <Button variant="outline" onClick={handleExportCsv}>
+                <File className="mr-2 h-4 w-4" /> Export to CSV
+            </Button>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
