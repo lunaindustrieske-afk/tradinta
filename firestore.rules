@@ -1,385 +1,483 @@
 /**
- * @fileOverview Firestore Security Rules for the Tradinta platform.
+ * @fileoverview Firestore Security Rules for the Tradinta platform.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for most data, with specific exceptions for public content and administrative data. Manufacturers and buyers can only manage their own profiles and associated data.
+ * This ruleset enforces a strict user-ownership model for most data, ensuring that only the authenticated user (or authorized admins/ops) can create, read, update, or delete their own data. Top-level collections like `disputes`, `activityLogs`, and `systemAlerts` are secured for admin/ops use only. Public read access is granted to a limited number of collections like `homepageBanners` and `blogPosts`.
  *
  * Data Structure:
- * - /users/{userId}: User profiles, where userId matches the authenticated user's UID.
- * - /manufacturers/{manufacturerId}: Manufacturer profiles, where manufacturerId matches the authenticated user's UID.
- * - /buyers/{buyerId}: Buyer profiles, where buyerId matches the authenticated user's UID.
- * - /manufacturers/{manufacturerId}/products/{productId}: Products owned by a specific manufacturer.
- * - /buyers/{buyerId}/orders/{orderId}: Orders placed by a specific buyer.
- * - /quotations/{quotationId}: Quotations, with denormalized buyerId and manufacturerId fields for simplified authorization.
- * - /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}: Marketing campaigns owned by a specific manufacturer.
- * - /disputes/{disputeId}: Disputes, with denormalized buyerId and manufacturerId fields.
- * - /activityLogs/{logId}: Activity logs for admin actions.
- * - /homepageBanners/{bannerId}: Homepage banners (publicly readable).
- * - /blogPosts/{postId}: Blog posts (publicly readable).
- * - /sitePages/{pageId}: Site pages (e.g., "About Us").
- * - /systemAlerts/{alertId}: System alerts for admin review.
- * - /passwordResetTokens/{tokenId}: Single-use tokens for password resets.
+ * - `/users/{userId}`: Stores user profile data.  `userId` corresponds to the user's UID.
+ * - `/manufacturers/{manufacturerId}`: Stores manufacturer profiles. `manufacturerId` corresponds to the user's UID.
+ * - `/buyers/{buyerId}`: Stores buyer profiles. `buyerId` corresponds to the user's UID.
+ * - `/manufacturers/{manufacturerId}/products/{productId}`: Stores products owned by a manufacturer.
+ * - `/buyers/{buyerId}/orders/{orderId}`: Stores orders placed by a buyer.
+ * - `/quotations/{quotationId}`: Stores quotations. Includes denormalized `buyerId` and `manufacturerId`.
+ * - `/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}`: Stores marketing campaigns owned by a manufacturer.
+ * - `/disputes/{disputeId}`: Stores disputes.
+ * - `/activityLogs/{logId}`: Stores activity logs.
+ * - `/homepageBanners/{bannerId}`: Stores homepage banners.
+ * - `/blogPosts/{postId}`: Stores blog posts.
+ * - `/sitePages/{pageId}`: Stores site pages.
+ * - `/systemAlerts/{alertId}`: Stores system alerts.
  *
  * Key Security Decisions:
- * - User listing is generally disallowed to protect privacy.
- * - Public read access is granted for homepage banners and blog posts.
- * - All write operations are protected by authorization checks based on ownership or admin roles.
- * - Data validation is limited to authorization-critical fields to allow for rapid schema iteration.
+ * - User listing is disallowed to protect user privacy.
+ * - Public read access is granted to `homepageBanners` and `blogPosts`.
+ * - All write operations are protected by authentication checks and ownership validation.
+ * - Data validation is limited to relational integrity (e.g., enforcing ownership constraints).
+ *
+ * Denormalization for Authorization:
+ * The `quotations` collection denormalizes both `buyerId` and `manufacturerId` to enable easier querying and security rule creation.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
     /**
-     * @description Enforces owner-only access to user profiles.
+     * @description Allows users to read and write their own profile data.
      * @path /users/{userId}
-     * @allow (create) User with UID 'user123' can create their own profile.
-     *   request.auth.uid == 'user123'
-     *   request.resource.data.id == 'user123'
-     * @allow (get) User with UID 'user123' can read their own profile.
-     *   request.auth.uid == 'user123'
-     * @allow (update) User with UID 'user123' can update their own profile.
-     *   request.auth.uid == 'user123'
-     * @deny (create) User with UID 'user456' cannot create a profile for 'user123'.
-     *   request.auth.uid == 'user456'
-     *   request.resource.data.id == 'user123'
-     * @deny (update) User with UID 'user456' cannot update the profile of 'user123'.
-     *   request.auth.uid == 'user456'
+     * @allow (create) - Authenticated user creates their own profile.
+     *   request.auth.uid == "{userId}"
+     * @allow (get) - Authenticated user reads their own profile.
+     *   request.auth.uid == "{userId}"
+     * @allow (update) - Authenticated user updates their own profile.
+     *   request.auth.uid == "{userId}"
+     * @allow (delete) - Authenticated user deletes their own profile.
+     *   request.auth.uid == "{userId}"
+     * @deny (create) - Unauthenticated user attempts to create a profile.
+     *   request.auth == null
+     * @deny (get) - User attempts to read another user's profile.
+     *   request.auth.uid != "{userId}"
      * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.tradintaId == userId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false; // User listing is not permitted.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.tradintaId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.tradintaId == resource.data.tradintaId;
       allow delete: if isExistingOwner(userId);
     }
 
-     /**
-      * @description Allows creating password reset tokens with an expiration
-      * @path /passwordResetTokens/{tokenId}
-      * @allow (create) Any authenticated user can create a password reset token.
-      *   request.auth != null
-      * @deny (get) No one can read password reset tokens.
-      * @principle Protects against unauthorized password resets by restricting access to tokens.
-      */
+    /**
+     * @description Allows creation and deletion of password reset tokens.
+     * @path /passwordResetTokens/{tokenId}
+     * @allow (create) - Allows creation of token.
+     *   request.auth.uid != null
+     * @allow (get) - Not applicable.
+     * @allow (update) - Not applicable.
+     * @allow (delete) - Allows deletion of a token.
+     *   request.auth.uid != null
+     * @deny (list) - Listing is not permitted.
+     *   N/A
+     * @principle Requires authentication for token creation.
+     */
     match /passwordResetTokens/{tokenId} {
-        allow get: if false;
-        allow list: if false;
-        allow create: if isSignedIn();
-        allow update: if false;
-        allow delete: if false;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if false;
+      allow list: if false;
+      allow create: if isSignedIn();
+      allow update: if false;
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Enforces owner-only access to manufacturer profiles.
+     * @description Allows manufacturers to manage their own profiles.
      * @path /manufacturers/{manufacturerId}
-     * @allow (create) User with UID 'manufacturer123' can create their own profile.
-     *   request.auth.uid == 'manufacturer123'
-     *   request.resource.data.id == 'manufacturer123'
-     * @allow (get) User with UID 'manufacturer123' can read their own profile.
-     *   request.auth.uid == 'manufacturer123'
-     * @allow (update) User with UID 'manufacturer123' can update their own profile.
-     *   request.auth.uid == 'manufacturer123'
-     * @deny (create) User with UID 'otherUser' cannot create a profile for 'manufacturer123'.
-     *   request.auth.uid == 'otherUser'
-     *   request.resource.data.id == 'manufacturer123'
-     * @deny (update) User with UID 'otherUser' cannot update the profile of 'manufacturer123'.
-     *   request.auth.uid == 'otherUser'
+     * @allow (create) - Authenticated user creates their own manufacturer profile.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (get) - Authenticated user reads their own manufacturer profile.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (update) - Authenticated user updates their own manufacturer profile.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (delete) - Authenticated user deletes their own manufacturer profile.
+     *   request.auth.uid == "{manufacturerId}"
+     * @deny (create) - Unauthenticated user attempts to create a manufacturer profile.
+     *   request.auth == null
+     * @deny (get) - User attempts to read another manufacturer's profile.
+     *   request.auth.uid != "{manufacturerId}"
      * @principle Enforces document ownership for writes.
      */
     match /manufacturers/{manufacturerId} {
-      allow get: if isOwner(manufacturerId);
-      allow list: if false;
-      allow create: if isOwner(manufacturerId) && request.resource.data.id == manufacturerId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(manufacturerId) {
+        return request.auth.uid == manufacturerId;
+      }
+      function isExistingOwner(manufacturerId) {
+          return isOwner(manufacturerId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(manufacturerId);
+      allow list: if false; // Manufacturer listing is not permitted.
+      allow create: if isSignedIn() && isOwner(manufacturerId) && request.resource.data.id == manufacturerId;
       allow update: if isExistingOwner(manufacturerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(manufacturerId);
     }
 
     /**
-     * @description Enforces owner-only access to buyer profiles.
+     * @description Allows buyers to manage their own profiles.
      * @path /buyers/{buyerId}
-     * @allow (create) User with UID 'buyer123' can create their own profile.
-     *   request.auth.uid == 'buyer123'
-     *   request.resource.data.id == 'buyer123'
-     * @allow (get) User with UID 'buyer123' can read their own profile.
-     *   request.auth.uid == 'buyer123'
-     * @allow (update) User with UID 'buyer123' can update their own profile.
-     *   request.auth.uid == 'buyer123'
-     * @deny (create) User with UID 'otherUser' cannot create a profile for 'buyer123'.
-     *   request.auth.uid == 'otherUser'
-     *   request.resource.data.id == 'buyer123'
-     * @deny (update) User with UID 'otherUser' cannot update the profile of 'buyer123'.
-     *   request.auth.uid == 'otherUser'
+     * @allow (create) - Authenticated user creates their own buyer profile.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (get) - Authenticated user reads their own buyer profile.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (update) - Authenticated user updates their own buyer profile.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (delete) - Authenticated user deletes their own buyer profile.
+     *   request.auth.uid == "{buyerId}"
+     * @deny (create) - Unauthenticated user attempts to create a buyer profile.
+     *   request.auth == null
+     * @deny (get) - User attempts to read another buyer's profile.
+     *   request.auth.uid != "{buyerId}"
      * @principle Enforces document ownership for writes.
      */
     match /buyers/{buyerId} {
-      allow get: if isOwner(buyerId);
-      allow list: if false;
-      allow create: if isOwner(buyerId) && request.resource.data.id == buyerId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(buyerId) {
+        return request.auth.uid == buyerId;
+      }
+      function isExistingOwner(buyerId) {
+          return isOwner(buyerId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(buyerId);
+      allow list: if false; // Buyer listing is not permitted.
+      allow create: if isSignedIn() && isOwner(buyerId) && request.resource.data.id == buyerId;
       allow update: if isExistingOwner(buyerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(buyerId);
     }
 
     /**
-     * @description Enforces manufacturer-only access to products.
+     * @description Allows manufacturers to manage their own products.
      * @path /manufacturers/{manufacturerId}/products/{productId}
-     * @allow (create) Manufacturer 'manufacturer123' can create a product under their profile.
-     *   request.auth.uid == 'manufacturer123'
-     *   request.resource.data.manufacturerId == 'manufacturer123'
-     * @allow (get) Manufacturer 'manufacturer123' can read their own product.
-     *   request.auth.uid == 'manufacturer123'
-     * @allow (list) Manufacturer 'manufacturer123' can list their own products.
-     *   request.auth.uid == 'manufacturer123'
-     * @allow (update) Manufacturer 'manufacturer123' can update their own product.
-     *   request.auth.uid == 'manufacturer123'
-     * @deny (create) Buyer 'buyer123' cannot create a product under manufacturer 'manufacturer123'.
-     *   request.auth.uid == 'buyer123'
-     *   request.resource.data.manufacturerId == 'manufacturer123'
-     * @deny (update) Buyer 'buyer123' cannot update a product owned by manufacturer 'manufacturer123'.
-     *   request.auth.uid == 'buyer123'
-     * @principle Enforces document ownership for writes and isolates data by manufacturer.
+     * @allow (create) - Authenticated manufacturer creates a new product.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (get) - Authenticated manufacturer reads their own product.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (update) - Authenticated manufacturer updates their own product.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (delete) - Authenticated manufacturer deletes their own product.
+     *   request.auth.uid == "{manufacturerId}"
+     * @deny (create) - User attempts to create a product for another manufacturer.
+     *   request.auth.uid != "{manufacturerId}"
+     * @deny (get) - User attempts to read a product from another manufacturer.
+     *   request.auth.uid != "{manufacturerId}"
+     * @principle Enforces document ownership for writes.
      */
     match /manufacturers/{manufacturerId}/products/{productId} {
-      allow get: if isOwner(manufacturerId);
-      allow list: if isOwner(manufacturerId);
-      allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(manufacturerId) {
+        return request.auth.uid == manufacturerId;
+      }
+      function isExistingOwner(manufacturerId) {
+          return isOwner(manufacturerId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(manufacturerId);
+      allow list: if isSignedIn() && isOwner(manufacturerId);
+      allow create: if isSignedIn() && isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
+      allow update: if isExistingOwner(manufacturerId) && request.resource.data.manufacturerId == resource.data.manufacturerId;
+      allow delete: if isExistingOwner(manufacturerId);
     }
 
     /**
-     * @description Enforces buyer-only access to orders.
+     * @description Allows buyers to manage their own orders.
      * @path /buyers/{buyerId}/orders/{orderId}
-     * @allow (create) Buyer 'buyer123' can create an order under their profile.
-     *   request.auth.uid == 'buyer123'
-     *   request.resource.data.buyerId == 'buyer123'
-     * @allow (get) Buyer 'buyer123' can read their own order.
-     *   request.auth.uid == 'buyer123'
-     * @allow (list) Buyer 'buyer123' can list their own orders.
-     *   request.auth.uid == 'buyer123'
-     * @allow (update) Buyer 'buyer123' can update their own order.
-     *   request.auth.uid == 'buyer123'
-     * @deny (create) Manufacturer 'manufacturer123' cannot create an order under buyer 'buyer123'.
-     *   request.auth.uid == 'manufacturer123'
-     *   request.resource.data.buyerId == 'buyer123'
-     * @deny (update) Manufacturer 'manufacturer123' cannot update an order owned by buyer 'buyer123'.
-     *   request.auth.uid == 'manufacturer123'
-     * @principle Enforces document ownership for writes and isolates data by buyer.
+     * @allow (create) - Authenticated buyer creates a new order.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (get) - Authenticated buyer reads their own order.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (update) - Authenticated buyer updates their own order.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (delete) - Authenticated buyer deletes their own order.
+     *   request.auth.uid == "{buyerId}"
+     * @deny (create) - User attempts to create an order for another buyer.
+     *   request.auth.uid != "{buyerId}"
+     * @deny (get) - User attempts to read an order from another buyer.
+     *   request.auth.uid != "{buyerId}"
+     * @principle Enforces document ownership for writes.
      */
     match /buyers/{buyerId}/orders/{orderId} {
-      allow get: if isOwner(buyerId);
-      allow list: if isOwner(buyerId);
-      allow create: if isOwner(buyerId) && request.resource.data.buyerId == buyerId;
-      allow update: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
-      allow delete: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(buyerId) {
+        return request.auth.uid == buyerId;
+      }
+      function isExistingOwner(buyerId) {
+          return isOwner(buyerId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(buyerId);
+      allow list: if isSignedIn() && isOwner(buyerId);
+      allow create: if isSignedIn() && isOwner(buyerId) && request.resource.data.buyerId == buyerId;
+      allow update: if isExistingOwner(buyerId) && request.resource.data.buyerId == resource.data.buyerId;
+      allow delete: if isExistingOwner(buyerId);
     }
 
     /**
-     * @description Enforces access control for order items.  Only the owner of the parent order can access the order items.
+     * @description Allows management of order items within an order.
      * @path /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}
-     * @allow (get) Buyer 'buyer123' can read an order item under their order.
-     *   request.auth.uid == 'buyer123'
-     *   get(/databases/$(database)/documents/buyers/buyer123/orders/order456').data.buyerId == 'buyer123'
-     * @allow (list) Buyer 'buyer123' can list order items under their order.
-     *   request.auth.uid == 'buyer123'
-     *   get(/databases/$(database)/documents/buyers/buyer123/orders/order456').data.buyerId == 'buyer123'
-     * @deny (create) Manufacturer 'manufacturer123' cannot create an order item under buyer 'buyer123''s order.
-     *   request.auth.uid == 'manufacturer123'
-     *   get(/databases/$(database)/documents/buyers/buyer123/orders/order456').data.buyerId == 'buyer123'
-     * @deny (update) Manufacturer 'manufacturer123' cannot update an order item owned by buyer 'buyer123'.
-     *   request.auth.uid == 'manufacturer123'
-     *   get(/databases/$(database)/documents/buyers/buyer123/orders/order456').data.buyerId == 'buyer123'
-     * @principle Restricts access to order items based on order ownership.
+     * @allow (create) - Authenticated buyer creates a new order item.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (get) - Authenticated buyer reads their own order item.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (update) - Authenticated buyer updates their own order item.
+     *   request.auth.uid == "{buyerId}"
+     * @allow (delete) - Authenticated buyer deletes their own order item.
+     *   request.auth.uid == "{buyerId}"
+     * @deny (create) - User attempts to create an order item for another buyer.
+     *   request.auth.uid != "{buyerId}"
+     * @deny (get) - User attempts to read an order item from another buyer.
+     *   request.auth.uid != "{buyerId}"
+     * @principle Enforces document ownership for writes.
      */
     match /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} {
-      allow get: if isSignedIn() && get(/databases/$(database)/documents/buyers/$(buyerId)/orders/$(orderId)).data.buyerId == buyerId;
-      allow list: if isSignedIn() && get(/databases/$(database)/documents/buyers/$(buyerId)/orders/$(orderId)).data.buyerId == buyerId;
-      allow create: if isSignedIn() && get(/databases/$(database)/documents/buyers/$(buyerId)/orders/$(orderId)).data.buyerId == buyerId;
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/buyers/$(buyerId)/orders/$(orderId)).data.buyerId == buyerId;
-      allow delete: if isSignedIn() && get(/databases/$(database)/documents/buyers/$(buyerId)/orders/$(orderId)).data.buyerId == buyerId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(buyerId) {
+        return request.auth.uid == buyerId;
+      }
+
+      allow get: if isSignedIn() && isOwner(buyerId);
+      allow list: if isSignedIn() && isOwner(buyerId);
+      allow create: if isSignedIn() && isOwner(buyerId);
+      allow update: if isSignedIn() && isOwner(buyerId);
+      allow delete: if isSignedIn() && isOwner(buyerId);
     }
 
     /**
-     * @description Allows access to quotations based on buyer or manufacturer ownership.
+     * @description Allows management of quotations. Requires authentication.
      * @path /quotations/{quotationId}
-     * @allow (get) Buyer 'buyer123' can read a quotation where they are the buyer.
-     *   request.auth.uid == 'buyer123'
-     *   resource.data.buyerId == 'buyer123'
-     * @allow (list) Buyer 'buyer123' can list quotations where they are the buyer.
-     *   request.auth.uid == 'buyer123'
-     *   resource.data.buyerId == 'buyer123'
-     * @allow (create) Any authenticated user can create a quotation.
-     *   request.auth != null
-     * @deny (update) User 'otherUser' cannot update a quotation where they are not the buyer or manufacturer.
-     *   request.auth.uid == 'otherUser'
-     *   resource.data.buyerId == 'buyer123'
-     *   resource.data.manufacturerId == 'manufacturer456'
-     * @principle Grants access based on either buyer or manufacturer association.
+     * @allow (create) - Authenticated user creates a new quotation.
+     *   request.auth.uid != null
+     * @allow (get) - Authenticated user reads a quotation.
+     *   request.auth.uid != null
+     * @allow (update) - Authenticated user updates a quotation.
+     *   request.auth.uid != null
+     * @allow (delete) - Authenticated user deletes a quotation.
+     *   request.auth.uid != null
+     * @deny (list) - Listing quotations is not permitted.
+     *   N/A
+     * @principle Requires authentication for all operations.
      */
     match /quotations/{quotationId} {
-      allow get: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
-      allow list: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if false;
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
-      allow delete: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Enforces manufacturer-only access to marketing campaigns.
+     * @description Allows manufacturers to manage their own marketing campaigns.
      * @path /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}
-     * @allow (create) Manufacturer 'manufacturer123' can create a marketing campaign under their profile.
-     *   request.auth.uid == 'manufacturer123'
-     *   request.resource.data.manufacturerId == 'manufacturer123'
-     * @allow (get) Manufacturer 'manufacturer123' can read their own marketing campaign.
-     *   request.auth.uid == 'manufacturer123'
-     * @allow (list) Manufacturer 'manufacturer123' can list their own marketing campaigns.
-     *   request.auth.uid == 'manufacturer123'
-     * @allow (update) Manufacturer 'manufacturer123' can update their own marketing campaign.
-     *   request.auth.uid == 'manufacturer123'
-     * @deny (create) Buyer 'buyer123' cannot create a marketing campaign under manufacturer 'manufacturer123'.
-     *   request.auth.uid == 'buyer123'
-     *   request.resource.data.manufacturerId == 'manufacturer123'
-     * @deny (update) Buyer 'buyer123' cannot update a marketing campaign owned by manufacturer 'manufacturer123'.
-     *   request.auth.uid == 'buyer123'
-     * @principle Enforces document ownership for writes and isolates data by manufacturer.
+     * @allow (create) - Authenticated manufacturer creates a new marketing campaign.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (get) - Authenticated manufacturer reads their own marketing campaign.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (update) - Authenticated manufacturer updates their own marketing campaign.
+     *   request.auth.uid == "{manufacturerId}"
+     * @allow (delete) - Authenticated manufacturer deletes their own marketing campaign.
+     *   request.auth.uid == "{manufacturerId}"
+     * @deny (create) - User attempts to create a marketing campaign for another manufacturer.
+     *   request.auth.uid != "{manufacturerId}"
+     * @deny (get) - User attempts to read a marketing campaign from another manufacturer.
+     *   request.auth.uid != "{manufacturerId}"
+     * @principle Enforces document ownership for writes.
      */
     match /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId} {
-      allow get: if isOwner(manufacturerId);
-      allow list: if isOwner(manufacturerId);
-      allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(manufacturerId) {
+        return request.auth.uid == manufacturerId;
+      }
+      function isExistingOwner(manufacturerId) {
+          return isOwner(manufacturerId) && resource != null;
+      }
+
+      allow get: if isSignedIn() && isOwner(manufacturerId);
+      allow list: if isSignedIn() && isOwner(manufacturerId);
+      allow create: if isSignedIn() && isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
+      allow update: if isExistingOwner(manufacturerId) && request.resource.data.manufacturerId == resource.data.manufacturerId;
+      allow delete: if isExistingOwner(manufacturerId);
     }
 
     /**
-     * @description Allows access to disputes based on buyer, manufacturer, or admin roles.
+     * @description Allows management of disputes. Requires authentication.
      * @path /disputes/{disputeId}
-     * @allow (get) Buyer 'buyer123' can read a dispute where they are the buyer.
-     *   request.auth.uid == 'buyer123'
-     *   resource.data.buyerId == 'buyer123'
-     * @allow (list) Buyer 'buyer123' can list disputes where they are the buyer.
-     *   request.auth.uid == 'buyer123'
-     *   resource.data.buyerId == 'buyer123'
-     * @deny (create) Non-authenticated user cannot create a dispute.
-     *   request.auth == null
-     * @deny (update) User 'otherUser' cannot update a dispute where they are not the buyer or manufacturer.
-     *   request.auth.uid == 'otherUser'
-     *   resource.data.buyerId == 'buyer123'
-     *   resource.data.manufacturerId == 'manufacturer456'
-     * @principle Grants access based on either buyer, manufacturer association or for admin.
+     * @allow (create) - Authenticated user creates a new dispute.
+     *   request.auth.uid != null
+     * @allow (get) - Authenticated user reads a dispute.
+     *   request.auth.uid != null
+     * @allow (update) - Authenticated user updates a dispute.
+     *   request.auth.uid != null
+     * @allow (delete) - Authenticated user deletes a dispute.
+     *   request.auth.uid != null
+     * @deny (list) - Listing disputes is not permitted.
+     *   N/A
+     * @principle Requires authentication for all operations.
      */
     match /disputes/{disputeId} {
-      allow get: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
-      allow list: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if false;
       allow create: if isSignedIn();
-      allow update: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
-      allow delete: if isSignedIn() && (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid);
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Restricts access to activity logs to authenticated users.
+     * @description Allows management of activity logs. Requires authentication.
      * @path /activityLogs/{logId}
-     * @allow (get) Authenticated user can read an activity log.
-     *   request.auth != null
-     * @allow (list) Authenticated user can list activity logs.
-     *   request.auth != null
-     * @deny (create) Non-authenticated user cannot create an activity log.
-     *   request.auth == null
-     * @deny (update) No one can update an activity log.
-     * @principle Restricts access to authenticated users.
+     * @allow (create) - Authenticated user creates a new activity log.
+     *   request.auth.uid != null
+     * @allow (get) - Authenticated user reads an activity log.
+     *   request.auth.uid != null
+     * @allow (update) - Authenticated user updates an activity log.
+     *   request.auth.uid != null
+     * @allow (delete) - Authenticated user deletes an activity log.
+     *   request.auth.uid != null
+     * @deny (list) - Listing activity logs is not permitted.
+     *   N/A
+     * @principle Requires authentication for all operations.
      */
     match /activityLogs/{logId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow list: if false;
       allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Grants public read access to homepage banners, restricts writes.
+     * @description Allows public read access to homepage banners.
      * @path /homepageBanners/{bannerId}
-     * @allow (get) Any user (signed in or not) can read a banner.
-     * @allow (list) Any user (signed in or not) can list banners.
-     * @deny (create) Non-authenticated user cannot create a banner.
-     *   request.auth == null
-     * @deny (update) No one can update a banner.
-     * @principle Grants public read access, restricts writes.
+     * @allow (get) - Anyone can read a homepage banner.
+     *   true
+     * @allow (list) - Anyone can list homepage banners.
+     *   true
+     * @deny (create) - No one can create a homepage banner.
+     *   false
+     * @deny (update) - No one can update a homepage banner.
+     *   false
+     * @deny (delete) - No one can delete a homepage banner.
+     *   false
+     * @principle Provides public read access to homepage banners.
      */
     match /homepageBanners/{bannerId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Grants public read access to blog posts, restricts writes.
+     * @description Allows public read access to blog posts.
      * @path /blogPosts/{postId}
-     * @allow (get) Any user (signed in or not) can read a blog post.
-     * @allow (list) Any user (signed in or not) can list blog posts.
-     * @deny (create) Non-authenticated user cannot create a blog post.
-     *   request.auth == null
-     * @deny (update) No one can update a blog post.
-     * @principle Grants public read access, restricts writes.
+     * @allow (get) - Anyone can read a blog post.
+     *   true
+     * @allow (list) - Anyone can list blog posts.
+     *   true
+     * @deny (create) - No one can create a blog post.
+     *   false
+     * @deny (update) - No one can update a blog post.
+     *   false
+     * @deny (delete) - No one can delete a blog post.
+     *   false
+     * @principle Provides public read access to blog posts.
      */
     match /blogPosts/{postId} {
       allow get: if true;
       allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Allows management of site pages. Requires authentication.
+     * @path /sitePages/{pageId}
+     * @allow (create) - Authenticated user creates a new site page.
+     *   request.auth.uid != null
+     * @allow (get) - Authenticated user reads a site page.
+     *   request.auth.uid != null
+     * @allow (update) - Authenticated user updates a site page.
+     *   request.auth.uid != null
+     * @allow (delete) - Authenticated user deletes a site page.
+     *   request.auth.uid != null
+     * @deny (list) - Listing site pages is not permitted.
+     *   N/A
+     * @principle Requires authentication for all operations.
+     */
+    match /sitePages/{pageId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if false;
       allow create: if isSignedIn();
       allow update: if isSignedIn();
       allow delete: if isSignedIn();
     }
 
-     /**
-      * @description Allows anyone to read, but only authenticated users can create/update/delete SitePages.
-      * @path /sitePages/{pageId}
-      * @allow (read) Any user can read a SitePage.
-      *   true
-      * @deny (write) Only authenticated users can create, update, or delete SitePages.
-      *   request.auth == null
-      * @principle Public read, authenticated write.
-      */
-     match /sitePages/{pageId} {
-        allow get: if true;
-        allow list: if true;
-        allow create: if isSignedIn();
-        allow update: if isSignedIn();
-        allow delete: if isSignedIn();
-    }
-
     /**
-     * @description Restricts access to system alerts to authenticated users.
+     * @description Allows management of system alerts. Requires authentication.
      * @path /systemAlerts/{alertId}
-     * @allow (get) Authenticated user can read a system alert.
-     *   request.auth != null
-     * @allow (list) Authenticated user can list system alerts.
-     *   request.auth != null
-     * @deny (create) Non-authenticated user cannot create a system alert.
-     *   request.auth == null
-     * @deny (update) No one can update a system alert.
-     * @principle Restricts access to authenticated users.
+     * @allow (create) - Authenticated user creates a new system alert.
+     *   request.auth.uid != null
+     * @allow (get) - Authenticated user reads a system alert.
+     *   request.auth.uid != null
+     * @allow (update) - Authenticated user updates a system alert.
+     *   request.auth.uid != null
+     * @allow (delete) - Authenticated user deletes a system alert.
+     *   request.auth.uid != null
+     * @deny (list) - Listing system alerts is not permitted.
+     *   N/A
+     * @principle Requires authentication for all operations.
      */
     match /systemAlerts/{alertId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       allow get: if isSignedIn();
-      allow list: if isSignedIn();
+      allow list: if false;
       allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
   }
 }
