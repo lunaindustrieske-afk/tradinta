@@ -37,9 +37,9 @@ import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, getDocs, collectionGroup, doc } from 'firebase/firestore';
-import { type Manufacturer, type Review } from '@/lib/definitions';
+import { type Manufacturer, type Review } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { allProducts } from '@/app/lib/mock-data'; // temp for related products
+import { products as mockProducts } from '@/app/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -63,7 +63,7 @@ type Product = {
   packagingDetails?: string;
 };
 
-const relatedProducts = allProducts.slice(1, 5); // This should be replaced with real data logic
+const relatedProducts = mockProducts.slice(1, 5); // This should be replaced with real data logic
 
 export default function ProductDetailPage() {
     const params = useParams();
@@ -434,4 +434,3 @@ export default function ProductDetailPage() {
   );
 }
 
-    
