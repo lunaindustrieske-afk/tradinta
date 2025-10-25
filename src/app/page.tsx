@@ -242,7 +242,7 @@ export default async function HomePage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {mockProducts.slice(0, 4).map((product) => (
                 <Card key={product.id} className="overflow-hidden group">
-                   <Link href={`/products/${manufacturers.find(m => m.id === product.manufacturerId)?.shopId}/${product.slug}`}>
+                   <Link href={`/products/${manufacturers.find(m => m.id === product.manufacturerId)?.slug}/${product.slug}`}>
                     <CardContent className="p-0">
                       <div className="relative aspect-[4/3] overflow-hidden">
                         <Image

@@ -1,5 +1,5 @@
 
-import 'server-only';
+'use server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
 
