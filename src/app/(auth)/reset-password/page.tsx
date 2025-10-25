@@ -92,7 +92,7 @@ function ResetPasswordComponent() {
                 Create a New Password
             </h2>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Your new password must be different from previous passwords.
+                Please enter a new password for your account below.
             </p>
         </div>
         <form action={dispatch}>
