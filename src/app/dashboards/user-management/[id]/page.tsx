@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -47,6 +48,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
+import { sendTransactionalEmail } from '@/lib/email';
+
 
 type UserProfile = {
   id: string;
@@ -94,6 +97,15 @@ export default function UserDetailPage() {
     setIsProcessing(true);
     try {
       await sendPasswordResetEmail(auth, user.email);
+      await sendTransactionalEmail({
+        to: user.email,
+        subject: 'Your Password Has Been Reset',
+        htmlContent: `
+          <p>Hi ${user.fullName},</p>
+          <p>A password reset was initiated for your Tradinta account by an administrator. Please check your inbox for a link to create a new password.</p>
+          <p>If you did not request this, please contact support immediately.</p>
+        `,
+      });
       toast({
         title: 'Password Reset Email Sent',
         description: `An email has been sent to ${user.email}.`,
@@ -152,13 +164,22 @@ export default function UserDetailPage() {
   };
 
   const handleRoleChange = async () => {
-    if (!userDocRef || !selectedRole) return;
+    if (!userDocRef || !selectedRole || !user?.email) return;
     setIsProcessing(true);
     try {
       await updateDoc(userDocRef, { role: selectedRole });
+       await sendTransactionalEmail({
+        to: user.email,
+        subject: 'Your Role on Tradinta Has Been Updated',
+        htmlContent: `
+          <p>Hi ${user.fullName},</p>
+          <p>An administrator has updated your role on the Tradinta platform. Your new role is: <strong>${selectedRole}</strong>.</p>
+          <p>Please log in to see your updated dashboard and permissions.</p>
+        `,
+      });
       toast({
         title: 'Role Updated',
-        description: `User role has been changed to ${selectedRole}.`,
+        description: `User role has been changed to ${selectedRole} and an email notification has been sent.`,
       });
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -166,6 +187,7 @@ export default function UserDetailPage() {
       setIsProcessing(false);
     }
   };
+
 
   if (isLoading) {
     return (
