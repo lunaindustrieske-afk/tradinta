@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, FileText, CheckCircle, Clock, Search, MessageSquare } from "lucide-react";
 import Link from 'next/link';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+
 
 const conversations = [
     {
@@ -75,13 +77,27 @@ export default function SellerMessagesPage() {
 
     return (
         <div className="space-y-6">
+            <Breadcrumb>
+                <BreadcrumbList>
+                    <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                            <Link href="/dashboards/seller-centre">Seller Centre</Link>
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                        <BreadcrumbPage>Messages</BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
+            
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><MessageSquare className="w-6 h-6 text-primary"/>Shop Inbox</CardTitle>
                     <CardDescription>Your central hub for all communications with buyers and partners.</CardDescription>
                 </CardHeader>
             </Card>
-            <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-220px)]">
+            <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-280px)]">
                 {/* Left Column: Conversation List */}
                 <div className="md:col-span-1 flex flex-col">
                     <Card className="flex flex-col h-full">
