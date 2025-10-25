@@ -40,6 +40,7 @@ import { collection, query, where, limit, getDocs, collectionGroup } from 'fireb
 import { type Manufacturer } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allProducts } from '@/app/lib/mock-data'; // temp for related products
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 type Product = {
   id: string;
@@ -62,6 +63,27 @@ type Product = {
 };
 
 const relatedProducts = allProducts.slice(1, 5); // This should be replaced with real data logic
+
+const reviews = [
+    { 
+        id: 'rev-1',
+        author: 'BuildRight Const.',
+        rating: 5,
+        comment: 'Reliable supplier with consistent quality. Our go-to for all major projects.',
+        product: 'Industrial Grade Cement',
+        date: '2 days ago',
+        avatar: 'https://picsum.photos/seed/rev1/32/32'
+    },
+    { 
+        id: 'rev-2',
+        author: 'Home Builders Inc.',
+        rating: 4,
+        comment: 'Good products and fair pricing. Sometimes lead times can be longer than stated.',
+        product: 'Steel Reinforcement Bars',
+        date: '1 week ago',
+        avatar: 'https://picsum.photos/seed/rev2/32/32'
+    }
+]
 
 export default function ProductDetailPage() {
     const params = useParams();
@@ -324,19 +346,32 @@ export default function ProductDetailPage() {
                     <p>{product.packagingDetails || 'Standard packaging information not available.'}</p>
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4">
-                    <h3 className="text-lg font-bold">Customer Reviews</h3>
-                    {/* Placeholder for reviews */}
-                    <div className="border-t mt-4 pt-4">
-                        <div className="flex gap-2 items-center mb-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
-                             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
-                              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
-                               <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/>
-                                <Star className="w-4 h-4 text-gray-300"/>
-                        </div>
-                        <p className="font-semibold">Great value for bulk orders.</p>
-                        <p className="text-sm text-muted-foreground">"The quality is consistent and delivery was on time." - John D. on 24 Oct 2023</p>
-                    </div>
+                     <CardContent className="space-y-4">
+                            {reviews.map(review => (
+                                <div key={review.id} className="p-4 border rounded-lg space-y-2">
+                                    <div className="flex justify-between items-start">
+                                        <div className="flex items-center gap-3">
+                                            <Avatar>
+                                                <AvatarImage src={review.avatar} />
+                                                <AvatarFallback>{review.author.charAt(0)}</AvatarFallback>
+                                            </Avatar>
+                                            <div>
+                                                <p className="font-semibold">{review.author}</p>
+                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                    <p>{review.date}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center">
+                                            {[...Array(5)].map((_, i) => (
+                                                <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
+                                </div>
+                            ))}
+                        </CardContent>
                 </TabsContent>
             </Tabs>
         </div>
