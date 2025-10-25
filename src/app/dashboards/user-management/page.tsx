@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -183,7 +184,7 @@ export default function UserManagementPage() {
       }
     } else { // Assume it's a Tradinta ID
       const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('tradintaId', '==', searchTerm), where('role', '!=', 'super-admin'));
+      const q = query(usersRef, where('tradintaId', '==', searchTerm));
       const querySnapshot = await getDocs(q);
       if (!querySnapshot.empty) {
         const doc = querySnapshot.docs[0];
@@ -193,6 +194,12 @@ export default function UserManagementPage() {
 
     if (userFound) {
       setDisplayedUsers([userFound]);
+    } else {
+        toast({
+            title: "Not Found",
+            description: "No user found with that email or ID.",
+            variant: "destructive",
+        })
     }
 
     setIsSearching(false);
@@ -203,7 +210,7 @@ export default function UserManagementPage() {
     setIsSearching(true);
     setDisplayedUsers([]);
 
-    const allUsersQuery = query(collection(firestore, 'users'), where('role', '!=', 'super-admin'));
+    const allUsersQuery = query(collection(firestore, 'users'));
     const querySnapshot = await getDocs(allUsersQuery);
     const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
     
