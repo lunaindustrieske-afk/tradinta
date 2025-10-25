@@ -12,6 +12,7 @@ import {
   Coins,
   Building,
   Loader2,
+  Book,
 } from 'lucide-react';
 import {
   Card,
@@ -127,6 +128,7 @@ const trustMetrics = [
 
 export default function HomePage() {
   const firestore = useFirestore();
+
   const bannersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -136,7 +138,18 @@ export default function HomePage() {
     );
   }, [firestore]);
 
+  const postsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+        collection(firestore, 'blogPosts'),
+        where('status', '==', 'published'),
+        orderBy('publishedAt', 'desc'),
+        limit(3)
+    );
+  }, [firestore]);
+
   const { data: banners, isLoading: isLoadingBanners } = useCollection<HomepageBanner>(bannersQuery);
+  const { data: blogPosts, isLoading: isLoadingPosts } = useCollection<BlogPost>(postsQuery);
 
   const HeroCarousel = () => {
     if (isLoadingBanners) {
@@ -311,6 +324,40 @@ export default function HomePage() {
                 <Link href="/pages/about-us">Learn More <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </section>
+
+          {/* News & Insights */}
+           <section>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-3xl font-bold font-headline">News & Insights</h2>
+              <Button variant="outline" asChild>
+                <Link href="/blog">
+                  Read All <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {isLoadingPosts ? (
+                Array.from({length: 3}).map((_, i) => (
+                  <Card key={i}><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
+                ))
+              ) : blogPosts && blogPosts.length > 0 ? (
+                blogPosts.map(post => (
+                  <Card key={post.id}>
+                    <CardContent className="p-6">
+                      <h3 className="font-bold text-lg mb-2">{post.title}</h3>
+                      <Button variant="link" asChild className="p-0"><Link href={`/blog/${post.slug}`}>Read More</Link></Button>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <div className="md:col-span-3 text-center text-muted-foreground py-8">
+                  <Book className="mx-auto h-12 w-12 mb-4" />
+                  <p>No news articles published yet. Check back soon!</p>
+                </div>
+              )}
+            </div>
+          </section>
+
 
           {/* 6. TradPay & TradCoin Promo */}
           <section className="grid md:grid-cols-2 gap-8 items-center">

@@ -720,7 +720,8 @@
         "definition": {
           "entityName": "HomepageBanner",
           "schema": { "$ref": "#/backend/entities/HomepageBanner" },
-          "description": "Stores data for the homepage carousel slides."
+          "description": "Stores data for the homepage carousel slides. This collection should have public read access.",
+          "publicRead": true
         }
       },
       {
@@ -728,7 +729,8 @@
         "definition": {
           "entityName": "BlogPost",
           "schema": { "$ref": "#/backend/entities/BlogPost" },
-          "description": "Stores blog posts for the 'Insights' section. Read access for this collection should be public."
+          "description": "Stores blog posts for the 'Insights' section. This collection should have public read access.",
+          "publicRead": true
         }
       },
       {
