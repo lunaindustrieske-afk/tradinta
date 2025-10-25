@@ -336,6 +336,53 @@
         "discountPercentage",
         "description"
       ]
+    },
+    "GrowthPartnerCampaign": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GrowthPartnerCampaign",
+      "type": "object",
+      "description": "Represents a specific promotional campaign linking a Growth Partner to a Manufacturer.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique ID for the campaign." },
+        "name": { "type": "string", "description": "Name of the campaign." },
+        "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
+        "manufacturerId": { "type": "string", "description": "The UID of the Manufacturer." },
+        "trackingCode": { "type": "string", "description": "Unique code for this partner-manufacturer link." },
+        "commissionRate": { "type": "number", "description": "Commission percentage (e.g., 5 for 5%)." },
+        "status": { "type": "string", "enum": ["Active", "Paused", "Finished"] }
+      },
+      "required": ["id", "name", "partnerId", "manufacturerId", "trackingCode", "commissionRate", "status"]
+    },
+    "AttributedSale": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttributedSale",
+      "type": "object",
+      "description": "Logs a sale attributed to a Growth Partner.",
+      "properties": {
+        "id": { "type": "string" },
+        "orderId": { "type": "string", "description": "The original order ID." },
+        "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
+        "campaignId": { "type": "string", "description": "The campaign this sale is attributed to." },
+        "saleAmount": { "type": "number" },
+        "commissionEarned": { "type": "number" },
+        "date": { "type": "string", "format": "date-time" },
+        "payoutStatus": { "type": "string", "enum": ["Unpaid", "Paid"] }
+      },
+      "required": ["id", "orderId", "partnerId", "campaignId", "saleAmount", "commissionEarned", "date", "payoutStatus"]
+    },
+    "PartnerEarning": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PartnerEarning",
+      "type": "object",
+      "description": "Aggregates a Growth Partner's earnings.",
+      "properties": {
+        "id": { "type": "string" },
+        "partnerId": { "type": "string" },
+        "totalEarnings": { "type": "number" },
+        "paidEarnings": { "type": "number" },
+        "unpaidEarnings": { "type": "number" }
+      },
+      "required": ["id", "partnerId", "totalEarnings", "paidEarnings", "unpaidEarnings"]
     }
   },
   "auth": {
@@ -350,143 +397,92 @@
         "path": "/manufacturers/{manufacturerId}",
         "definition": {
           "entityName": "Manufacturer",
-          "schema": {
-            "$ref": "#/backend/entities/Manufacturer"
-          },
-          "description": "Stores manufacturer profiles. Includes 'shopId' for relationship to Shop.",
-          "params": [
-            {
-              "name": "manufacturerId",
-              "description": "The unique identifier for the manufacturer."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Manufacturer" },
+          "description": "Stores manufacturer profiles."
         }
       },
       {
         "path": "/buyers/{buyerId}",
         "definition": {
           "entityName": "Buyer",
-          "schema": {
-            "$ref": "#/backend/entities/Buyer"
-          },
-          "description": "Stores buyer profiles.",
-          "params": [
-            {
-              "name": "buyerId",
-              "description": "The unique identifier for the buyer."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Buyer" },
+          "description": "Stores buyer profiles."
         }
       },
       {
         "path": "/shops/{shopId}",
         "definition": {
           "entityName": "Shop",
-          "schema": {
-            "$ref": "#/backend/entities/Shop"
-          },
-          "description": "Stores shop profiles. Includes 'manufacturerId' for relationship to Manufacturer.",
-          "params": [
-            {
-              "name": "shopId",
-              "description": "The unique identifier for the shop."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Shop" },
+          "description": "Stores shop profiles."
         }
       },
       {
         "path": "/shops/{shopId}/products/{productId}",
         "definition": {
           "entityName": "Product",
-          "schema": {
-            "$ref": "#/backend/entities/Product"
-          },
-          "description": "Stores product listings for each shop. Includes denormalized 'shopId' for authorization independence.",
-          "params": [
-            {
-              "name": "shopId",
-              "description": "The unique identifier for the shop."
-            },
-            {
-              "name": "productId",
-              "description": "The unique identifier for the product."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Product" },
+          "description": "Stores product listings for each shop."
         }
       },
       {
         "path": "/orders/{orderId}",
         "definition": {
           "entityName": "Order",
-          "schema": {
-            "$ref": "#/backend/entities/Order"
-          },
-          "description": "Stores order details. Includes denormalized 'buyerId' and 'shopId' for authorization independence.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the order."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Order" },
+          "description": "Stores order details."
         }
       },
       {
         "path": "/orders/{orderId}/orderItems/{orderItemId}",
         "definition": {
           "entityName": "OrderItem",
-          "schema": {
-            "$ref": "#/backend/entities/OrderItem"
-          },
-          "description": "Stores individual items within an order. Includes 'orderId' to nest under the respective order.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the order."
-            },
-            {
-              "name": "orderItemId",
-              "description": "The unique identifier for the order item."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/OrderItem" },
+          "description": "Stores individual items within an order."
         }
       },
       {
         "path": "/payments/{paymentId}",
         "definition": {
           "entityName": "Payment",
-          "schema": {
-            "$ref": "#/backend/entities/Payment"
-          },
-          "description": "Stores payment details. Includes 'orderId' for relationship to Order.",
-          "params": [
-            {
-              "name": "paymentId",
-              "description": "The unique identifier for the payment."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Payment" },
+          "description": "Stores payment details."
         }
       },
       {
         "path": "/shops/{shopId}/marketingCampaigns/{marketingCampaignId}",
         "definition": {
           "entityName": "MarketingCampaign",
-          "schema": {
-            "$ref": "#/backend/entities/MarketingCampaign"
-          },
-          "description": "Stores marketing campaigns for each shop. Includes denormalized 'shopId' for authorization independence.",
-          "params": [
-            {
-              "name": "shopId",
-              "description": "The unique identifier for the shop."
-            },
-            {
-              "name": "marketingCampaignId",
-              "description": "The unique identifier for the marketing campaign."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/MarketingCampaign" },
+          "description": "Stores marketing campaigns for each shop."
+        }
+      },
+      {
+        "path": "/growthPartnerCampaigns/{campaignId}",
+        "definition": {
+          "entityName": "GrowthPartnerCampaign",
+          "schema": { "$ref": "#/backend/entities/GrowthPartnerCampaign" },
+          "description": "Stores campaigns for Growth Partners."
+        }
+      },
+      {
+        "path": "/partners/{partnerId}/attributedSales/{saleId}",
+        "definition": {
+          "entityName": "AttributedSale",
+          "schema": { "$ref": "#/backend/entities/AttributedSale" },
+          "description": "Logs sales attributed to a specific partner."
+        }
+      },
+      {
+        "path": "/partnerEarnings/{partnerId}",
+        "definition": {
+          "entityName": "PartnerEarning",
+          "schema": { "$ref": "#/backend/entities/PartnerEarning" },
+          "description": "Aggregates earnings for each Growth Partner."
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to support Tradinta's B2B marketplace, focusing on manufacturers, shops, products, buyers, orders, and related entities. The design emphasizes authorization independence via denormalization to avoid `get()` calls in security rules, enhancing security and scalability.\n\n1.  **Authorization Independence:**\n    *   `Manufacturers` and `Shops`: The `shopId` in `Manufacturers` is used to quickly locate a manufacturer's shop. No denormalization is needed at this level as manufacturers are essentially creating their own shops.\n    *   `Products`: The `shopId` field is denormalized into each product to enable secure listing and querying of products within a specific shop. This allows listing products for a shop without needing to query across collections or use `get()` calls in security rules.\n    *   `Orders` and `OrderItems`: The `shopId` and `buyerId` are denormalized into `Orders` to facilitate order listing and access control based on the shop or buyer. The `OrderItem` includes the `orderId`, nesting order items under the respective order.\n    *   `MarketingCampaigns`: The `shopId` is included to allow for listing and management of campaigns specific to a shop.\n2.  **Structural Segregation:**\n    *   Each major entity type (`Manufacturers`, `Buyers`, `Shops`, `Products`, `Orders`, `OrderItems`, `Payments`, `MarketingCampaigns`) has its own top-level collection. This simplifies security rules as each collection has a homogeneous security posture.\n3.  **Access Modeling:**\n    *   Ownership: Shops are owned by manufacturers. Products are owned by shops. Orders are associated with both buyers and shops. This hierarchy is reflected in the data structure.\n    *   Collaborative Data: Membership maps are not used in this design, as the primary access control is based on the relationship between manufacturers, shops, products, and buyers.\n4.  **QAPs (Rules are not Filters):**\n    *   Secure `list` operations are supported by denormalizing the `shopId` and `buyerId` into the respective documents. This allows querying orders or products associated with a shop or buyer without complex rule logic.\n5.  **Invariants:**\n    *   The structure supports the integrity of ownership through explicit `shopId`, `manufacturerId`, and `buyerId` fields.\n\nThis design provides a clear, secure, and scalable foundation for the Tradinta platform."
+    ]
   }
 }
+
+    
