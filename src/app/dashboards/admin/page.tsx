@@ -31,25 +31,23 @@ export default function AdminDashboard() {
     const auth = useAuth();
     const { toast } = useToast();
 
-    const pendingVerificationsQuery = useMemoFirebase(() => {
+    const manufacturersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(
-            collection(firestore, 'manufacturers'),
-            where('verificationStatus', 'in', ['Pending Legal', 'Pending Admin'])
-        );
+        return collection(firestore, 'manufacturers');
     }, [firestore]);
 
-    const { data: pendingVerifications, isLoading: isLoadingVerifications } = useCollection<Manufacturer>(pendingVerificationsQuery);
-    
-    const allSellersQuery = useMemoFirebase(() => {
-         if (!firestore) return null;
-        return query(
-            collection(firestore, 'manufacturers'),
-            where('verificationStatus', 'in', ['Verified', 'Restricted'])
-        )
-    }, [firestore]);
+    const { data: allManufacturers, isLoading: isLoadingManufacturers } = useCollection<Manufacturer>(manufacturersQuery);
 
-    const { data: allSellers, isLoading: isLoadingSellers } = useCollection<Manufacturer>(allSellersQuery);
+    const pendingVerifications = React.useMemo(() => {
+        if (!allManufacturers) return null;
+        return allManufacturers.filter(m => ['Pending Legal', 'Pending Admin'].includes(m.verificationStatus));
+    }, [allManufacturers]);
+
+    const allSellers = React.useMemo(() => {
+        if (!allManufacturers) return null;
+        return allManufacturers.filter(m => ['Verified', 'Restricted'].includes(m.verificationStatus));
+    }, [allManufacturers]);
+
 
     const handleRestrictSeller = (sellerId: string, sellerName: string) => {
         if (!firestore || !auth) return;
@@ -86,7 +84,7 @@ export default function AdminDashboard() {
 
 
     const renderVerificationRows = () => {
-        if (isLoadingVerifications) {
+        if (isLoadingManufacturers) {
             return Array.from({length: 2}).map((_, i) => (
                 <TableRow key={`skel-ver-${i}`}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
@@ -116,7 +114,7 @@ export default function AdminDashboard() {
     }
     
     const renderPerformanceRows = () => {
-        if (isLoadingSellers) {
+        if (isLoadingManufacturers) {
             return Array.from({length: 3}).map((_, i) => (
                 <TableRow key={`skel-perf-${i}`}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
@@ -242,5 +240,3 @@ export default function AdminDashboard() {
         </Tabs>
     );
 }
-
-    
