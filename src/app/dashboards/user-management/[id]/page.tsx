@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -29,6 +28,7 @@ import {
   Key,
   Trash2,
   Loader2,
+  ShieldAlert,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
@@ -47,6 +47,7 @@ import { Label } from '@/components/ui/label';
 import { sendTransactionalEmail } from '@/lib/email';
 import { logActivity } from '@/lib/activity-log';
 import { Combobox } from '@/components/ui/combobox';
+import { RestrictPermissionsModal } from '@/components/restrict-permissions-modal';
 
 
 type UserProfile = {
@@ -57,6 +58,7 @@ type UserProfile = {
   tradintaId: string;
   registrationDate?: any;
   status?: 'active' | 'suspended';
+  restrictedPermissions?: string[];
 };
 
 const DetailItem = ({ label, value }: { label: string; value?: string | null }) => (
@@ -353,6 +355,13 @@ export default function UserDetailPage() {
                 {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Key className="mr-2 h-4 w-4" />}
                 Send Password Reset
               </Button>
+
+               <RestrictPermissionsModal 
+                userId={userId}
+                userName={user.fullName}
+                userRole={user.role}
+                currentRestrictions={user.restrictedPermissions || []}
+               />
               
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -410,5 +419,3 @@ export default function UserDetailPage() {
     </div>
   );
 }
-
-    

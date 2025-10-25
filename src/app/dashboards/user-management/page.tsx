@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -52,8 +51,9 @@ type UserProfile = {
   fullName: string;
   email: string;
   role: string;
-  status?: 'Active' | 'Suspended' | 'Pending';
+  status?: 'active' | 'suspended';
   tradintaId: string;
+  restrictedPermissions?: string[];
 };
 
 const SummaryCard = ({
@@ -286,14 +286,12 @@ export default function UserManagementPage() {
         <TableCell>
           <Badge
             variant={
-              user.status === 'Active'
+              user.status === 'active' || user.status === undefined
                 ? 'secondary'
-                : user.status === 'Suspended'
-                ? 'destructive'
-                : 'outline'
+                : 'destructive'
             }
           >
-            {user.status || 'Active'}
+            {user.status || 'active'}
           </Badge>
         </TableCell>
         <TableCell className="space-x-2">
