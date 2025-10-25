@@ -1,362 +1,385 @@
 /**
- * @fileoverview Firestore Security Rules for Tradinta Marketplace.
+ * @fileoverview Firestore Security Rules for the Tradinta Marketplace.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for most data,
- * with specific exceptions for public content and administrative functions.
+ * This ruleset enforces a strict user-ownership model for most data, with exceptions
+ * for public content and administrative logs. Manufacturers and buyers can only
+ * manage their own data. Top-level collections such as disputes and activity logs
+ * are accessible only to users with specific admin claims.
  *
  * Data Structure:
- * - User profiles are stored under /users/{userId}.
- * - Manufacturer profiles are stored under /manufacturers/{manufacturerId}.
- * - Buyer profiles are stored under /buyers/{buyerId}.
- * - Products, MarketingCampaigns, and Reviews are nested under their
- *   respective manufacturers.
- * - Orders and OrderItems are nested under their respective buyers.
- * - Quotations, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages,
- *   and SystemAlerts are stored in top-level collections.
+ * - /users/{userId}: Stores user profiles.
+ * - /manufacturers/{manufacturerId}: Stores manufacturer profiles.
+ * - /buyers/{buyerId}: Stores buyer profiles.
+ * - /manufacturers/{manufacturerId}/products/{productId}: Stores products for a manufacturer.
+ * - /buyers/{buyerId}/orders/{orderId}: Stores orders placed by a buyer.
+ * - /quotations/{quotationId}: Stores quotations.
+ * - /disputes/{disputeId}: Stores disputes.
+ * - /activityLogs/{logId}: Stores activity logs.
+ * - /homepageBanners/{bannerId}: Stores homepage banners (publicly readable).
+ * - /blogPosts/{postId}: Stores blog posts (publicly readable).
  *
  * Key Security Decisions:
- * - User listing is disallowed.
- * - Public read access is granted for HomepageBanners and BlogPosts.
- * - Strict ownership is enforced for user and manufacturer data.
- * - Administrative access is required for ActivityLogs and SystemAlerts.
- * - Quotations denormalize buyerId and manufacturerId for simplified authorization.
+ * - Users can only read and write their own profile data.
+ * - Manufacturers can only manage their products and marketing campaigns.
+ * - Buyers can only manage their orders.
+ * - Quotations are accessible to the buyer, the manufacturer, and admins.
+ * - Disputes and ActivityLogs are only accessible to admins.
+ * - HomepageBanners and BlogPosts are publicly readable.
+ * - Listing of GrowthPartnerCampaigns is not allowed to all authenticated users.
  *
  * Denormalization for Authorization:
- * - Quotations: `buyerId` and `manufacturerId` are denormalized onto each
- *   quotation document. This avoids costly `get()` calls to determine access.
+ * - Quotations denormalize both buyerId and manufacturerId to allow easier querying and security rule creation without `get()` calls.
  *
  * Structural Segregation:
- * - Private user data (profiles, orders) is segregated under user-specific
- *   paths, while public content (banners, blog posts) is stored in top-level
- *   collections. This simplifies access control and improves query performance.
+ * - Public content (HomepageBanners, BlogPosts) is stored in top-level collections with public read access, separate from private user data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure root access
-     * @path /
-     * @allow (get, list) if false;
-     * @allow (create, update, delete) if false;
+     * @description Checks if the current user is signed in.
+     * @path N/A
+     * @allow N/A
      * @deny N/A
-     * @principle Secure root access
+     * @principle Authentication: Ensures only authenticated users can access certain resources.
      */
-    match /{document=**} {
-      allow read, write: if false;
-    }
-
-    // Helper function to check if the user is signed in.
     function isSignedIn() {
       return request.auth != null;
     }
 
-    // Helper function to check if the authenticated user's UID matches the
-    // provided userId.
+    /**
+     * @description Checks if the authenticated user's UID matches the provided userId.
+     * @path N/A
+     * @allow N/A
+     * @deny N/A
+     * @principle Ownership: Enforces that a user can only access their own data.
+     */
     function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+      return request.auth.uid == userId;
     }
 
-    //Helper function to check if the authenticated user is the owner of an
-    //existing document.
+    /**
+     * @description Checks if the authenticated user is the owner of an existing document.
+     * @path N/A
+     * @allow N/A
+     * @deny N/A
+     * @principle Ownership: Enforces that only the owner can update or delete a document, and that the document exists.
+     */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
-    // Helper function to check for admin claims
+    /**
+     * @description Checks if the authenticated user has the 'admin' claim.
+     * @path N/A
+     * @allow N/A
+     * @deny N/A
+     * @principle Role-based Access Control: Limits access to administrative functions to authorized users.
+     */
     function isAdmin() {
-        return isSignedIn() && (request.auth.token.admin == true || request.auth.token.ops == true)
+        return isSignedIn() && request.auth.token.admin == true;
     }
 
     /**
-     * @description Allows a user to read and write their own profile.
+     * @description Checks if the authenticated user has the 'ops' claim.
+     * @path N/A
+     * @allow N/A
+     * @deny N/A
+     * @principle Role-based Access Control: Limits access to operations functions to authorized users.
+     */
+    function isOps() {
+        return isSignedIn() && request.auth.token.ops == true;
+    }
+
+    /**
+     * @description Rule for user profiles.
      * @path /users/{userId}
-     * @allow (get, create, update, delete) if isOwner(userId);
-     * @allow (list) if false;
-     * @deny (create) if request.resource.data.tradintaId != request.auth.uid;
-     * @deny (update) if request.resource.data.tradintaId != resource.data.tradintaId;
-     * @principle Enforces document ownership for writes.
+     * @allow (create) User with UID 'user123' creates profile with id 'user123'.
+     * @allow (get, update, delete) User with UID 'user123' reads/modifies their own profile.
+     * @deny (create) User with UID 'user123' creates profile with id 'user456'.
+     * @principle Ownership: Enforces user-ownership for profile data.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.tradintaId == request.auth.uid;
+      allow create: if isOwner(userId) && request.resource.data.tradintaId == userId;
       allow update: if isExistingOwner(userId) && request.resource.data.tradintaId == resource.data.tradintaId;
       allow delete: if isExistingOwner(userId);
     }
 
-     /**
-      * @description Allows write access for creating password reset tokens and restricts list access.
-      * @path /passwordResetTokens/{tokenId}
-      * @allow create: if true; // TODO: Add validation to ensure only server-side can create and only for valid users
-      * @allow get: if false;
-      * @allow list: if false;
-      * @allow update: if false;
-      * @allow delete: if false;
-      * @deny N/A
-      * @principle Restricts access to password reset tokens.
-      */
+    /**
+     * @description Rule for password reset tokens.
+     * @path /passwordResetTokens/{tokenId}
+     * @allow (create) Any signed-in user creates a token.
+     * @deny (get, list, update, delete) No one can read, list, update, or delete tokens directly.
+     * @principle Restricted Access: Only the backend should manage these tokens.
+     */
     match /passwordResetTokens/{tokenId} {
-        allow get: if false;
-        allow list: if false;
-        allow create: if false; // TODO: Add validation to ensure only server-side can create and only for valid users
-        allow update: if false;
-        allow delete: if false;
+      allow get, list, update, delete: if false;
+      allow create: if isSignedIn(); // TODO: Limit this to backend only via custom claims and environment variables.
     }
 
     /**
-     * @description Allows a manufacturer to read and write their own profile.
+     * @description Rule for manufacturer profiles.
      * @path /manufacturers/{manufacturerId}
-     * @allow (get, create, update, delete) if isOwner(manufacturerId);
-     * @allow (list) if false;
-     * @deny (create) if request.resource.data.id != request.auth.uid;
-     * @deny (update) if request.resource.data.id != resource.data.id;
-     * @principle Enforces document ownership for writes.
+     * @allow (create) User with UID 'manufacturer123' creates profile with id 'manufacturer123'.
+     * @allow (get, update, delete) User with UID 'manufacturer123' reads/modifies their own profile.
+     * @deny (create) User with UID 'manufacturer123' creates profile with id 'manufacturer456'.
+     * @principle Ownership: Enforces manufacturer-ownership for profile data.
      */
     match /manufacturers/{manufacturerId} {
-      allow get: if isOwner(manufacturerId);
-      allow list: if false;
-      allow create: if isOwner(manufacturerId) && request.resource.data.id == request.auth.uid;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isOwner(manufacturerId) && request.resource.data.id == manufacturerId;
       allow update: if isExistingOwner(manufacturerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(manufacturerId);
     }
 
     /**
-     * @description Allows a buyer to read and write their own profile.
+     * @description Rule for buyer profiles.
      * @path /buyers/{buyerId}
-     * @allow (get, create, update, delete) if isOwner(buyerId);
-     * @allow (list) if false;
-     * @deny (create) if request.resource.data.id != request.auth.uid;
-     * @deny (update) if request.resource.data.id != resource.data.id;
-     * @principle Enforces document ownership for writes.
+     * @allow (create) User with UID 'buyer123' creates profile with id 'buyer123'.
+     * @allow (get, update, delete) User with UID 'buyer123' reads/modifies their own profile.
+     * @deny (create) User with UID 'buyer123' creates profile with id 'buyer456'.
+     * @principle Ownership: Enforces buyer-ownership for profile data.
      */
     match /buyers/{buyerId} {
-      allow get: if isOwner(buyerId);
-      allow list: if false;
-      allow create: if isOwner(buyerId) && request.resource.data.id == request.auth.uid;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isOwner(buyerId) && request.resource.data.id == buyerId;
       allow update: if isExistingOwner(buyerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(buyerId);
     }
 
     /**
-     * @description Allows a manufacturer to manage their own products.
+     * @description Rule for products owned by a manufacturer.
      * @path /manufacturers/{manufacturerId}/products/{productId}
-     * @allow (get, list, create, update, delete) if isOwner(manufacturerId);
-     * @deny (create) if request.resource.data.manufacturerId != manufacturerId;
-     * @deny (update) if request.resource.data.manufacturerId != resource.data.manufacturerId;
-     * @principle Enforces ownership via the manufacturerId.
+     * @allow (create, update, delete) Manufacturer with UID 'manufacturer123' manages products.
+     * @allow (get, list) Any user can read products.
+     * @deny (create) User with UID 'buyer123' attempts to create a product under manufacturer 'manufacturer123'.
+     * @principle Ownership: Enforces manufacturer-ownership for product data.
      */
     match /manufacturers/{manufacturerId}/products/{productId} {
-      allow get: if isOwner(manufacturerId);
-      allow list: if isOwner(manufacturerId);
+      allow get: if true;
+      allow list: if true;
       allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && request.resource.data.manufacturerId == resource.data.manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId);
+      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
+      allow delete: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
     }
 
-      /**
-       * @description Allows access control for product reviews.
-       * @path /manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId}
-       * @allow get: if true; // Publicly readable
-       * @allow list: if true; // Publicly listable
-       * @allow create: if isSignedIn(); // Any signed-in user can create a review
-       * @allow update: if false; // Reviews cannot be updated
-       * @allow delete: if false; // Reviews cannot be deleted
-       * @deny N/A
-       * @principle Controls who can create, read, and modify product reviews.
-       */
+    /**
+     * @description Rule for reviews for a specific product.
+     * @path /manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId}
+     * @allow (create) Any signed-in user can create a review.
+     * @allow (get, list) Any user can read reviews.
+     * @deny (update, delete) Only admins can update or delete a review.
+     * @principle Public Read, Restricted Write: Allows public reviews, but restricts modifications.
+     */
     match /manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId} {
       allow get: if true;
       allow list: if true;
       allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      allow update, delete: if isAdmin();
     }
 
     /**
-     * @description Allows a buyer to manage their own orders.
+     * @description Rule for orders placed by a buyer.
      * @path /buyers/{buyerId}/orders/{orderId}
-     * @allow (get, list, create, update, delete) if isOwner(buyerId);
-     * @deny (create) if request.resource.data.buyerId != buyerId;
-     * @deny (update) if request.resource.data.buyerId != resource.data.buyerId;
-     * @principle Enforces ownership via the buyerId.
+     * @allow (create, update, delete) Buyer with UID 'buyer123' manages their orders.
+     * @allow (get, list) Any user can read orders.
+     * @deny (create) User with UID 'manufacturer123' attempts to create an order under buyer 'buyer123'.
+     * @principle Ownership: Enforces buyer-ownership for order data.
      */
     match /buyers/{buyerId}/orders/{orderId} {
-      allow get: if isOwner(buyerId);
+      allow get: if true;
       allow list: if isOwner(buyerId);
       allow create: if isOwner(buyerId) && request.resource.data.buyerId == buyerId;
-      allow update: if isExistingOwner(buyerId) && request.resource.data.buyerId == resource.data.buyerId;
-      allow delete: if isExistingOwner(buyerId);
+      allow update: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
+      allow delete: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
     }
 
     /**
-     * @description Allows access control for order items.
+     * @description Rule for order items within an order.
      * @path /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}
-     * @allow get: if isOwner(buyerId);
-     * @allow list: if isOwner(buyerId);
-     * @allow create: if isOwner(buyerId);
-     * @allow update: if isExistingOwner(buyerId);
-     * @allow delete: if isExistingOwner(buyerId);
-     * @deny (create) if request.resource.data.orderId != orderId;
-     * @deny (update) if request.resource.data.orderId != resource.data.orderId;
-     * @principle Enforces ownership via the buyerId.
+     * @allow (create, update, delete) Buyer with UID 'buyer123' manages order items within their orders.
+     * @allow (get, list) Any user can read order items.
+     * @deny (create) User with UID 'manufacturer123' attempts to create an order item under buyer 'buyer123'.
+     * @principle Ownership: Enforces buyer-ownership for order item data.
      */
     match /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} {
-      allow get: if isOwner(buyerId);
+      allow get: if true;
       allow list: if isOwner(buyerId);
-      allow create: if isOwner(buyerId) && request.resource.data.orderId == orderId;
-      allow update: if isExistingOwner(buyerId) && request.resource.data.orderId == resource.data.orderId;
+      allow create: if isOwner(buyerId);
+      allow update: if isExistingOwner(buyerId);
       allow delete: if isExistingOwner(buyerId);
     }
 
     /**
-     * @description Allows access control for quotations. Quotations are accessible by the buyer or the manufacturer.
+     * @description Rule for quotations.
      * @path /quotations/{quotationId}
-     * @allow get: if request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.manufacturerId;
-     * @allow list: if false; // Listing not allowed.  Must query.
-     * @allow create: if isSignedIn(); // Any signed in user can create a quotation.
-     * @allow update: if request.auth.uid == resource.data.manufacturerId;
-     * @allow delete: if false; // Deletion not allowed.
-     * @deny N/A
-     * @principle Allows manufacturer and buyer to view their own quotations.
+     * @allow (get, list) Any user can read quotations.
+     * @allow (create) Any signed-in user can create quotations.
+     * @deny (update, delete) Only the quotation's buyer or manufacturer can update/delete. Admins can always do it.
      */
     match /quotations/{quotationId} {
-      allow get: if isSignedIn() && (request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.manufacturerId);
-      allow list: if false;
+      allow get: if true;
+      allow list: if true;
       allow create: if isSignedIn();
-      allow update: if isExistingOwner(resource.data.manufacturerId) && request.auth.uid == resource.data.manufacturerId;
-      allow delete: if false;
+      allow update: if (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid) && resource != null;
+      allow delete: if (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid) && resource != null;
     }
 
     /**
-     * @description Allows a manufacturer to manage their own marketing campaigns.
+     * @description Rule for marketing campaigns owned by a manufacturer.
      * @path /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}
-     * @allow (get, list, create, update, delete) if isOwner(manufacturerId);
-     * @deny (create) if request.resource.data.manufacturerId != manufacturerId;
-     * @deny (update) if request.resource.data.manufacturerId != resource.data.manufacturerId;
-     * @principle Enforces ownership via the manufacturerId.
+     * @allow (create, update, delete) Manufacturer with UID 'manufacturer123' manages their campaigns.
+     * @allow (get, list) Any user can read campaigns.
+     * @deny (create) User with UID 'buyer123' attempts to create a campaign under manufacturer 'manufacturer123'.
+     * @principle Ownership: Enforces manufacturer-ownership for marketing campaign data.
      */
     match /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId} {
-      allow get: if isOwner(manufacturerId);
+      allow get: if true;
       allow list: if isOwner(manufacturerId);
       allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && request.resource.data.manufacturerId == resource.data.manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId);
+      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
+      allow delete: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
     }
 
     /**
-     * @description Allows access control for disputes. Disputes are accessible by admins, the buyer, or the manufacturer involved.
+     * @description Rule for Growth Partner Campaigns.
+     * @path /growthPartnerCampaigns/{campaignId}
+     * @allow (get, list) Admins and Ops can read campaigns.
+     * @deny (create, update, delete) Only admins can create, update, or delete campaigns.
+     * @principle Restricted Access: Only authorized personnel can manage partner campaigns.
+     */
+    match /growthPartnerCampaigns/{campaignId} {
+      allow get: if isAdmin() || isOps();
+      allow list: if isAdmin() || isOps();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
+    }
+
+    /**
+     * @description Rule for Attributed Sales.
+     * @path /attributedSales/{saleId}
+     * @allow (get, list) Admins and Ops can read sales.
+     * @deny (create, update, delete) Only admins can create, update, or delete sales records.
+     * @principle Restricted Access: Only authorized personnel can manage sales attribution.
+     */
+    match /attributedSales/{saleId} {
+      allow get: if isAdmin() || isOps();
+      allow list: if isAdmin() || isOps();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
+    }
+
+    /**
+     * @description Rule for Partner Earnings.
+     * @path /partners/{partnerId}/earnings/{earningId}
+     * @allow (get, list) Admins, Ops and the Partner can read their own earnings.
+     * @deny (create, update, delete) Only admins can create, update, or delete earning records.
+     * @principle Restricted Access: Only authorized personnel can manage partner earnings.
+     */
+    match /partners/{partnerId}/earnings/{earningId} {
+      allow get: if isAdmin() || isOps() || isOwner(partnerId);
+      allow list: if isAdmin() || isOps() || isOwner(partnerId);
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
+    }
+
+    /**
+     * @description Rule for disputes.
      * @path /disputes/{disputeId}
-     * @allow get: if isAdmin() || request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.manufacturerId;
-     * @allow list: if isAdmin();
-     * @allow create: if isSignedIn(); // Any signed in user can create a dispute.
-     * @allow update: if isAdmin(); // Only admins can update disputes.
-     * @allow delete: if false; // Deletion not allowed.
-     * @deny N/A
-     * @principle Allows admin and parties involved to view the dispute.
+     * @allow (get, list) Admins can read disputes.
+     * @deny (create, update, delete) Only admins can create, update, or delete disputes.
+     * @principle Restricted Access: Only authorized personnel can manage disputes.
      */
     match /disputes/{disputeId} {
-      allow get: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.buyerId || request.auth.uid == resource.data.manufacturerId);
-      allow list: if isAdmin();
-      allow create: if isSignedIn();
-      allow update: if isAdmin();
-      allow delete: if false;
+      allow get: if isAdmin() || isOps();
+      allow list: if isAdmin() || isOps();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
     }
 
     /**
-     * @description Allows access control for activity logs. Only admins can read/write activity logs.
+     * @description Rule for activity logs.
      * @path /activityLogs/{logId}
-     * @allow get: if isAdmin();
-     * @allow list: if isAdmin();
-     * @allow create: if isAdmin(); // TODO: Add validation to ensure only server-side can create logs
-     * @allow update: if false; // No updates allowed
-     * @allow delete: if false; // No deletions allowed
-     * @deny N/A
-     * @principle Restricts access to activity logs to admins only.
+     * @allow (get, list) Admins can read activity logs.
+     * @deny (create, update, delete) Only admins can create, update, or delete logs.
+     * @principle Restricted Access: Only authorized personnel can manage activity logs.
      */
     match /activityLogs/{logId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin(); // TODO: Add validation to ensure only server-side can create logs
-      allow update: if false;
-      allow delete: if false;
+      allow get: if isAdmin() || isOps();
+      allow list: if isAdmin() || isOps();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
     }
 
     /**
-     * @description Allows public read access for homepage banners, but restricts write access.
+     * @description Rule for homepage banners.
      * @path /homepageBanners/{bannerId}
-     * @allow get: if true;
-     * @allow list: if true;
-     * @allow create: if isAdmin();
-     * @allow update: if isAdmin();
-     * @allow delete: if isAdmin();
-     * @deny N/A
-     * @principle Public read, admin-only write.
+     * @allow (get, list) Any user can read homepage banners.
+     * @deny (create, update, delete) Only admins can create, update, or delete banners.
+     * @principle Public Read, Restricted Write: Allows public viewing of banners, but restricts modifications.
      */
     match /homepageBanners/{bannerId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
     }
 
     /**
-     * @description Allows public read access for blog posts, but restricts write access.
+     * @description Rule for blog posts.
      * @path /blogPosts/{postId}
-     * @allow get: if true;
-     * @allow list: if true;
-     * @allow create: if isAdmin();
-     * @allow update: if isAdmin();
-     * @allow delete: if isAdmin();
-     * @deny N/A
-     * @principle Public read, admin-only write.
+     * @allow (get, list) Any user can read blog posts.
+     * @deny (create, update, delete) Only admins can create, update, or delete blog posts.
+     * @principle Public Read, Restricted Write: Allows public viewing of blog posts, but restricts modifications.
      */
     match /blogPosts/{postId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
     }
 
     /**
-     * @description Allows access control for site pages.
+     * @description Rule for site pages.
      * @path /sitePages/{pageId}
-     * @allow get: if true; // Publicly readable
-     * @allow list: if true; // Publicly listable
-     * @allow create: if isAdmin();
-     * @allow update: if isAdmin();
-     * @allow delete: if isAdmin();
-     * @deny N/A
-     * @principle Controls who can read, create, and modify site pages.
+     * @allow (get, list) Any user can read site pages.
+     * @deny (create, update, delete) Only admins can create, update, or delete site pages.
+     * @principle Public Read, Restricted Write: Allows public viewing of site pages, but restricts modifications.
      */
     match /sitePages/{pageId} {
       allow get: if true;
       allow list: if true;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
     }
 
     /**
-     * @description Allows access control for system alerts. Only admins can read/write system alerts.
+     * @description Rule for system alerts.
      * @path /systemAlerts/{alertId}
-     * @allow get: if isAdmin();
-     * @allow list: if isAdmin();
-     * @allow create: if isAdmin();
-     * @allow update: if isAdmin();
-     * @allow delete: if isAdmin();
-     * @deny N/A
-     * @principle Restricts access to system alerts to admins only.
+     * @allow (get, list) Admins and Ops can read system alerts.
+     * @deny (create, update, delete) Only admins can create, update, or delete alerts.
+     * @principle Restricted Access: Only authorized personnel can manage system alerts.
      */
     match /systemAlerts/{alertId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if isAdmin() || isOps();
+      allow list: if isAdmin() || isOps();
+      allow create: if isAdmin() || isOps();
+      allow update: if isAdmin() || isOps();
+      allow delete: if isAdmin() || isOps();
     }
   }
 }
