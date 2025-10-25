@@ -18,7 +18,7 @@ export async function sendTransactionalEmail({ to, subject, htmlContent }: SendE
   if (!token || !fromEmail) {
     console.error('Email service is not configured. Missing ZOHO_ZEPTOMAIL_TOKEN or ZOHO_ZEPTOMAIL_FROM_EMAIL in .env');
     // In production, you might want to throw an error or handle this more gracefully
-    return Promise.reject('Email service is not configured.');
+    throw new Error('Email service is not configured on the server.');
   }
 
   const body = {
@@ -47,13 +47,15 @@ export async function sendTransactionalEmail({ to, subject, htmlContent }: SendE
       body: JSON.stringify(body),
     });
 
+    const responseData = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`ZeptoMail API Error: ${errorData.message || response.statusText}`);
+      // Throw a detailed error based on ZeptoMail's response
+      throw new Error(`ZeptoMail API Error: ${responseData.message || response.statusText}`);
     }
     
     console.log(`Email sent successfully to ${to}`);
-    return await response.json();
+    return responseData;
   } catch (error) {
     console.error('Failed to send transactional email:', error);
     // Re-throw the error so the calling function can handle it if needed

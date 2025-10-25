@@ -122,7 +122,7 @@ export async function handleRequestPasswordReset(
             success: true,
         };
     }
-     // Catch errors from sendTransactionalEmail
+     // Catch specific errors from sendTransactionalEmail
     if (error.message && error.message.includes('ZeptoMail API Error')) {
       return {
         message: 'Could not send reset email. ' + error.message,
@@ -130,7 +130,7 @@ export async function handleRequestPasswordReset(
       };
     }
     return {
-      message: 'An unexpected error occurred. Please try again.',
+      message: error.message || 'An unexpected error occurred. Please try again.',
       success: false,
     };
   }
@@ -233,7 +233,7 @@ export async function handleAdminRequestPasswordReset(email: string): Promise<{ 
       };
     }
     return {
-      message: 'An unexpected error occurred. Please try again.',
+      message: error.message || 'An unexpected error occurred. Please try again.',
       success: false,
     };
   }
@@ -312,6 +312,6 @@ export async function handleResetPassword(
 
     } catch (error: any) {
         console.error('Password reset failed:', error);
-        return { message: 'An unexpected error occurred. Please try again.', success: false };
+        return { message: error.message || 'An unexpected error occurred. Please try again.', success: false };
     }
 }

@@ -6,7 +6,6 @@ import { useParams, useRouter } from 'next/navigation';
 import { useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import {
-  handleRequestPasswordReset,
   handleAdminRequestPasswordReset,
 } from '@/app/(auth)/actions';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -148,16 +147,17 @@ export default function UserDetailPage() {
     setIsProcessing(true);
     try {
       await deleteDoc(userDocRef);
+      // Note: This does not delete the Firebase Auth user. That requires an admin SDK call.
       toast({
         title: 'User Deleted',
-        description: 'The user account has been permanently deleted.',
+        description: "The user's Firestore profile has been deleted.",
         variant: 'destructive',
       });
       router.push('/dashboards/user-management');
     } catch (error: any) {
       toast({
         title: 'Error',
-        description: `Failed to delete user: ${error.message}`,
+        description: `Failed to delete user profile: ${error.message}`,
         variant: 'destructive',
       });
       setIsProcessing(false);
@@ -185,7 +185,7 @@ export default function UserDetailPage() {
     } catch (error: any) {
       toast({
         title: 'Error updating role',
-        description: error.message,
+        description: error.message || 'An unexpected error occurred.',
         variant: 'destructive'
     });
     } finally {
