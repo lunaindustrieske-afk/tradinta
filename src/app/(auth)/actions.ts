@@ -18,9 +18,10 @@ export async function setUserRoleClaim(userId: string, role: string): Promise<{ 
     // 1. Set custom user claims for security/permissions
     await auth.setCustomUserClaims(userId, { role });
 
-    // 2. Update the user's document in Firestore for display purposes
+    // 2. Update the user's document in Firestore for display purposes.
+    // Use set with merge to prevent race conditions during sign-up.
     const userDocRef = firestore.collection('users').doc(userId);
-    await userDocRef.update({ role: role });
+    await userDocRef.set({ role: role }, { merge: true });
 
     return { success: true, message: `Successfully set role to ${role} for user ${userId}` };
   } catch (error: any) {
@@ -509,5 +510,3 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
         return { success: false, message: 'An error occurred while verifying your email.' };
     }
 }
-
-    
