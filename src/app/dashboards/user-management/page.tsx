@@ -85,226 +85,240 @@ const SummaryCard = ({
   </Card>
 );
 
-function UserManagementContent() {
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const [searchQuery, setSearchQuery] = React.useState('');
-  const [isSearching, setIsSearching] = React.useState(false);
-  const [displayedUsers, setDisplayedUsers] = React.useState<UserProfile[]>([]);
+export default function UserManagementPage() {
+    const { isUserLoading, role } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [isSearching, setIsSearching] = React.useState(false);
+    const [displayedUsers, setDisplayedUsers] = React.useState<UserProfile[]>([]);
 
-  // --- Data Fetching for Summary Cards ---
-  const usersQuery = useMemoFirebase(
-    () => (firestore ? query(collection(firestore, 'users')) : null),
-    [firestore]
-  );
-  const { data: allUsers, isLoading: isLoadingAllUsers } =
-    useCollection<UserProfile>(usersQuery);
-
-  const sellersQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'users'), where('role', '==', 'manufacturer'))
-        : null,
-    [firestore]
-  );
-  const { data: sellers, isLoading: isLoadingSellers } =
-    useCollection(sellersQuery);
-
-  const buyersQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(collection(firestore, 'users'), where('role', '==', 'buyer'))
-        : null,
-    [firestore]
-  );
-  const { data: buyers, isLoading: isLoadingBuyers } =
-    useCollection(buyersQuery);
-
-  const adminsQuery = useMemoFirebase(
-    () =>
-      firestore
-        ? query(
-            collection(firestore, 'users'),
-            where('role', 'in', ['admin', 'super-admin'])
-          )
-        : null,
-    [firestore]
-  );
-  const { data: admins, isLoading: isLoadingAdmins } =
-    useCollection(adminsQuery);
-
-  const summaryCards = [
-    {
-      title: 'Total Users',
-      count: allUsers?.length || 0,
-      icon: <Users />,
-      isLoading: isLoadingAllUsers,
-    },
-    {
-      title: 'Sellers (Manufacturers)',
-      count: sellers?.length || 0,
-      icon: <Building />,
-      isLoading: isLoadingSellers,
-    },
-    {
-      title: 'Buyers',
-      count: buyers?.length || 0,
-      icon: <ShoppingCart />,
-      isLoading: isLoadingBuyers,
-    },
-    {
-      title: 'Admin Staff',
-      count: admins?.length || 0,
-      icon: <Shield />,
-      isLoading: isLoadingAdmins,
-    },
-  ];
-
-  const handleSearch = async (event?: React.FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    const searchTerm = searchQuery.trim();
-    if (!firestore || !searchTerm) {
-      setDisplayedUsers([]);
-      return;
-    }
-    setIsSearching(true);
-    setDisplayedUsers([]);
-
-    let userFound: UserProfile | null = null;
-
-    // Check if it's an email
-    if (searchTerm.includes('@')) {
-      const emailDocRef = doc(firestore, 'emails', searchTerm);
-      const emailDocSnap = await getDoc(emailDocRef);
-
-      if (emailDocSnap.exists()) {
-        const userId = emailDocSnap.data().userId;
-        const userDocRef = doc(firestore, 'users', userId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          userFound = { id: userDocSnap.id, ...userDocSnap.data() } as UserProfile;
-        }
-      }
-    } else { // Assume it's a Tradinta ID
-      const usersRef = collection(firestore, 'users');
-      const q = query(usersRef, where('tradintaId', '==', searchTerm));
-      const querySnapshot = await getDocs(q);
-      if (!querySnapshot.empty) {
-        const doc = querySnapshot.docs[0];
-        userFound = { id: doc.id, ...doc.data() } as UserProfile;
-      }
-    }
-
-    if (userFound) {
-      setDisplayedUsers([userFound]);
-    } else {
-        toast({
-            title: "Not Found",
-            description: "No user found with that email or ID.",
-            variant: "destructive",
-        })
-    }
-
-    setIsSearching(false);
-  };
-  
-  const handleLoadAll = async () => {
-    if (!firestore) return;
-    setIsSearching(true);
-    setDisplayedUsers([]);
-
-    const allUsersQuery = query(collection(firestore, 'users'));
-    const querySnapshot = await getDocs(allUsersQuery);
-    const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
-    
-    setDisplayedUsers(usersList);
-    setIsSearching(false);
-  };
-
-  const handleExportCsv = () => {
-    if (displayedUsers.length === 0) {
-      toast({
-        title: "No data to export",
-        description: "Please search for users or load all users before exporting.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    const headers = ['Tradinta ID', 'Full Name', 'Email', 'Role', 'Status'];
-    const rows = displayedUsers.map(user => 
-      [
-        user.tradintaId || 'N/A',
-        `"${user.fullName || ''}"`,
-        user.email,
-        user.role,
-        user.status || 'Active'
-      ].join(',')
+    const usersQuery = useMemoFirebase(
+        () => (firestore ? query(collection(firestore, 'users')) : null),
+        [firestore]
     );
-    
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "tradinta_users.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const { data: allUsers, isLoading: isLoadingAllUsers } =
+        useCollection<UserProfile>(usersQuery);
 
-    toast({
-      title: "Export Successful",
-      description: `${displayedUsers.length} users exported to CSV.`
-    });
-  };
+    const sellersQuery = useMemoFirebase(
+        () =>
+        firestore
+            ? query(collection(firestore, 'users'), where('role', '==', 'manufacturer'))
+            : null,
+        [firestore]
+    );
+    const { data: sellers, isLoading: isLoadingSellers } =
+        useCollection(sellersQuery);
 
-  const renderTableRows = () => {
-    if (isSearching) {
-      return (
-        <TableRow>
-          <TableCell colSpan={6} className="h-24 text-center">
-            <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-          </TableCell>
-        </TableRow>
-      );
-    }
+    const buyersQuery = useMemoFirebase(
+        () =>
+        firestore
+            ? query(collection(firestore, 'users'), where('role', '==', 'buyer'))
+            : null,
+        [firestore]
+    );
+    const { data: buyers, isLoading: isLoadingBuyers } =
+        useCollection(buyersQuery);
 
-    if (displayedUsers.length === 0) {
-      return (
-        <TableRow>
-          <TableCell colSpan={6} className="h-24 text-center">
-            No users found. Enter an email or Tradinta ID to search, or load all users.
-          </TableCell>
-        </TableRow>
-      );
-    }
+    const adminsQuery = useMemoFirebase(
+        () =>
+        firestore
+            ? query(
+                collection(firestore, 'users'),
+                where('role', 'in', ['admin', 'super-admin'])
+            )
+            : null,
+        [firestore]
+    );
+    const { data: admins, isLoading: isLoadingAdmins } =
+        useCollection(adminsQuery);
 
-    return displayedUsers.map((user) => (
-      <TableRow key={user.id}>
-        <TableCell className="font-mono text-xs">
-          {user.tradintaId || 'N/A'}
-        </TableCell>
-        <TableCell className="font-medium">{user.fullName}</TableCell>
-        <TableCell>{user.email}</TableCell>
-        <TableCell className="capitalize">{user.role}</TableCell>
-        <TableCell>
-          <Badge
-            variant={
-              user.status === 'active' || user.status === undefined
-                ? 'secondary'
-                : 'destructive'
+    const summaryCards = [
+        {
+        title: 'Total Users',
+        count: allUsers?.length || 0,
+        icon: <Users />,
+        isLoading: isLoadingAllUsers,
+        },
+        {
+        title: 'Sellers (Manufacturers)',
+        count: sellers?.length || 0,
+        icon: <Building />,
+        isLoading: isLoadingSellers,
+        },
+        {
+        title: 'Buyers',
+        count: buyers?.length || 0,
+        icon: <ShoppingCart />,
+        isLoading: isLoadingBuyers,
+        },
+        {
+        title: 'Admin Staff',
+        count: admins?.length || 0,
+        icon: <Shield />,
+        isLoading: isLoadingAdmins,
+        },
+    ];
+
+    const handleSearch = async (event?: React.FormEvent<HTMLFormElement>) => {
+        event?.preventDefault();
+        const searchTerm = searchQuery.trim();
+        if (!firestore || !searchTerm) {
+        setDisplayedUsers([]);
+        return;
+        }
+        setIsSearching(true);
+        setDisplayedUsers([]);
+
+        let userFound: UserProfile | null = null;
+
+        if (searchTerm.includes('@')) {
+        const emailDocRef = doc(firestore, 'emails', searchTerm);
+        const emailDocSnap = await getDoc(emailDocRef);
+
+        if (emailDocSnap.exists()) {
+            const userId = emailDocSnap.data().userId;
+            const userDocRef = doc(firestore, 'users', userId);
+            const userDocSnap = await getDoc(userDocRef);
+            if (userDocSnap.exists()) {
+            userFound = { id: userDocSnap.id, ...userDocSnap.data() } as UserProfile;
             }
-          >
-            {user.status || 'active'}
-          </Badge>
-        </TableCell>
-        <TableCell className="space-x-2">
-          <Button size="sm" variant="outline" asChild>
-            <Link href={`/dashboards/user-management/${user.id}`}>Manage</Link>
-          </Button>
-        </TableCell>
-      </TableRow>
-    ));
-  };
+        }
+        } else { // Assume it's a Tradinta ID
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('tradintaId', '==', searchTerm));
+        const querySnapshot = await getDocs(q);
+        if (!querySnapshot.empty) {
+            const doc = querySnapshot.docs[0];
+            userFound = { id: doc.id, ...doc.data() } as UserProfile;
+        }
+        }
+
+        if (userFound) {
+        setDisplayedUsers([userFound]);
+        } else {
+            toast({
+                title: "Not Found",
+                description: "No user found with that email or ID.",
+                variant: "destructive",
+            })
+        }
+
+        setIsSearching(false);
+    };
+    
+    const handleLoadAll = async () => {
+        if (!firestore) return;
+        setIsSearching(true);
+        setDisplayedUsers([]);
+
+        const allUsersQuery = query(collection(firestore, 'users'));
+        const querySnapshot = await getDocs(allUsersQuery);
+        const usersList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
+        
+        setDisplayedUsers(usersList);
+        setIsSearching(false);
+    };
+
+    const handleExportCsv = () => {
+        if (displayedUsers.length === 0) {
+        toast({
+            title: "No data to export",
+            description: "Please search for users or load all users before exporting.",
+            variant: "destructive",
+        });
+        return;
+        }
+        
+        const headers = ['Tradinta ID', 'Full Name', 'Email', 'Role', 'Status'];
+        const rows = displayedUsers.map(user => 
+        [
+            user.tradintaId || 'N/A',
+            `"${user.fullName || ''}"`,
+            user.email,
+            user.role,
+            user.status || 'Active'
+        ].join(',')
+        );
+        
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "tradinta_users.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        toast({
+        title: "Export Successful",
+        description: `${displayedUsers.length} users exported to CSV.`
+        });
+    };
+
+    const renderTableRows = () => {
+        if (isSearching) {
+        return (
+            <TableRow>
+            <TableCell colSpan={6} className="h-24 text-center">
+                <Loader2 className="mx-auto h-6 w-6 animate-spin" />
+            </TableCell>
+            </TableRow>
+        );
+        }
+
+        if (displayedUsers.length === 0) {
+        return (
+            <TableRow>
+            <TableCell colSpan={6} className="h-24 text-center">
+                No users found. Enter an email or Tradinta ID to search, or load all users.
+            </TableCell>
+            </TableRow>
+        );
+        }
+
+        return displayedUsers.map((user) => (
+        <TableRow key={user.id}>
+            <TableCell className="font-mono text-xs">
+            {user.tradintaId || 'N/A'}
+            </TableCell>
+            <TableCell className="font-medium">{user.fullName}</TableCell>
+            <TableCell>{user.email}</TableCell>
+            <TableCell className="capitalize">{user.role}</TableCell>
+            <TableCell>
+            <Badge
+                variant={
+                user.status === 'active' || user.status === undefined
+                    ? 'secondary'
+                    : 'destructive'
+                }
+            >
+                {user.status || 'active'}
+            </Badge>
+            </TableCell>
+            <TableCell className="space-x-2">
+            <Button size="sm" variant="outline" asChild>
+                <Link href={`/dashboards/user-management/${user.id}`}>Manage</Link>
+            </Button>
+            </TableCell>
+        </TableRow>
+        ));
+    };
+
+    if (isUserLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="ml-4 text-muted-foreground">Verifying permissions...</p>
+            </div>
+        );
+    }
+
+    const hasAccess = role === 'user-management' || role === 'admin' || role === 'super-admin';
+    if (!hasAccess) {
+        return <PermissionDenied />;
+    }
+
     return (
         <div className="space-y-6">
             <Card>
@@ -391,58 +405,4 @@ function UserManagementContent() {
             </Card>
         </div>
     );
-}
-
-const PermissionGate = ({ role, onProceed }: { role: string | null, onProceed: () => void }) => {
-  const hasAccess = role === 'user-management' || role === 'admin' || role === 'super-admin';
-
-  if (!hasAccess) {
-    return <PermissionDenied />;
-  }
-
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Permission Check Complete</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
-            <ShieldCheck className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Your role:</p>
-              <p className="font-bold text-lg">{role}</p>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">You have the correct permissions to view the User Management Dashboard.</p>
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={onProceed}>
-            Proceed to Dashboard
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-};
-
-
-export default function UserManagementPage() {
-    const { isUserLoading, role } = useUser();
-    const [gatePassed, setGatePassed] = React.useState(false);
-    
-    if (isUserLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-4 text-muted-foreground">Verifying your permissions...</p>
-            </div>
-        );
-    }
-
-    if (!gatePassed) {
-      return <PermissionGate role={role} onProceed={() => setGatePassed(true)} />;
-    }
-
-    return <UserManagementContent />;
 }

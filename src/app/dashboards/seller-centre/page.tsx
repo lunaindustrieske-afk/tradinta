@@ -191,8 +191,8 @@ const VerificationStatusCard = ({
   );
 };
 
-function SellerDashboardContent() {
-  const { user } = useUser();
+export default function SellerDashboardPage() {
+  const { user, isUserLoading, role } = useUser();
   const firestore = useFirestore();
 
   const reviewsQuery = useMemoFirebase(() => {
@@ -207,6 +207,20 @@ function SellerDashboardContent() {
 
   const { data: reviews, isLoading: isLoadingReviews } =
     useCollection<Review>(reviewsQuery);
+  
+  if (isUserLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="ml-4 text-muted-foreground">Verifying permissions...</p>
+      </div>
+    );
+  }
+
+  const hasAccess = role === 'manufacturer' || role === 'super-admin';
+  if (!hasAccess) {
+    return <PermissionDenied />;
+  }
 
   return (
     <div className="space-y-6">
@@ -507,57 +521,4 @@ function SellerDashboardContent() {
       </div>
     </div>
   );
-}
-
-const PermissionGate = ({ role, onProceed }: { role: string | null, onProceed: () => void }) => {
-  const hasAccess = role === 'manufacturer' || role === 'super-admin';
-
-  if (!hasAccess) {
-    return <PermissionDenied />;
-  }
-
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Permission Check Complete</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
-            <ShieldCheck className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Your role:</p>
-              <p className="font-bold text-lg">{role}</p>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">You have the correct permissions to view the Seller Centre.</p>
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={onProceed}>
-            Proceed to Dashboard
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-};
-
-export default function SellerDashboardPage() {
-  const { isUserLoading, role } = useUser();
-  const [gatePassed, setGatePassed] = React.useState(false);
-
-  if (isUserLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Verifying your permissions...</p>
-      </div>
-    );
-  }
-
-  if (!gatePassed) {
-    return <PermissionGate role={role} onProceed={() => setGatePassed(true)} />;
-  }
-  
-  return <SellerDashboardContent />;
 }

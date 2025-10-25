@@ -58,14 +58,14 @@ const RoleCard = ({ title, count, isLoading, onAddUser }: { title: string, count
 );
 
 
-function SuperAdminDashboardContent() {
+export default function SuperAdminDashboardPage() {
+    const { isUserLoading, role } = useUser();
     const firestore = useFirestore();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
     const activeTab = searchParams.get('tab') || 'overview';
     
-    // State for the modal
     const [isModalOpen, setIsModalOpen] = React.useState(false);
     const [selectedRole, setSelectedRole] = React.useState({ name: '', value: '' });
 
@@ -80,7 +80,6 @@ function SuperAdminDashboardContent() {
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    // --- Data Queries ---
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return query(collection(firestore, 'users'));
@@ -122,7 +121,6 @@ function SuperAdminDashboardContent() {
         return query(collection(firestore, 'systemAlerts'), where('status', '==', 'new'), where('severity', '==', 'critical'));
     }, [firestore]);
 
-    // --- Data Hooks ---
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
     const { data: sellers, isLoading: isLoadingSellers } = useCollection(sellersQuery);
     const { data: buyers, isLoading: isLoadingBuyers } = useCollection(buyersQuery);
@@ -183,6 +181,19 @@ function SuperAdminDashboardContent() {
         { name: 'TradCoin Airdrop Admins', value: 'tradcoin-airdrop', count: users?.filter(u => u.role === 'tradcoin-airdrop').length, isLoading: isLoadingUsers },
     ]
 
+    if (isUserLoading) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="ml-4 text-muted-foreground">Verifying permissions...</p>
+        </div>
+      );
+    }
+  
+    const hasAccess = role === 'super-admin';
+    if (!hasAccess) {
+      return <PermissionDenied />;
+    }
 
     return (
         <>
@@ -491,58 +502,4 @@ function SuperAdminDashboardContent() {
             </Tabs>
         </>
     );
-}
-
-const PermissionGate = ({ role, onProceed }: { role: string | null, onProceed: () => void }) => {
-  const hasAccess = role === 'super-admin';
-
-  if (!hasAccess) {
-    return <PermissionDenied />;
-  }
-
-  return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Permission Check Complete</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-4 p-4 bg-secondary/50 rounded-lg">
-            <ShieldCheck className="h-8 w-8 text-green-600" />
-            <div>
-              <p className="text-sm text-muted-foreground">Your role:</p>
-              <p className="font-bold text-lg">{role}</p>
-            </div>
-          </div>
-          <p className="text-sm text-muted-foreground">You have the correct permissions to view the Super Admin Dashboard.</p>
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={onProceed}>
-            Proceed to Dashboard
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-};
-
-
-export default function SuperAdminDashboardPage() {
-  const { isUserLoading, role } = useUser();
-  const [gatePassed, setGatePassed] = React.useState(false);
-  
-  if (isUserLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Verifying your permissions...</p>
-      </div>
-    );
-  }
-
-  if (!gatePassed) {
-    return <PermissionGate role={role} onProceed={() => setGatePassed(true)} />;
-  }
-
-  return <SuperAdminDashboardContent />;
 }
