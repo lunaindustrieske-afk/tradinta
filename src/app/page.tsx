@@ -1,6 +1,4 @@
 
-'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -29,9 +27,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getHomepageBanners, getRecentBlogPosts } from '@/app/lib/data';
 import { manufacturers, products as mockProducts } from '@/app/lib/mock-data';
 
 
@@ -126,35 +123,9 @@ const trustMetrics = [
     { value: '4.8/5', label: 'Manufacturer Satisfaction' },
 ];
 
-export default function HomePage() {
-  const firestore = useFirestore();
+const HeroCarousel = async () => {
+    const banners = await getHomepageBanners();
 
-  const bannersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-      collection(firestore, 'homepageBanners'),
-      where('status', '==', 'published'),
-      orderBy('order', 'asc')
-    );
-  }, [firestore]);
-
-  const postsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(
-        collection(firestore, 'blogPosts'),
-        where('status', '==', 'published'),
-        orderBy('publishedAt', 'desc'),
-        limit(3)
-    );
-  }, [firestore]);
-
-  const { data: banners, isLoading: isLoadingBanners } = useCollection<HomepageBanner>(bannersQuery);
-  const { data: blogPosts, isLoading: isLoadingPosts } = useCollection<BlogPost>(postsQuery);
-
-  const HeroCarousel = () => {
-    if (isLoadingBanners) {
-      return <Skeleton className="w-full h-full" />;
-    }
     if (!banners || banners.length === 0) {
       // Fallback static banner
        return (
@@ -217,6 +188,9 @@ export default function HomePage() {
     );
   };
 
+
+export default async function HomePage() {
+  const blogPosts = await getRecentBlogPosts();
 
   return (
     <>
@@ -336,11 +310,7 @@ export default function HomePage() {
               </Button>
             </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {isLoadingPosts ? (
-                Array.from({length: 3}).map((_, i) => (
-                  <Card key={i}><CardContent className="p-6"><Skeleton className="h-40 w-full" /></CardContent></Card>
-                ))
-              ) : blogPosts && blogPosts.length > 0 ? (
+              {blogPosts && blogPosts.length > 0 ? (
                 blogPosts.map(post => (
                   <Card key={post.id}>
                     <CardContent className="p-6">
