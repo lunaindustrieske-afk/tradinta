@@ -1,385 +1,197 @@
 /**
- * @fileoverview Firestore Security Rules for the Tradinta Marketplace.
- *
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for most data, with exceptions
- * for public content and administrative logs. Manufacturers and buyers can only
- * manage their own data. Top-level collections such as disputes and activity logs
- * are accessible only to users with specific admin claims.
- *
- * Data Structure:
- * - /users/{userId}: Stores user profiles.
- * - /manufacturers/{manufacturerId}: Stores manufacturer profiles.
- * - /buyers/{buyerId}: Stores buyer profiles.
- * - /manufacturers/{manufacturerId}/products/{productId}: Stores products for a manufacturer.
- * - /buyers/{buyerId}/orders/{orderId}: Stores orders placed by a buyer.
- * - /quotations/{quotationId}: Stores quotations.
- * - /disputes/{disputeId}: Stores disputes.
- * - /activityLogs/{logId}: Stores activity logs.
- * - /homepageBanners/{bannerId}: Stores homepage banners (publicly readable).
- * - /blogPosts/{postId}: Stores blog posts (publicly readable).
- *
- * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - Manufacturers can only manage their products and marketing campaigns.
- * - Buyers can only manage their orders.
- * - Quotations are accessible to the buyer, the manufacturer, and admins.
- * - Disputes and ActivityLogs are only accessible to admins.
- * - HomepageBanners and BlogPosts are publicly readable.
- * - Listing of GrowthPartnerCampaigns is not allowed to all authenticated users.
- *
- * Denormalization for Authorization:
- * - Quotations denormalize both buyerId and manufacturerId to allow easier querying and security rule creation without `get()` calls.
- *
- * Structural Segregation:
- * - Public content (HomepageBanners, BlogPosts) is stored in top-level collections with public read access, separate from private user data.
+ * @description This ruleset enforces a strict ownership model for manufacturers, shops, buyers, products, orders, order items, payments, and marketing campaigns on the Tradinta platform.
+ * @dataStructure
+ *   - /manufacturers/{manufacturerId}: Stores manufacturer profiles.
+ *   - /buyers/{buyerId}: Stores buyer profiles.
+ *   - /shops/{shopId}: Stores shop profiles.
+ *   - /shops/{shopId}/products/{productId}: Stores product listings for each shop.
+ *   - /orders/{orderId}: Stores order details.
+ *   - /orders/{orderId}/orderItems/{orderItemId}: Stores individual items within an order.
+ *   - /payments/{paymentId}: Stores payment details.
+ *   - /shops/{shopId}/marketingCampaigns/{marketingCampaignId}: Stores marketing campaigns for each shop.
+ * @keySecurityDecisions
+ *   - Manufacturers and buyers can only access their own profiles.
+ *   - Shops can only be created and managed by their associated manufacturer.
+ *   - Products can only be created and managed within their associated shop.
+ *   - Orders are accessible to both the buyer and the shop involved.
+ *   - Order items are accessible only within the context of their parent order.
+ *   - Payments are linked to orders and accessible only within the context of their parent order.
+ *   - Marketing campaigns can only be created and managed within their associated shop.
+ *   - Listing manufacturers or buyers is disallowed.
+ * @denormalizationForAuthorization
+ *   - 'shopId' is denormalized into Products and MarketingCampaigns to enable shop-specific access control without extra reads.
+ *   - 'shopId' and 'buyerId' are denormalized into Orders to facilitate order listing and access control based on the shop or buyer.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the current user is signed in.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Authentication: Ensures only authenticated users can access certain resources.
+     * @description Controls access to manufacturer profiles. Manufacturers can only read and write their own profiles.
+     * @path /manufacturers/{manufacturerId}
+     * @allow (create) - Authenticated user creating a manufacturer profile where the manufacturerId matches their user ID.
+     * @allow (get, update, delete) - Authenticated user accessing/modifying a manufacturer profile where the manufacturerId matches their user ID.
+     * @deny (create) - Authenticated user attempting to create a manufacturer profile with a manufacturerId that does not match their user ID.
+     * @deny (get, update, delete) - Authenticated user attempting to access/modify a manufacturer profile where the manufacturerId does not match their user ID.
+     * @principle Enforces document ownership for all operations.
      */
+    match /manufacturers/{manufacturerId} {
+      allow get: if isSignedIn() && isOwner(manufacturerId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(manufacturerId) && request.resource.data.id == manufacturerId;
+      allow update: if isSignedIn() && isOwner(manufacturerId) && resource.data.id == manufacturerId;
+      allow delete: if isSignedIn() && isExistingOwner(manufacturerId);
+    }
+
+    /**
+     * @description Controls access to buyer profiles. Buyers can only read and write their own profiles.
+     * @path /buyers/{buyerId}
+     * @allow (create) - Authenticated user creating a buyer profile where the buyerId matches their user ID.
+     * @allow (get, update, delete) - Authenticated user accessing/modifying a buyer profile where the buyerId matches their user ID.
+     * @deny (create) - Authenticated user attempting to create a buyer profile with a buyerId that does not match their user ID.
+     * @deny (get, update, delete) - Authenticated user attempting to access/modify a buyer profile where the buyerId does not match their user ID.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /buyers/{buyerId} {
+      allow get: if isSignedIn() && isOwner(buyerId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(buyerId) && request.resource.data.id == buyerId;
+      allow update: if isSignedIn() && isOwner(buyerId) && resource.data.id == buyerId;
+      allow delete: if isSignedIn() && isExistingOwner(buyerId);
+    }
+
+    /**
+     * @description Controls access to shop profiles. Only the associated manufacturer can manage the shop.
+     * @path /shops/{shopId}
+     * @allow (create) - Authenticated user creating a shop profile where the manufacturerId in the shop data matches their user ID.
+     * @allow (get, update, delete) - Authenticated user accessing/modifying a shop profile where the manufacturerId in the shop data matches their user ID.
+     * @deny (create) - Authenticated user attempting to create a shop profile with a manufacturerId that does not match their user ID.
+     * @deny (get, update, delete) - Authenticated user attempting to access/modify a shop profile where the manufacturerId does not match their user ID.
+     * @principle Enforces manufacturer ownership for all shop operations.
+     */
+    match /shops/{shopId} {
+      allow get: if isSignedIn() && isManufacturerOfShop(shopId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.resource.data.manufacturerId == request.auth.uid && request.resource.data.id == shopId;
+      allow update: if isSignedIn() && isManufacturerOfShop(shopId) && resource.data.id == shopId;
+      allow delete: if isSignedIn() && isExistingManufacturerOfShop(shopId);
+    }
+
+    /**
+     * @description Controls access to product listings within a shop. Only the shop's manufacturer can manage products.
+     * @path /shops/{shopId}/products/{productId}
+     * @allow (create) - Authenticated user creating a product where the shopId matches the parent shop and the user is the manufacturer.
+     * @allow (get, update, delete) - Authenticated user accessing/modifying a product where the shopId matches the parent shop and the user is the manufacturer.
+     * @deny (create) - Authenticated user attempting to create a product where the shopId does not match the parent shop or the user is not the manufacturer.
+     * @deny (get, update, delete) - Authenticated user attempting to access/modify a product where the shopId does not match the parent shop or the user is not the manufacturer.
+     * @principle Enforces shop ownership (via manufacturer) for all product operations.
+     */
+    match /shops/{shopId}/products/{productId} {
+      allow get: if isSignedIn() && isManufacturerOfShop(shopId);
+      allow list: if isSignedIn() && isManufacturerOfShop(shopId);
+      allow create: if isSignedIn() && isManufacturerOfShop(shopId) && request.resource.data.shopId == shopId && request.resource.data.id == productId;
+      allow update: if isSignedIn() && isManufacturerOfShop(shopId) && resource.data.shopId == shopId && resource.data.id == productId;
+      allow delete: if isSignedIn() && isExistingManufacturerOfShop(shopId) && resource.data.shopId == shopId;
+    }
+
+    /**
+     * @description Controls access to order details. Orders are accessible to both the buyer and the shop involved.
+     * @path /orders/{orderId}
+     * @allow (get, update, delete) - Authenticated user accessing/modifying an order where the user is either the buyer or the shop owner.
+     * @deny (create) - Authenticated user attempting to create an order without being either the buyer or the shop owner.
+     * @principle Enforces shared access based on buyer and shop relationships.
+     */
+    match /orders/{orderId} {
+      allow get: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId));
+      allow list: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId));
+      allow create: if isSignedIn() && (request.resource.data.buyerId == request.auth.uid || isManufacturerOfShop(request.resource.data.shopId)) && request.resource.data.id == orderId;
+      allow update: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId)) && resource.data.id == orderId;
+      allow delete: if isSignedIn() && (isExistingBuyerOfOrder(orderId) || isExistingShopOfOrder(orderId));
+    }
+
+    /**
+     * @description Controls access to order items within an order. Accessible only within the context of their parent order.
+     * @path /orders/{orderId}/orderItems/{orderItemId}
+     * @allow (get, update, delete) - Authenticated user accessing/modifying an order item only if they have access to the parent order.
+     * @deny (create) - Authenticated user attempting to create an order item if they do not have access to the parent order.
+     * @principle Enforces access control through the parent order relationship.
+     */
+    match /orders/{orderId}/orderItems/{orderItemId} {
+      allow get: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId));
+      allow list: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId));
+      allow create: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId)) && request.resource.data.orderId == orderId  && request.resource.data.id == orderItemId;
+      allow update: if isSignedIn() && (isBuyerOfOrder(orderId) || isShopOfOrder(orderId)) && resource.data.orderId == orderId && resource.data.id == orderItemId;
+      allow delete: if isSignedIn() && (isExistingBuyerOfOrder(orderId) || isExistingShopOfOrder(orderId)) && resource.data.orderId == orderId;
+    }
+
+    /**
+     * @description Controls access to payment details. Payments are linked to orders and accessible only within the context of their parent order.
+     * @path /payments/{paymentId}
+     * @allow (get, update, delete) - Authenticated user accessing/modifying a payment only if they have access to the parent order.
+     * @deny (create) - Authenticated user attempting to create a payment if they do not have access to the parent order.
+     * @principle Enforces access control through the parent order relationship.
+     */
+    match /payments/{paymentId} {
+      allow get: if isSignedIn() && (isBuyerOfOrder(resource.data.orderId) || isShopOfOrder(resource.data.orderId));
+      allow list: if false; // Payments are generally not listable
+      allow create: if isSignedIn() && (isBuyerOfOrder(request.resource.data.orderId) || isShopOfOrder(request.resource.data.orderId)) && request.resource.data.id == paymentId;
+      allow update: if isSignedIn() && (isBuyerOfOrder(resource.data.orderId) || isShopOfOrder(resource.data.orderId)) && resource.data.id == paymentId;
+      allow delete: if isSignedIn() && (isExistingBuyerOfOrder(resource.data.orderId) || isExistingShopOfOrder(resource.data.orderId));
+    }
+
+    /**
+     * @description Controls access to marketing campaigns within a shop. Only the shop's manufacturer can manage campaigns.
+     * @path /shops/{shopId}/marketingCampaigns/{marketingCampaignId}
+     * @allow (create) - Authenticated user creating a campaign where the shopId matches the parent shop and the user is the manufacturer.
+     * @allow (get, update, delete) - Authenticated user accessing/modifying a campaign where the shopId matches the parent shop and the user is the manufacturer.
+     * @deny (create) - Authenticated user attempting to create a campaign where the shopId does not match the parent shop or the user is not the manufacturer.
+     * @deny (get, update, delete) - Authenticated user attempting to access/modify a campaign where the shopId does not match the parent shop or the user is not the manufacturer.
+     * @principle Enforces shop ownership (via manufacturer) for all campaign operations.
+     */
+    match /shops/{shopId}/marketingCampaigns/{marketingCampaignId} {
+      allow get: if isSignedIn() && isManufacturerOfShop(shopId);
+      allow list: if isSignedIn() && isManufacturerOfShop(shopId);
+      allow create: if isSignedIn() && isManufacturerOfShop(shopId) && request.resource.data.shopId == shopId && request.resource.data.id == marketingCampaignId;
+      allow update: if isSignedIn() && isManufacturerOfShop(shopId) && resource.data.shopId == shopId && resource.data.id == marketingCampaignId;
+      allow delete: if isSignedIn() && isExistingManufacturerOfShop(shopId) && resource.data.shopId == shopId;
+    }
+
+    // --- Helper Functions ---
+
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Ownership: Enforces that a user can only access their own data.
-     */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
-    /**
-     * @description Checks if the authenticated user is the owner of an existing document.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Ownership: Enforces that only the owner can update or delete a document, and that the document exists.
-     */
     function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
+      return isSignedIn() && isOwner(userId) && resource != null;
     }
 
-    /**
-     * @description Checks if the authenticated user has the 'admin' claim.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Role-based Access Control: Limits access to administrative functions to authorized users.
-     */
-    function isAdmin() {
-        return isSignedIn() && request.auth.token.admin == true;
+    function isManufacturerOfShop(shopId) {
+      return isSignedIn() && get(/databases/$(database)/documents/shops/$(shopId)).data.manufacturerId == request.auth.uid;
     }
 
-    /**
-     * @description Checks if the authenticated user has the 'ops' claim.
-     * @path N/A
-     * @allow N/A
-     * @deny N/A
-     * @principle Role-based Access Control: Limits access to operations functions to authorized users.
-     */
-    function isOps() {
-        return isSignedIn() && request.auth.token.ops == true;
+    function isExistingManufacturerOfShop(shopId) {
+      return isSignedIn() && isManufacturerOfShop(shopId) && resource != null;
     }
 
-    /**
-     * @description Rule for user profiles.
-     * @path /users/{userId}
-     * @allow (create) User with UID 'user123' creates profile with id 'user123'.
-     * @allow (get, update, delete) User with UID 'user123' reads/modifies their own profile.
-     * @deny (create) User with UID 'user123' creates profile with id 'user456'.
-     * @principle Ownership: Enforces user-ownership for profile data.
-     */
-    match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.tradintaId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.tradintaId == resource.data.tradintaId;
-      allow delete: if isExistingOwner(userId);
+    function isBuyerOfOrder(orderId) {
+      return isSignedIn() && get(/databases/$(database)/documents/orders/$(orderId)).data.buyerId == request.auth.uid;
     }
 
-    /**
-     * @description Rule for password reset tokens.
-     * @path /passwordResetTokens/{tokenId}
-     * @allow (create) Any signed-in user creates a token.
-     * @deny (get, list, update, delete) No one can read, list, update, or delete tokens directly.
-     * @principle Restricted Access: Only the backend should manage these tokens.
-     */
-    match /passwordResetTokens/{tokenId} {
-      allow get, list, update, delete: if false;
-      allow create: if isSignedIn(); // TODO: Limit this to backend only via custom claims and environment variables.
+    function isExistingBuyerOfOrder(orderId) {
+      return isSignedIn() && isBuyerOfOrder(orderId) && resource != null;
     }
 
-    /**
-     * @description Rule for manufacturer profiles.
-     * @path /manufacturers/{manufacturerId}
-     * @allow (create) User with UID 'manufacturer123' creates profile with id 'manufacturer123'.
-     * @allow (get, update, delete) User with UID 'manufacturer123' reads/modifies their own profile.
-     * @deny (create) User with UID 'manufacturer123' creates profile with id 'manufacturer456'.
-     * @principle Ownership: Enforces manufacturer-ownership for profile data.
-     */
-    match /manufacturers/{manufacturerId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isOwner(manufacturerId) && request.resource.data.id == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(manufacturerId);
+    function isShopOfOrder(orderId) {
+      return isSignedIn() && isManufacturerOfShop(get(/databases/$(database)/documents/orders/$(orderId)).data.shopId);
     }
 
-    /**
-     * @description Rule for buyer profiles.
-     * @path /buyers/{buyerId}
-     * @allow (create) User with UID 'buyer123' creates profile with id 'buyer123'.
-     * @allow (get, update, delete) User with UID 'buyer123' reads/modifies their own profile.
-     * @deny (create) User with UID 'buyer123' creates profile with id 'buyer456'.
-     * @principle Ownership: Enforces buyer-ownership for profile data.
-     */
-    match /buyers/{buyerId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isOwner(buyerId) && request.resource.data.id == buyerId;
-      allow update: if isExistingOwner(buyerId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(buyerId);
-    }
-
-    /**
-     * @description Rule for products owned by a manufacturer.
-     * @path /manufacturers/{manufacturerId}/products/{productId}
-     * @allow (create, update, delete) Manufacturer with UID 'manufacturer123' manages products.
-     * @allow (get, list) Any user can read products.
-     * @deny (create) User with UID 'buyer123' attempts to create a product under manufacturer 'manufacturer123'.
-     * @principle Ownership: Enforces manufacturer-ownership for product data.
-     */
-    match /manufacturers/{manufacturerId}/products/{productId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-    }
-
-    /**
-     * @description Rule for reviews for a specific product.
-     * @path /manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId}
-     * @allow (create) Any signed-in user can create a review.
-     * @allow (get, list) Any user can read reviews.
-     * @deny (update, delete) Only admins can update or delete a review.
-     * @principle Public Read, Restricted Write: Allows public reviews, but restricts modifications.
-     */
-    match /manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update, delete: if isAdmin();
-    }
-
-    /**
-     * @description Rule for orders placed by a buyer.
-     * @path /buyers/{buyerId}/orders/{orderId}
-     * @allow (create, update, delete) Buyer with UID 'buyer123' manages their orders.
-     * @allow (get, list) Any user can read orders.
-     * @deny (create) User with UID 'manufacturer123' attempts to create an order under buyer 'buyer123'.
-     * @principle Ownership: Enforces buyer-ownership for order data.
-     */
-    match /buyers/{buyerId}/orders/{orderId} {
-      allow get: if true;
-      allow list: if isOwner(buyerId);
-      allow create: if isOwner(buyerId) && request.resource.data.buyerId == buyerId;
-      allow update: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
-      allow delete: if isExistingOwner(buyerId) && resource.data.buyerId == buyerId;
-    }
-
-    /**
-     * @description Rule for order items within an order.
-     * @path /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}
-     * @allow (create, update, delete) Buyer with UID 'buyer123' manages order items within their orders.
-     * @allow (get, list) Any user can read order items.
-     * @deny (create) User with UID 'manufacturer123' attempts to create an order item under buyer 'buyer123'.
-     * @principle Ownership: Enforces buyer-ownership for order item data.
-     */
-    match /buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId} {
-      allow get: if true;
-      allow list: if isOwner(buyerId);
-      allow create: if isOwner(buyerId);
-      allow update: if isExistingOwner(buyerId);
-      allow delete: if isExistingOwner(buyerId);
-    }
-
-    /**
-     * @description Rule for quotations.
-     * @path /quotations/{quotationId}
-     * @allow (get, list) Any user can read quotations.
-     * @allow (create) Any signed-in user can create quotations.
-     * @deny (update, delete) Only the quotation's buyer or manufacturer can update/delete. Admins can always do it.
-     */
-    match /quotations/{quotationId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid) && resource != null;
-      allow delete: if (resource.data.buyerId == request.auth.uid || resource.data.manufacturerId == request.auth.uid) && resource != null;
-    }
-
-    /**
-     * @description Rule for marketing campaigns owned by a manufacturer.
-     * @path /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}
-     * @allow (create, update, delete) Manufacturer with UID 'manufacturer123' manages their campaigns.
-     * @allow (get, list) Any user can read campaigns.
-     * @deny (create) User with UID 'buyer123' attempts to create a campaign under manufacturer 'manufacturer123'.
-     * @principle Ownership: Enforces manufacturer-ownership for marketing campaign data.
-     */
-    match /manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId} {
-      allow get: if true;
-      allow list: if isOwner(manufacturerId);
-      allow create: if isOwner(manufacturerId) && request.resource.data.manufacturerId == manufacturerId;
-      allow update: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-      allow delete: if isExistingOwner(manufacturerId) && resource.data.manufacturerId == manufacturerId;
-    }
-
-    /**
-     * @description Rule for Growth Partner Campaigns.
-     * @path /growthPartnerCampaigns/{campaignId}
-     * @allow (get, list) Admins and Ops can read campaigns.
-     * @deny (create, update, delete) Only admins can create, update, or delete campaigns.
-     * @principle Restricted Access: Only authorized personnel can manage partner campaigns.
-     */
-    match /growthPartnerCampaigns/{campaignId} {
-      allow get: if isAdmin() || isOps();
-      allow list: if isAdmin() || isOps();
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for Attributed Sales.
-     * @path /attributedSales/{saleId}
-     * @allow (get, list) Admins and Ops can read sales.
-     * @deny (create, update, delete) Only admins can create, update, or delete sales records.
-     * @principle Restricted Access: Only authorized personnel can manage sales attribution.
-     */
-    match /attributedSales/{saleId} {
-      allow get: if isAdmin() || isOps();
-      allow list: if isAdmin() || isOps();
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for Partner Earnings.
-     * @path /partners/{partnerId}/earnings/{earningId}
-     * @allow (get, list) Admins, Ops and the Partner can read their own earnings.
-     * @deny (create, update, delete) Only admins can create, update, or delete earning records.
-     * @principle Restricted Access: Only authorized personnel can manage partner earnings.
-     */
-    match /partners/{partnerId}/earnings/{earningId} {
-      allow get: if isAdmin() || isOps() || isOwner(partnerId);
-      allow list: if isAdmin() || isOps() || isOwner(partnerId);
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for disputes.
-     * @path /disputes/{disputeId}
-     * @allow (get, list) Admins can read disputes.
-     * @deny (create, update, delete) Only admins can create, update, or delete disputes.
-     * @principle Restricted Access: Only authorized personnel can manage disputes.
-     */
-    match /disputes/{disputeId} {
-      allow get: if isAdmin() || isOps();
-      allow list: if isAdmin() || isOps();
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for activity logs.
-     * @path /activityLogs/{logId}
-     * @allow (get, list) Admins can read activity logs.
-     * @deny (create, update, delete) Only admins can create, update, or delete logs.
-     * @principle Restricted Access: Only authorized personnel can manage activity logs.
-     */
-    match /activityLogs/{logId} {
-      allow get: if isAdmin() || isOps();
-      allow list: if isAdmin() || isOps();
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for homepage banners.
-     * @path /homepageBanners/{bannerId}
-     * @allow (get, list) Any user can read homepage banners.
-     * @deny (create, update, delete) Only admins can create, update, or delete banners.
-     * @principle Public Read, Restricted Write: Allows public viewing of banners, but restricts modifications.
-     */
-    match /homepageBanners/{bannerId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for blog posts.
-     * @path /blogPosts/{postId}
-     * @allow (get, list) Any user can read blog posts.
-     * @deny (create, update, delete) Only admins can create, update, or delete blog posts.
-     * @principle Public Read, Restricted Write: Allows public viewing of blog posts, but restricts modifications.
-     */
-    match /blogPosts/{postId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for site pages.
-     * @path /sitePages/{pageId}
-     * @allow (get, list) Any user can read site pages.
-     * @deny (create, update, delete) Only admins can create, update, or delete site pages.
-     * @principle Public Read, Restricted Write: Allows public viewing of site pages, but restricts modifications.
-     */
-    match /sitePages/{pageId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
-    }
-
-    /**
-     * @description Rule for system alerts.
-     * @path /systemAlerts/{alertId}
-     * @allow (get, list) Admins and Ops can read system alerts.
-     * @deny (create, update, delete) Only admins can create, update, or delete alerts.
-     * @principle Restricted Access: Only authorized personnel can manage system alerts.
-     */
-    match /systemAlerts/{alertId} {
-      allow get: if isAdmin() || isOps();
-      allow list: if isAdmin() || isOps();
-      allow create: if isAdmin() || isOps();
-      allow update: if isAdmin() || isOps();
-      allow delete: if isAdmin() || isOps();
+    function isExistingShopOfOrder(orderId) {
+      return isSignedIn() && isShopOfOrder(orderId) && resource != null;
     }
   }
 }

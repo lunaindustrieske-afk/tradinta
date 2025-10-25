@@ -1,267 +1,112 @@
-
 {
   "entities": {
-    "UserProfile": {
-      "title": "User Profile",
-      "type": "object",
-      "description": "Represents a user's profile information.",
-      "properties": {
-        "tradintaId": {
-          "type": "string",
-          "description": "A unique, 8-character, user-friendly identifier."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "The user's email address."
-        },
-        "fullName": {
-          "type": "string",
-          "description": "The user's full name."
-        },
-        "businessName": {
-          "type": "string",
-          "description": "The user's business name (if applicable)."
-        },
-        "role": {
-          "type": "string",
-          "description": "The user's role on the platform.",
-          "enum": [
-            "manufacturer",
-            "buyer",
-            "partner"
-          ]
-        },
-        "registrationDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date the user registered."
-        },
-        "referredBy": {
-            "type": "string",
-            "description": "The ID of the partner who referred this user."
-        }
-      },
-      "required": [
-        "tradintaId",
-        "email",
-        "role",
-        "fullName",
-        "registrationDate"
-      ]
-    },
-    "PasswordResetToken": {
-        "title": "Password Reset Token",
-        "type": "object",
-        "description": "A secure token for verifying a user's password reset request.",
-        "properties": {
-            "userId": { "type": "string", "description": "The UID of the user requesting the reset." },
-            "token": { "type": "string", "description": "The unique, single-use token." },
-            "expires": { "type": "string", "format": "date-time", "description": "The timestamp when this token expires." }
-        },
-        "required": ["userId", "token", "expires"]
-    },
     "Manufacturer": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Manufacturer",
       "type": "object",
-      "description": "Represents a manufacturer registered on the Tradinta platform.",
+      "description": "Represents a manufacturer on the Tradinta platform.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Manufacturer entity."
+          "description": "Unique identifier for the manufacturer entity."
         },
-        "shopId": {
+        "name": {
           "type": "string",
-          "description": "A short, unique, URL-friendly identifier for the shop."
+          "description": "Name of the manufacturing company."
         },
-        "shopName": {
+        "description": {
           "type": "string",
-          "description": "The name of the manufacturer's shop on Tradinta."
-        },
-        "ownerName": {
-          "type": "string",
-          "description": "The name of the manufacturer's shop owner."
+          "description": "Description of the manufacturer and their products."
         },
         "email": {
           "type": "string",
-          "description": "The email address of the manufacturer.",
+          "description": "Email address of the manufacturer.",
           "format": "email"
         },
         "phone": {
           "type": "string",
-          "description": "The phone number of the manufacturer."
-        },
-        "businessLicenseNumber": {
-          "type": "string",
-          "description": "The business license number of the manufacturer."
-        },
-        "kraPin": {
-          "type": "string",
-          "description": "The KRA PIN of the manufacturer."
+          "description": "Phone number of the manufacturer."
         },
         "address": {
           "type": "string",
-          "description": "The physical address of the manufacturer."
+          "description": "Physical address of the manufacturer."
         },
-        "description": {
+        "shopId": {
           "type": "string",
-          "description": "A description of the manufacturer and their products."
-        },
-        "registrationDate": {
-          "type": "string",
-          "description": "The date when the manufacturer registered on the platform.",
-          "format": "date-time"
-        },
-        "logoUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of the shop's logo."
-        },
-        "bannerUrl": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL of the shop's banner image."
-        },
-        "tagline": {
-          "type": "string",
-          "description": "A short, catchy phrase for the shop."
-        },
-        "paymentPolicy": {
-          "type": "string",
-          "description": "The shop's payment policy."
-        },
-        "shippingPolicy": {
-          "type": "string",
-          "description": "The shop's shipping policy."
-        },
-        "returnPolicy": {
-          "type": "string",
-          "description": "The shop's return policy."
-        },
-        "certifications": {
-          "type": "array",
-          "description": "URLs of uploaded certification documents.",
-          "items": {
-            "type": "string",
-            "format": "uri"
-          }
-        },
-        "website": {
-            "type": "string",
-            "format": "uri",
-            "description": "The manufacturer's official website."
-        },
-        "linkedin": {
-            "type": "string",
-            "format": "uri",
-            "description": "URL to the manufacturer's LinkedIn profile."
-        },
-        "acceptsTradPay": {
-            "type": "boolean",
-            "description": "Indicates if the seller accepts TradPay."
-        },
-        "issuesTradPoints": {
-            "type": "boolean",
-            "description": "Indicates if the seller issues TradPoints."
-        },
-        "verificationStatus": {
-          "type": "string",
-          "description": "The overall verification status of the manufacturer.",
-          "enum": ["Unsubmitted", "Pending Legal", "Pending Admin", "Action Required", "Verified", "Restricted"]
-        },
-        "rejectionReason": {
-            "type": "string",
-            "description": "Reason for rejection if status is 'Action Required'."
+          "description": "Reference to Shop. (Relationship: Manufacturer 1:1 Shop)"
         }
       },
       "required": [
         "id",
-        "shopName",
-        "email"
+        "name",
+        "description",
+        "email",
+        "phone",
+        "address",
+        "shopId"
       ]
     },
     "Buyer": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Buyer",
       "type": "object",
-      "description": "Represents a buyer registered on the Tradinta platform.",
+      "description": "Represents a buyer on the Tradinta platform.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Buyer entity."
+          "description": "Unique identifier for the buyer entity."
         },
-        "companyName": {
+        "name": {
           "type": "string",
-          "description": "The name of the buyer's company."
-        },
-        "contactName": {
-          "type": "string",
-          "description": "The name of the buyer's contact person."
+          "description": "Name of the buyer (company or individual)."
         },
         "email": {
           "type": "string",
-          "description": "The email address of the buyer.",
+          "description": "Email address of the buyer.",
           "format": "email"
         },
         "phone": {
           "type": "string",
-          "description": "The phone number of the buyer."
+          "description": "Phone number of the buyer."
         },
         "address": {
           "type": "string",
-          "description": "The physical address of the buyer."
-        },
-        "registrationDate": {
-          "type": "string",
-          "description": "The date when the buyer registered on the platform.",
-          "format": "date-time"
-        },
-        "verificationStatus": {
-          "type": "string",
-          "description": "The verification status of the buyer.",
-          "enum": ["Unsubmitted", "Pending Admin", "Action Required", "Verified"]
+          "description": "Physical address of the buyer."
         }
       },
       "required": [
         "id",
-        "companyName",
-        "email"
+        "name",
+        "email",
+        "phone",
+        "address"
       ]
     },
     "Product": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Product",
       "type": "object",
-      "description": "Represents a product listed on the Tradinta platform.",
+      "description": "Represents a product listed on the Tradinta marketplace.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Product entity."
+          "description": "Unique identifier for the product entity."
         },
-        "manufacturerId": {
+        "shopId": {
           "type": "string",
-          "description": "Reference to Manufacturer UID. (Relationship: Manufacturer 1:N Product)"
+          "description": "Reference to Shop. (Relationship: Shop 1:N Product)"
         },
         "name": {
           "type": "string",
-          "description": "The name of the product."
-        },
-        "slug": {
-          "type": "string",
-          "description": "URL-friendly version of the product name."
+          "description": "Name of the product."
         },
         "description": {
           "type": "string",
-          "description": "A description of the product."
+          "description": "Description of the product."
         },
         "price": {
           "type": "number",
-          "description": "The price of the product."
-        },
-        "unit": {
-          "type": "string",
-          "description": "Unit of measurement for the product (e.g., kg, piece)."
+          "description": "Price of the product."
         },
         "imageUrl": {
           "type": "string",
@@ -270,92 +115,20 @@
         },
         "tags": {
           "type": "array",
-          "description": "Tags or labels to help users search for the product",
+          "description": "Array of product tags",
           "items": {
             "type": "string"
           }
-        },
-        "status": {
-            "type": "string",
-            "description": "The current status of the product.",
-            "enum": ["draft", "published", "archived"]
-        },
-        "category": {
-            "type": "string",
-            "description": "The main category of the product."
-        },
-        "subcategory": {
-            "type": "string",
-            "description": "The sub-category of the product."
-        },
-        "stock": {
-            "type": "number",
-            "description": "Available stock quantity."
-        },
-        "sku": {
-            "type": "string",
-            "description": "Stock Keeping Unit."
-        },
-        "moq": {
-            "type": "number",
-            "description": "Minimum Order Quantity."
-        },
-        "weight": {
-          "type": "string",
-          "description": "Weight of the product (e.g., '50kg')."
-        },
-        "dimensions": {
-          "type": "string",
-          "description": "Dimensions of the product (e.g., '80cm x 50cm x 15cm')."
-        },
-        "material": {
-          "type": "string",
-          "description": "The primary material of the product."
-        },
-        "certifications": {
-          "type": "string",
-          "description": "Compliance standards or certifications (e.g., 'KEBS Certified, ISO 9001')."
-        },
-        "packagingDetails": {
-          "type": "string",
-          "description": "Details about how the product is packaged."
-        },
-        "createdAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of product creation."
-        },
-        "updatedAt": {
-            "type": "string",
-            "format": "date-time",
-            "description": "Timestamp of last product update."
         }
       },
       "required": [
         "id",
-        "manufacturerId",
+        "shopId",
         "name",
+        "description",
         "price",
-        "status"
+        "imageUrl"
       ]
-    },
-    "Review": {
-        "title": "Review",
-        "type": "object",
-        "description": "Represents a single customer review for a product.",
-        "properties": {
-            "id": { "type": "string", "description": "Unique identifier for the review." },
-            "productId": { "type": "string", "description": "Reference to the Product ID." },
-            "productName": { "type": "string", "description": "Denormalized product name for easier display." },
-            "buyerId": { "type": "string", "description": "Reference to the Buyer's UID." },
-            "buyerName": { "type": "string", "description": "Denormalized buyer's name." },
-            "buyerAvatar": { "type": "string", "format": "uri", "description": "Denormalized buyer's avatar URL." },
-            "rating": { "type": "number", "description": "The star rating given (1-5)." },
-            "comment": { "type": "string", "description": "The text content of the review." },
-            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the review was submitted." },
-            "status": { "type": "string", "enum": ["pending", "approved", "rejected"], "description": "The moderation status of the review." }
-        },
-        "required": ["id", "productId", "buyerId", "rating", "createdAt", "status"]
     },
     "Order": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -365,28 +138,32 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Order entity."
+          "description": "Unique identifier for the order entity."
         },
         "buyerId": {
           "type": "string",
           "description": "Reference to Buyer. (Relationship: Buyer 1:N Order)"
         },
+        "shopId": {
+          "type": "string",
+          "description": "Reference to Shop. (Relationship: Shop 1:N Order)"
+        },
         "orderDate": {
           "type": "string",
-          "description": "The date when the order was placed.",
+          "description": "Date and time the order was placed.",
           "format": "date-time"
         },
         "totalAmount": {
           "type": "number",
-          "description": "The total amount of the order."
+          "description": "Total amount of the order."
         },
         "status": {
           "type": "string",
-          "description": "The status of the order (e.g., pending, processing, shipped, delivered)."
+          "description": "Current status of the order (e.g., pending, processing, shipped, delivered)."
         },
-        "orderItems": {
+        "orderItemIds": {
           "type": "array",
-          "description": "List of items included in the order.",
+          "description": "References to OrderItems. (Relationship: Order 1:N OrderItem)",
           "items": {
             "type": "string"
           }
@@ -395,20 +172,22 @@
       "required": [
         "id",
         "buyerId",
+        "shopId",
         "orderDate",
         "totalAmount",
-        "status"
+        "status",
+        "orderItemIds"
       ]
     },
     "OrderItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "OrderItem",
       "type": "object",
-      "description": "Represents an item within an order.",
+      "description": "Represents a specific item within an order.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the OrderItem entity."
+          "description": "Unique identifier for the order item entity."
         },
         "orderId": {
           "type": "string",
@@ -420,11 +199,11 @@
         },
         "quantity": {
           "type": "number",
-          "description": "The quantity of the product in the order item."
+          "description": "Quantity of the product ordered."
         },
-        "price": {
+        "unitPrice": {
           "type": "number",
-          "description": "Price of the product at order time."
+          "description": "Price of a single unit of the product."
         }
       },
       "required": [
@@ -432,66 +211,83 @@
         "orderId",
         "productId",
         "quantity",
-        "price"
+        "unitPrice"
       ]
     },
-    "Quotation": {
+    "Shop": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Quotation",
+      "title": "Shop",
       "type": "object",
-      "description": "Represents a quotation request from a buyer to a manufacturer.",
+      "description": "Represents a manufacturer's shop on the Tradinta platform.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Quotation entity."
+          "description": "Unique identifier for the shop entity."
         },
-        "buyerId": {
+        "name": {
           "type": "string",
-          "description": "Reference to Buyer. (Relationship: Buyer 1:N Quotation)"
+          "description": "Name of the shop."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the shop."
         },
         "manufacturerId": {
           "type": "string",
-          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:N Quotation)"
-        },
-        "productId": {
-          "type": "string",
-          "description": "Reference to Product. (Relationship: Product 1:N Quotation)"
-        },
-        "requestDate": {
-          "type": "string",
-          "description": "The date when the quotation was requested.",
-          "format": "date-time"
-        },
-        "quantity": {
-          "type": "number",
-          "description": "The quantity of the product requested in the quotation."
-        },
-        "unit": {
-          "type": "string",
-          "description": "The unit of product being quoted"
-        },
-        "offeredPrice": {
-          "type": "number",
-          "description": "The price offered by the manufacturer, if any."
-        },
-        "expirationDate": {
-          "type": "string",
-          "description": "The expiration date of the quotation, if any.",
-          "format": "date-time"
-        },
-        "status": {
-          "type": "string",
-          "description": "The status of the quotation (e.g., pending, accepted, rejected)."
+          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:1 Shop)"
         }
       },
       "required": [
         "id",
-        "buyerId",
-        "manufacturerId",
-        "productId",
-        "requestDate",
-        "quantity",
-        "unit"
+        "name",
+        "description",
+        "manufacturerId"
+      ]
+    },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Represents a payment made through TradPay.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the payment entity."
+        },
+        "orderId": {
+          "type": "string",
+          "description": "Reference to Order. (Relationship: Order 1:1 Payment)"
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date and time the payment was made.",
+          "format": "date-time"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the payment."
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Method of payment used (e.g., M-Pesa, card)."
+        },
+        "transactionId": {
+          "type": "string",
+          "description": "Transaction ID from the payment gateway."
+        },
+        "status": {
+          "type": "string",
+          "description": "Status of the payment (e.g., pending, completed, failed)."
+        }
+      },
+      "required": [
+        "id",
+        "orderId",
+        "paymentDate",
+        "amount",
+        "paymentMethod",
+        "transactionId",
+        "status"
       ]
     },
     "MarketingCampaign": {
@@ -502,349 +298,195 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the MarketingCampaign entity."
+          "description": "Unique identifier for the marketing campaign entity."
         },
-        "manufacturerId": {
+        "shopId": {
           "type": "string",
-          "description": "Reference to Manufacturer. (Relationship: Manufacturer 1:N MarketingCampaign)"
+          "description": "Reference to Shop. (Relationship: Shop 1:N MarketingCampaign)"
         },
         "name": {
           "type": "string",
-          "description": "The name of the marketing campaign."
+          "description": "Name of the marketing campaign."
         },
         "startDate": {
           "type": "string",
-          "description": "The start date of the marketing campaign.",
+          "description": "Start date of the campaign.",
           "format": "date-time"
         },
         "endDate": {
           "type": "string",
-          "description": "The end date of the marketing campaign.",
+          "description": "End date of the campaign.",
           "format": "date-time"
         },
         "discountPercentage": {
           "type": "number",
-          "description": "The discount percentage offered in the campaign."
+          "description": "Discount percentage offered during the campaign."
         },
         "description": {
           "type": "string",
-          "description": "A description of the marketing campaign."
+          "description": "Description of the marketing campaign."
         }
       },
       "required": [
         "id",
-        "manufacturerId",
+        "shopId",
         "name",
         "startDate",
         "endDate",
-        "discountPercentage"
+        "discountPercentage",
+        "description"
       ]
-    },
-    "GrowthPartnerCampaign": {
-        "title": "Growth Partner Campaign",
-        "type": "object",
-        "description": "Links a Growth Partner to a specific manufacturer for a promotional campaign.",
-        "properties": {
-            "id": { "type": "string", "description": "Unique identifier for the campaign." },
-            "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
-            "manufacturerId": { "type": "string", "description": "The UID of the Manufacturer being promoted." },
-            "name": { "type": "string", "description": "The name of the campaign (e.g., 'Jane Doe Q4 Promo for Constructa Ltd')." },
-            "trackingCode": { "type": "string", "description": "Unique code for referral links (e.g., 'JANE-CONST-Q4')." },
-            "commissionRate": { "type": "number", "description": "The commission rate for this campaign (e.g., 0.05 for 5%)." },
-            "status": { "type": "string", "enum": ["active", "inactive", "archived"], "description": "The current status of the campaign." },
-            "startDate": { "type": "string", "format": "date-time" },
-            "endDate": { "type": "string", "format": "date-time" }
-        },
-        "required": ["id", "partnerId", "manufacturerId", "name", "trackingCode", "commissionRate", "status"]
-    },
-    "AttributedSale": {
-        "title": "Attributed Sale",
-        "type": "object",
-        "description": "Logs a sale that was successfully attributed to a Growth Partner.",
-        "properties": {
-            "id": { "type": "string" },
-            "orderId": { "type": "string", "description": "Reference to the Order ID." },
-            "partnerId": { "type": "string", "description": "The UID of the partner who gets credit." },
-            "campaignId": { "type": "string", "description": "The campaign that drove the sale." },
-            "orderTotal": { "type": "number", "description": "The total value of the order." },
-            "commissionEarned": { "type": "number", "description": "The amount of commission earned from this sale." },
-            "saleDate": { "type": "string", "format": "date-time" },
-            "status": { "type": "string", "enum": ["unpaid", "paid", "disputed"], "description": "The payout status of the commission." }
-        },
-        "required": ["id", "orderId", "partnerId", "campaignId", "orderTotal", "commissionEarned", "saleDate", "status"]
-    },
-    "PartnerEarning": {
-        "title": "Partner Earning",
-        "type": "object",
-        "description": "Aggregates earnings for a Growth Partner for a specific payout period.",
-        "properties": {
-            "id": { "type": "string" },
-            "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
-            "period": { "type": "string", "description": "The payout period (e.g., 'YYYY-MM')." },
-            "totalEarnings": { "type": "number", "description": "Total commission earned in this period." },
-            "status": { "type": "string", "enum": ["pending", "paid"], "description": "The status of the payout." },
-            "paidAt": { "type": "string", "format": "date-time", "description": "Timestamp when the payout was made." }
-        },
-        "required": ["id", "partnerId", "period", "totalEarnings", "status"]
-    },
-    "Dispute": {
-      "title": "Dispute",
-      "type": "object",
-      "description": "Represents a dispute between a buyer and a seller regarding an order.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the dispute." },
-        "orderId": { "type": "string", "description": "Reference to the Order ID." },
-        "buyerId": { "type": "string", "description": "Reference to the Buyer's UID." },
-        "manufacturerId": { "type": "string", "description": "Reference to the Manufacturer's UID." },
-        "reason": { "type": "string", "description": "The reason for filing the dispute." },
-        "status": {
-          "type": "string",
-          "description": "The current status of the dispute.",
-          "enum": ["Open", "Under Review", "Awaiting Buyer Response", "Awaiting Seller Response", "Resolved", "Closed"]
-        },
-        "openedDate": { "type": "string", "format": "date-time", "description": "When the dispute was opened." },
-        "resolution": { "type": "string", "description": "The final resolution of the dispute." }
-      },
-      "required": ["id", "orderId", "buyerId", "manufacturerId", "reason", "status", "openedDate"]
-    },
-    "ActivityLog": {
-        "title": "Activity Log",
-        "type": "object",
-        "description": "Represents a log entry for an auditable action performed by an admin.",
-        "properties": {
-            "id": { "type": "string", "description": "Unique identifier for the log entry." },
-            "timestamp": { "type": "string", "format": "date-time", "description": "When the action occurred." },
-            "userId": { "type": "string", "description": "The UID of the user who performed the action." },
-            "userEmail": { "type": "string", "format": "email", "description": "The email of the user for easy identification." },
-            "action": { "type": "string", "description": "A short, machine-readable key for the action (e.g., 'VERIFICATION_APPROVED')." },
-            "details": { "type": "string", "description": "A human-readable description of the action (e.g., 'Approved manufacturer TradCo Ltd (xyz123)')." }
-        },
-        "required": ["id", "timestamp", "userId", "userEmail", "action", "details"]
-    },
-    "HomepageBanner": {
-      "title": "Homepage Banner",
-      "type": "object",
-      "description": "Represents a single banner/slide in the homepage carousel.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the banner." },
-        "title": { "type": "string", "description": "The main headline for the banner." },
-        "subtitle": { "type": "string", "description": "The subtext or description for the banner." },
-        "imageUrl": { "type": "string", "format": "uri", "description": "URL of the banner background image." },
-        "link": { "type": "string", "description": "The destination URL when the banner is clicked." },
-        "status": { "type": "string", "enum": ["draft", "published"], "description": "The visibility status of the banner." },
-        "order": { "type": "number", "description": "The display order of the banner in the carousel." }
-      },
-      "required": ["id", "title", "imageUrl", "status"]
-    },
-    "BlogPost": {
-      "title": "Blog Post",
-      "type": "object",
-      "description": "Represents a single blog post or article in the 'Insights' section.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the post." },
-        "title": { "type": "string", "description": "The title of the blog post." },
-        "slug": { "type": "string", "description": "URL-friendly version of the title." },
-        "author": { "type": "string", "description": "The name of the post's author." },
-        "content": { "type": "string", "description": "The full content of the blog post in Markdown or HTML." },
-        "status": { "type": "string", "enum": ["draft", "published", "archived"], "description": "The visibility status of the post." },
-        "publishedAt": { "type": "string", "format": "date-time", "description": "When the post was published." }
-      },
-      "required": ["id", "title", "slug", "content", "status"]
-    },
-    "SitePage": {
-      "title": "Site Page",
-      "type": "object",
-      "description": "Represents a static content page like 'About Us' or 'Privacy Policy'.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the page." },
-        "title": { "type": "string", "description": "The title of the page." },
-        "slug": { "type": "string", "description": "The unique, URL-friendly identifier (e.g., 'about-us', 'privacy-policy')." },
-        "content": { "type": "string", "description": "The full content of the page in Markdown or HTML." },
-        "lastUpdated": { "type": "string", "format": "date-time", "description": "Timestamp of the last update." }
-      },
-      "required": ["id", "title", "slug", "content"]
-    },
-    "SystemAlert": {
-      "title": "System Alert",
-      "type": "object",
-      "description": "Represents a system-level alert for administrative attention.",
-      "properties": {
-        "id": { "type": "string", "description": "Unique identifier for the alert." },
-        "timestamp": { "type": "string", "format": "date-time", "description": "When the alert was generated." },
-        "type": { "type": "string", "description": "A machine-readable key for the alert type (e.g., 'HIGH_ERROR_RATE')." },
-        "severity": { "type": "string", "enum": ["critical", "warning", "info"], "description": "The severity level of the alert." },
-        "message": { "type": "string", "description": "A human-readable summary of the alert." },
-        "status": { "type": "string", "enum": ["new", "acknowledged", "resolved"], "description": "The current status of the alert." },
-        "details": { "type": "object", "description": "An object containing additional data related to the alert." }
-      },
-      "required": ["id", "timestamp", "type", "severity", "message", "status"]
     }
   },
   "auth": {
     "providers": [
       "password",
-      "google.com"
-    ],
-    "claims": {
-        "admin": { "type": "boolean" },
-        "ops": { "type": "boolean" }
-    }
+      "anonymous"
+    ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserProfile",
-          "schema": { "$ref": "#/backend/entities/UserProfile" },
-          "description": "Stores public user profiles. The 'userId' is the document ID and corresponds to the user's UID."
-        }
-      },
-      {
-        "path": "/passwordResetTokens/{tokenId}",
-        "definition": {
-          "entityName": "PasswordResetToken",
-          "schema": { "$ref": "#/backend/entities/PasswordResetToken" },
-          "description": "Stores single-use tokens for password resets. Documents should have a TTL policy."
-        }
-      },
-      {
         "path": "/manufacturers/{manufacturerId}",
         "definition": {
           "entityName": "Manufacturer",
-          "schema": { "$ref": "#/backend/entities/Manufacturer" },
-          "description": "Stores manufacturer profiles. The 'manufacturerId' is the document ID and corresponds to the user's UID."
+          "schema": {
+            "$ref": "#/backend/entities/Manufacturer"
+          },
+          "description": "Stores manufacturer profiles. Includes 'shopId' for relationship to Shop.",
+          "params": [
+            {
+              "name": "manufacturerId",
+              "description": "The unique identifier for the manufacturer."
+            }
+          ]
         }
       },
       {
         "path": "/buyers/{buyerId}",
         "definition": {
           "entityName": "Buyer",
-          "schema": { "$ref": "#/backend/entities/Buyer" },
-          "description": "Stores buyer profiles. The 'buyerId' is the document ID and corresponds to the user's UID."
+          "schema": {
+            "$ref": "#/backend/entities/Buyer"
+          },
+          "description": "Stores buyer profiles.",
+          "params": [
+            {
+              "name": "buyerId",
+              "description": "The unique identifier for the buyer."
+            }
+          ]
         }
       },
       {
-        "path": "/manufacturers/{manufacturerId}/products/{productId}",
+        "path": "/shops/{shopId}",
+        "definition": {
+          "entityName": "Shop",
+          "schema": {
+            "$ref": "#/backend/entities/Shop"
+          },
+          "description": "Stores shop profiles. Includes 'manufacturerId' for relationship to Manufacturer.",
+          "params": [
+            {
+              "name": "shopId",
+              "description": "The unique identifier for the shop."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/shops/{shopId}/products/{productId}",
         "definition": {
           "entityName": "Product",
-          "schema": { "$ref": "#/backend/entities/Product" },
-          "description": "Stores products owned by a manufacturer. The 'manufacturerId' identifies the owner."
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
+          "description": "Stores product listings for each shop. Includes denormalized 'shopId' for authorization independence.",
+          "params": [
+            {
+              "name": "shopId",
+              "description": "The unique identifier for the shop."
+            },
+            {
+              "name": "productId",
+              "description": "The unique identifier for the product."
+            }
+          ]
         }
       },
       {
-        "path": "/manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId}",
-        "definition": {
-          "entityName": "Review",
-          "schema": { "$ref": "#/backend/entities/Review" },
-          "description": "Stores reviews for a specific product."
-        }
-      },
-      {
-        "path": "/buyers/{buyerId}/orders/{orderId}",
+        "path": "/orders/{orderId}",
         "definition": {
           "entityName": "Order",
-          "schema": { "$ref": "#/backend/entities/Order" },
-          "description": "Stores orders placed by a buyer. The 'buyerId' identifies the order owner."
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
+          "description": "Stores order details. Includes denormalized 'buyerId' and 'shopId' for authorization independence.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            }
+          ]
         }
       },
       {
-        "path": "/buyers/{buyerId}/orders/{orderId}/orderItems/{orderItemId}",
+        "path": "/orders/{orderId}/orderItems/{orderItemId}",
         "definition": {
           "entityName": "OrderItem",
-          "schema": { "$ref": "#/backend/entities/OrderItem" },
-          "description": "Stores order items within an order."
+          "schema": {
+            "$ref": "#/backend/entities/OrderItem"
+          },
+          "description": "Stores individual items within an order. Includes 'orderId' to nest under the respective order.",
+          "params": [
+            {
+              "name": "orderId",
+              "description": "The unique identifier for the order."
+            },
+            {
+              "name": "orderItemId",
+              "description": "The unique identifier for the order item."
+            }
+          ]
         }
       },
       {
-        "path": "/quotations/{quotationId}",
+        "path": "/payments/{paymentId}",
         "definition": {
-          "entityName": "Quotation",
-          "schema": { "$ref": "#/backend/entities/Quotation" },
-          "description": "Stores quotations. Includes denormalized 'buyerId' and 'manufacturerId' for authorization independence."
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores payment details. Includes 'orderId' for relationship to Order.",
+          "params": [
+            {
+              "name": "paymentId",
+              "description": "The unique identifier for the payment."
+            }
+          ]
         }
       },
       {
-        "path": "/manufacturers/{manufacturerId}/marketingCampaigns/{marketingCampaignId}",
+        "path": "/shops/{shopId}/marketingCampaigns/{marketingCampaignId}",
         "definition": {
           "entityName": "MarketingCampaign",
-          "schema": { "$ref": "#/backend/entities/MarketingCampaign" },
-          "description": "Stores marketing campaigns owned by a manufacturer. The 'manufacturerId' identifies the owner."
-        }
-      },
-       {
-        "path": "/growthPartnerCampaigns/{campaignId}",
-        "definition": {
-          "entityName": "GrowthPartnerCampaign",
-          "schema": { "$ref": "#/backend/entities/GrowthPartnerCampaign" },
-          "description": "Top-level collection for all partner campaigns for easy querying by marketing managers."
-        }
-      },
-      {
-        "path": "/attributedSales/{saleId}",
-        "definition": {
-          "entityName": "AttributedSale",
-          "schema": { "$ref": "#/backend/entities/AttributedSale" },
-          "description": "Top-level collection for all attributed sales for easy querying and commission calculation."
-        }
-      },
-      {
-        "path": "/partners/{partnerId}/earnings/{earningId}",
-        "definition": {
-          "entityName": "PartnerEarning",
-          "schema": { "$ref": "#/backend/entities/PartnerEarning" },
-          "description": "Stores aggregated earnings for each partner."
-        }
-      },
-      {
-        "path": "/disputes/{disputeId}",
-        "definition": {
-          "entityName": "Dispute",
-          "schema": { "$ref": "#/backend/entities/Dispute" },
-          "description": "Top-level collection for all disputes for easy querying by admin roles."
-        }
-      },
-      {
-        "path": "/activityLogs/{logId}",
-        "definition": {
-          "entityName": "ActivityLog",
-          "schema": { "$ref": "#/backend/entities/ActivityLog" },
-          "description": "Top-level collection for all auditable admin actions."
-        }
-      },
-      {
-        "path": "/homepageBanners/{bannerId}",
-        "definition": {
-          "entityName": "HomepageBanner",
-          "schema": { "$ref": "#/backend/entities/HomepageBanner" },
-          "description": "Stores data for the homepage carousel slides. This collection should have public read access."
-        }
-      },
-      {
-        "path": "/blogPosts/{postId}",
-        "definition": {
-          "entityName": "BlogPost",
-          "schema": { "$ref": "#/backend/entities/BlogPost" },
-          "description": "Stores blog posts for the 'Insights' section. This collection should have public read access."
-        }
-      },
-      {
-        "path": "/sitePages/{pageId}",
-        "definition": {
-          "entityName": "SitePage",
-          "schema": { "$ref": "#/backend/entities/SitePage" },
-          "description": "Stores content for static pages like 'About Us', 'Privacy Policy', etc."
-        }
-      },
-      {
-        "path": "/systemAlerts/{alertId}",
-        "definition": {
-          "entityName": "SystemAlert",
-          "schema": { "$ref": "#/backend/entities/SystemAlert" },
-          "description": "Top-level collection for all system-generated alerts for admin review."
+          "schema": {
+            "$ref": "#/backend/entities/MarketingCampaign"
+          },
+          "description": "Stores marketing campaigns for each shop. Includes denormalized 'shopId' for authorization independence.",
+          "params": [
+            {
+              "name": "shopId",
+              "description": "The unique identifier for the shop."
+            },
+            {
+              "name": "marketingCampaignId",
+              "description": "The unique identifier for the marketing campaign."
+            }
+          ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages, SystemAlerts).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns, Reviews**: These are nested under the manufacturer to indicate ownership.  Reviews are further nested under products. Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, ActivityLogs, SystemAlerts**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`, `/systemAlerts/{alertId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
+    "reasoning": "The Firestore structure is designed to support Tradinta's B2B marketplace, focusing on manufacturers, shops, products, buyers, orders, and related entities. The design emphasizes authorization independence via denormalization to avoid `get()` calls in security rules, enhancing security and scalability.\n\n1.  **Authorization Independence:**\n    *   `Manufacturers` and `Shops`: The `shopId` in `Manufacturers` is used to quickly locate a manufacturer's shop. No denormalization is needed at this level as manufacturers are essentially creating their own shops.\n    *   `Products`: The `shopId` field is denormalized into each product to enable secure listing and querying of products within a specific shop. This allows listing products for a shop without needing to query across collections or use `get()` calls in security rules.\n    *   `Orders` and `OrderItems`: The `shopId` and `buyerId` are denormalized into `Orders` to facilitate order listing and access control based on the shop or buyer. The `OrderItem` includes the `orderId`, nesting order items under the respective order.\n    *   `MarketingCampaigns`: The `shopId` is included to allow for listing and management of campaigns specific to a shop.\n2.  **Structural Segregation:**\n    *   Each major entity type (`Manufacturers`, `Buyers`, `Shops`, `Products`, `Orders`, `OrderItems`, `Payments`, `MarketingCampaigns`) has its own top-level collection. This simplifies security rules as each collection has a homogeneous security posture.\n3.  **Access Modeling:**\n    *   Ownership: Shops are owned by manufacturers. Products are owned by shops. Orders are associated with both buyers and shops. This hierarchy is reflected in the data structure.\n    *   Collaborative Data: Membership maps are not used in this design, as the primary access control is based on the relationship between manufacturers, shops, products, and buyers.\n4.  **QAPs (Rules are not Filters):**\n    *   Secure `list` operations are supported by denormalizing the `shopId` and `buyerId` into the respective documents. This allows querying orders or products associated with a shop or buyer without complex rule logic.\n5.  **Invariants:**\n    *   The structure supports the integrity of ownership through explicit `shopId`, `manufacturerId`, and `buyerId` fields.\n\nThis design provides a clear, secure, and scalable foundation for the Tradinta platform."
   }
 }
