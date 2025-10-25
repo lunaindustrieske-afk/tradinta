@@ -50,6 +50,17 @@
         "registrationDate"
       ]
     },
+    "PasswordResetToken": {
+        "title": "Password Reset Token",
+        "type": "object",
+        "description": "A secure token for verifying a user's password reset request.",
+        "properties": {
+            "userId": { "type": "string", "description": "The UID of the user requesting the reset." },
+            "token": { "type": "string", "description": "The unique, single-use token." },
+            "expires": { "type": "string", "format": "date-time", "description": "The timestamp when this token expires." }
+        },
+        "required": ["userId", "token", "expires"]
+    },
     "Manufacturer": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Manufacturer",
@@ -622,6 +633,14 @@
           "entityName": "UserProfile",
           "schema": { "$ref": "#/backend/entities/UserProfile" },
           "description": "Stores public user profiles. The 'userId' is the document ID and corresponds to the user's UID."
+        }
+      },
+      {
+        "path": "/passwordResetTokens/{tokenId}",
+        "definition": {
+          "entityName": "PasswordResetToken",
+          "schema": { "$ref": "#/backend/entities/PasswordResetToken" },
+          "description": "Stores single-use tokens for password resets. Documents should have a TTL policy."
         }
       },
       {

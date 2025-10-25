@@ -3,41 +3,22 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useAuth } from '@/firebase';
-import { sendPasswordResetEmail } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Logo } from '@/components/logo';
-import { useToast } from '@/hooks/use-toast';
 import { Mail, Loader2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { handleRequestPasswordReset } from '@/app/(auth)/actions';
+import { useFormState } from 'react-dom';
+
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isEmailSent, setIsEmailSent] = useState(false);
-  const auth = useAuth();
-  const { toast } = useToast();
-
-  const handleResetRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      // You must configure the Action URL in your Firebase Console
-      // to point to your custom domain where /reset-password lives.
-      await sendPasswordResetEmail(auth, email);
-      setIsEmailSent(true);
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  
+  const initialState = { message: '', success: false };
+  const [state, dispatch] = useFormState(handleRequestPasswordReset, initialState);
+  const isEmailSent = state.success;
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2">
@@ -52,7 +33,7 @@ export default function ForgotPasswordPage() {
                         Check your email
                     </h2>
                     <p className="mt-2 text-gray-600 dark:text-gray-400">
-                        We've sent a password reset link to <span className="font-semibold text-primary">{email}</span>. Please check your inbox and spam folder.
+                        {state.message}
                     </p>
                      <Button asChild className="mt-6">
                         <Link href="/login">
@@ -68,26 +49,31 @@ export default function ForgotPasswordPage() {
                     <p className="mt-2 text-gray-600 dark:text-gray-400">
                         No worries. Enter your email address and we'll send you a link to reset it.
                     </p>
-                    <form className="mt-8 space-y-6" onSubmit={handleResetRequest}>
-                        <div className="relative">
-                            <Label htmlFor="email">Email</Label>
-                            <Mail className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
-                            <Input
-                                id="email"
-                                name="email"
-                                type="email"
-                                autoComplete="email"
-                                required
-                                className="mt-1 pl-10"
-                                placeholder="you@company.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
-                        </div>
-                        <div>
-                            <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : 'Send Reset Link'}
-                            </Button>
+                    <form action={dispatch}>
+                        <div className="relative mt-8 space-y-6">
+                            <div className="relative">
+                                <Label htmlFor="email">Email</Label>
+                                <Mail className="absolute left-3 top-[2.4rem] h-5 w-5 text-muted-foreground" />
+                                <Input
+                                    id="email"
+                                    name="email"
+                                    type="email"
+                                    autoComplete="email"
+                                    required
+                                    className="mt-1 pl-10"
+                                    placeholder="you@company.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
+                            </div>
+                            <div>
+                                <Button type="submit" className="w-full">
+                                    Send Reset Link
+                                </Button>
+                            </div>
+                            {state.message && !state.success && (
+                                <p className="text-sm text-destructive text-center">{state.message}</p>
+                            )}
                         </div>
                     </form>
                     <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
