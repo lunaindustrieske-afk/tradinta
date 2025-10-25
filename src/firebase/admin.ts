@@ -19,7 +19,16 @@ function getServiceAccount(): ServiceAccount | undefined {
 
   try {
     const decodedServiceAccount = Buffer.from(serviceAccountB64, 'base64').toString('utf8');
-    return JSON.parse(decodedServiceAccount);
+    const serviceAccountJson = JSON.parse(decodedServiceAccount);
+
+    // IMPORTANT: Ensure the private key is properly formatted.
+    // Environment variables can sometimes escape newline characters.
+    if (serviceAccountJson.private_key) {
+        serviceAccountJson.private_key = serviceAccountJson.private_key.replace(/\\n/g, '\n');
+    }
+    
+    return serviceAccountJson;
+
   } catch (error) {
     console.error('Failed to parse Firebase service account key:', error);
     throw new Error('The Firebase service account key is not a valid Base64 encoded JSON string.');
