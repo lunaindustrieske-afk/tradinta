@@ -393,6 +393,7 @@ export async function sendVerificationEmail(userId: string, email: string, name:
 export async function verifyEmailToken(token: string): Promise<{ success: boolean; message: string }> {
     try {
         const firestore = getFirestore();
+        const auth = getAuth();
         const tokenDocRef = firestore.collection('emailVerificationTokens').doc(token);
         const tokenDoc = await tokenDocRef.get();
 
@@ -407,7 +408,7 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
         }
 
         const userId = data.userId;
-        const auth = getAuth();
+        const user = await auth.getUser(userId); // Get user record
         
         // Mark email as verified in Firebase Auth
         await auth.updateUser(userId, { emailVerified: true });
@@ -418,6 +419,71 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
 
         // Invalidate the token
         await tokenDocRef.delete();
+
+        // Send welcome email
+        const welcomeHtml = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Welcome to Tradinta!</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                        <td align="center" style="padding: 20px 0;">
+                            <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                                <tr>
+                                    <td align="center" style="padding: 40px 20px; border-bottom: 1px solid #eeeeee;">
+                                        <img src="https://i.postimg.cc/NGkTK7Jc/Gemini-Generated-Image-e6p14ne6p14ne6p1-removebg-preview.png" alt="Tradinta Logo" width="150">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 40px 30px;">
+                                        <h1 style="color: #333333; font-size: 24px;">Welcome to the Tradinta Network, ${user.displayName || 'Partner'}!</h1>
+                                        <p style="color: #555555; font-size: 16px; line-height: 1.5;">Your account is now active. You are officially part of Africa’s premier B2B manufacturing marketplace. Here’s how to get started:</p>
+                                        
+                                        <h2 style="color: #333333; font-size: 20px; margin-top: 30px;">Your Quick Start Guide</h2>
+                                        <ul style="color: #555555; font-size: 16px; line-height: 1.5; padding-left: 20px;">
+                                            <li style="margin-bottom: 10px;"><strong>For Manufacturers:</strong> Complete your shop profile to get verified and start listing products. A complete profile attracts more buyers.</li>
+                                            <li style="margin-bottom: 10px;"><strong>For Buyers:</strong> Start browsing thousands of products and use the "Request Quotation" feature to get the best factory prices.</li>
+                                            <li style="margin-bottom: 10px;"><strong>For Growth Partners:</strong> Check your dashboard for active campaigns and share your unique referral links to start earning.</li>
+                                        </ul>
+
+                                        <p style="text-align: center; margin: 30px 0;">
+                                            <a href="${process.env.NEXT_PUBLIC_APP_URL}/login" style="background-color: #1D4ED8; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Go to My Dashboard</a>
+                                        </p>
+                                        <p style="color: #555555; font-size: 16px; line-height: 1.5; margin-top: 30px;">If you have any questions, visit our Help Center or contact our support team.</p>
+                                        <p style="color: #555555; font-size: 16px; line-height: 1.5;">Best,<br>The Tradinta Team</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="padding: 20px 30px; font-size: 12px; color: #999999; text-align: center; border-top: 1px solid #eeeeee;">
+                                        <p>© ${new Date().getFullYear()} Tradinta. All rights reserved.</p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+            </body>
+            </html>
+        `;
+
+        // We don't want to block the user's flow, so we send the email but don't await it.
+        // We also wrap in a try/catch to prevent any email sending errors from failing the verification process.
+        try {
+          if (user.email) {
+            sendTransactionalEmail({
+              to: user.email,
+              subject: 'Welcome to Tradinta! Your Account is Active.',
+              htmlContent: welcomeHtml,
+            });
+          }
+        } catch (emailError) {
+            console.error("Failed to send welcome email:", emailError);
+        }
         
         return { success: true, message: 'Your email has been successfully verified!' };
 
