@@ -343,15 +343,48 @@
       "type": "object",
       "description": "Represents a specific promotional campaign linking a Growth Partner to a Manufacturer.",
       "properties": {
-        "id": { "type": "string", "description": "Unique ID for the campaign." },
-        "name": { "type": "string", "description": "Name of the campaign." },
-        "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
-        "manufacturerId": { "type": "string", "description": "The UID of the Manufacturer." },
-        "trackingCode": { "type": "string", "description": "Unique code for this partner-manufacturer link." },
-        "commissionRate": { "type": "number", "description": "Commission percentage (e.g., 5 for 5%)." },
-        "status": { "type": "string", "enum": ["Active", "Paused", "Finished"] }
+        "id": {
+          "type": "string",
+          "description": "Unique ID for the campaign."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the campaign."
+        },
+        "partnerId": {
+          "type": "string",
+          "description": "The UID of the Growth Partner."
+        },
+        "manufacturerId": {
+          "type": "string",
+          "description": "The UID of the Manufacturer."
+        },
+        "trackingCode": {
+          "type": "string",
+          "description": "Unique code for this partner-manufacturer link."
+        },
+        "commissionRate": {
+          "type": "number",
+          "description": "Commission percentage (e.g., 5 for 5%)."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "Active",
+            "Paused",
+            "Finished"
+          ]
+        }
       },
-      "required": ["id", "name", "partnerId", "manufacturerId", "trackingCode", "commissionRate", "status"]
+      "required": [
+        "id",
+        "name",
+        "partnerId",
+        "manufacturerId",
+        "trackingCode",
+        "commissionRate",
+        "status"
+      ]
     },
     "AttributedSale": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -359,16 +392,49 @@
       "type": "object",
       "description": "Logs a sale attributed to a Growth Partner.",
       "properties": {
-        "id": { "type": "string" },
-        "orderId": { "type": "string", "description": "The original order ID." },
-        "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
-        "campaignId": { "type": "string", "description": "The campaign this sale is attributed to." },
-        "saleAmount": { "type": "number" },
-        "commissionEarned": { "type": "number" },
-        "date": { "type": "string", "format": "date-time" },
-        "payoutStatus": { "type": "string", "enum": ["Unpaid", "Paid"] }
+        "id": {
+          "type": "string"
+        },
+        "orderId": {
+          "type": "string",
+          "description": "The original order ID."
+        },
+        "partnerId": {
+          "type": "string",
+          "description": "The UID of the Growth Partner."
+        },
+        "campaignId": {
+          "type": "string",
+          "description": "The campaign this sale is attributed to."
+        },
+        "saleAmount": {
+          "type": "number"
+        },
+        "commissionEarned": {
+          "type": "number"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "payoutStatus": {
+          "type": "string",
+          "enum": [
+            "Unpaid",
+            "Paid"
+          ]
+        }
       },
-      "required": ["id", "orderId", "partnerId", "campaignId", "saleAmount", "commissionEarned", "date", "payoutStatus"]
+      "required": [
+        "id",
+        "orderId",
+        "partnerId",
+        "campaignId",
+        "saleAmount",
+        "commissionEarned",
+        "date",
+        "payoutStatus"
+      ]
     },
     "PartnerEarning": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -376,13 +442,29 @@
       "type": "object",
       "description": "Aggregates a Growth Partner's earnings.",
       "properties": {
-        "id": { "type": "string" },
-        "partnerId": { "type": "string" },
-        "totalEarnings": { "type": "number" },
-        "paidEarnings": { "type": "number" },
-        "unpaidEarnings": { "type": "number" }
+        "id": {
+          "type": "string"
+        },
+        "partnerId": {
+          "type": "string"
+        },
+        "totalEarnings": {
+          "type": "number"
+        },
+        "paidEarnings": {
+          "type": "number"
+        },
+        "unpaidEarnings": {
+          "type": "number"
+        }
       },
-      "required": ["id", "partnerId", "totalEarnings", "paidEarnings", "unpaidEarnings"]
+      "required": [
+        "id",
+        "partnerId",
+        "totalEarnings",
+        "paidEarnings",
+        "unpaidEarnings"
+      ]
     }
   },
   "auth": {
@@ -397,7 +479,9 @@
         "path": "/manufacturers/{manufacturerId}",
         "definition": {
           "entityName": "Manufacturer",
-          "schema": { "$ref": "#/backend/entities/Manufacturer" },
+          "schema": {
+            "$ref": "#/backend/entities/Manufacturer"
+          },
           "description": "Stores manufacturer profiles."
         }
       },
@@ -405,7 +489,9 @@
         "path": "/buyers/{buyerId}",
         "definition": {
           "entityName": "Buyer",
-          "schema": { "$ref": "#/backend/entities/Buyer" },
+          "schema": {
+            "$ref": "#/backend/entities/Buyer"
+          },
           "description": "Stores buyer profiles."
         }
       },
@@ -413,7 +499,9 @@
         "path": "/shops/{shopId}",
         "definition": {
           "entityName": "Shop",
-          "schema": { "$ref": "#/backend/entities/Shop" },
+          "schema": {
+            "$ref": "#/backend/entities/Shop"
+          },
           "description": "Stores shop profiles."
         }
       },
@@ -421,7 +509,9 @@
         "path": "/shops/{shopId}/products/{productId}",
         "definition": {
           "entityName": "Product",
-          "schema": { "$ref": "#/backend/entities/Product" },
+          "schema": {
+            "$ref": "#/backend/entities/Product"
+          },
           "description": "Stores product listings for each shop."
         }
       },
@@ -429,7 +519,9 @@
         "path": "/orders/{orderId}",
         "definition": {
           "entityName": "Order",
-          "schema": { "$ref": "#/backend/entities/Order" },
+          "schema": {
+            "$ref": "#/backend/entities/Order"
+          },
           "description": "Stores order details."
         }
       },
@@ -437,7 +529,9 @@
         "path": "/orders/{orderId}/orderItems/{orderItemId}",
         "definition": {
           "entityName": "OrderItem",
-          "schema": { "$ref": "#/backend/entities/OrderItem" },
+          "schema": {
+            "$ref": "#/backend/entities/OrderItem"
+          },
           "description": "Stores individual items within an order."
         }
       },
@@ -445,7 +539,9 @@
         "path": "/payments/{paymentId}",
         "definition": {
           "entityName": "Payment",
-          "schema": { "$ref": "#/backend/entities/Payment" },
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
           "description": "Stores payment details."
         }
       },
@@ -453,23 +549,29 @@
         "path": "/shops/{shopId}/marketingCampaigns/{marketingCampaignId}",
         "definition": {
           "entityName": "MarketingCampaign",
-          "schema": { "$ref": "#/backend/entities/MarketingCampaign" },
+          "schema": {
+            "$ref": "#/backend/entities/MarketingCampaign"
+          },
           "description": "Stores marketing campaigns for each shop."
         }
       },
       {
-        "path": "/growthPartnerCampaigns/{campaignId}",
+        "path": "/users/{userId}/growthPartnerCampaigns/{campaignId}",
         "definition": {
           "entityName": "GrowthPartnerCampaign",
-          "schema": { "$ref": "#/backend/entities/GrowthPartnerCampaign" },
-          "description": "Stores campaigns for Growth Partners."
+          "schema": {
+            "$ref": "#/backend/entities/GrowthPartnerCampaign"
+          },
+          "description": "Stores campaigns for Growth Partners, nested under the user for security."
         }
       },
       {
         "path": "/partners/{partnerId}/attributedSales/{saleId}",
         "definition": {
           "entityName": "AttributedSale",
-          "schema": { "$ref": "#/backend/entities/AttributedSale" },
+          "schema": {
+            "$ref": "#/backend/entities/AttributedSale"
+          },
           "description": "Logs sales attributed to a specific partner."
         }
       },
@@ -477,12 +579,12 @@
         "path": "/partnerEarnings/{partnerId}",
         "definition": {
           "entityName": "PartnerEarning",
-          "schema": { "$ref": "#/backend/entities/PartnerEarning" },
+          "schema": {
+            "$ref": "#/backend/entities/PartnerEarning"
+          },
           "description": "Aggregates earnings for each Growth Partner."
         }
       }
     ]
   }
 }
-
-    

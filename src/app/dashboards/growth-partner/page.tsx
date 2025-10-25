@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -48,11 +47,6 @@ const mockMetrics = {
   earnings: 22512.5,
 };
 
-const mockCampaigns = [
-    { id: 'PCAMP-01', name: 'Constructa Ltd Q4 Promo', seller: 'Constructa Ltd', commission: '5%', status: 'Active' },
-    { id: 'PCAMP-02', name: 'SuperBake Bakery Launch', seller: 'SuperBake Bakery', commission: '5%', status: 'Active' },
-];
-
 const mockSales = [
     { id: 'SALE-001', campaign: 'Constructa Ltd Q4 Promo', orderId: 'ORD-582', amount: 120000, commission: 6000, date: '2023-11-20', status: 'Unpaid' },
     { id: 'SALE-002', campaign: 'SuperBake Bakery Launch', orderId: 'ORD-588', amount: 45000, commission: 2250, date: '2023-11-19', status: 'Unpaid' },
@@ -73,7 +67,8 @@ export default function GrowthPartnerDashboard() {
 
   const campaignsQuery = useMemoFirebase(() => {
     if (!user || !firestore) return null;
-    return query(collection(firestore, 'growthPartnerCampaigns'), where('partnerId', '==', user.uid));
+    // Corrected query path
+    return collection(firestore, 'users', user.uid, 'growthPartnerCampaigns');
   }, [user, firestore]);
 
   const { data: campaigns, isLoading: isLoadingCampaigns } = useCollection(campaignsQuery);
@@ -226,27 +221,41 @@ export default function GrowthPartnerDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockCampaigns.map((campaign) => {
-                    const campaignLink = `${window.location.origin}/manufacturer/${campaign.seller.toLowerCase().replace(/ /g, '-')}/?ref=${user.uid}&campaign=${campaign.id}`;
-                    return (
-                        <TableRow key={campaign.id}>
-                            <TableCell>
-                                <div className="font-medium">{campaign.name}</div>
-                                <div className="text-sm text-muted-foreground">{campaign.seller}</div>
-                            </TableCell>
-                            <TableCell className="font-semibold">{campaign.commission}</TableCell>
-                            <TableCell>
-                            <Badge>{campaign.status}</Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                                <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', campaign.id)}>
-                                    {copiedCampaignLink === campaign.id ? <ClipboardCheck className="mr-2 h-4 w-4 text-green-500"/> : <LinkIcon className="mr-2 h-4 w-4" />}
-                                    {copiedCampaignLink === campaign.id ? 'Copied!' : 'Copy Link'}
-                                </Button>
+                   {isLoadingCampaigns ? (
+                        <TableRow>
+                            <TableCell colSpan={4} className="text-center">
+                                <Loader2 className="h-6 w-6 animate-spin mx-auto my-4" />
                             </TableCell>
                         </TableRow>
-                    )
-                  })}
+                   ) : campaigns && campaigns.length > 0 ? (
+                        campaigns.map((campaign: any) => {
+                            const campaignLink = `${window.location.origin}/manufacturer/${campaign.seller?.toLowerCase().replace(/ /g, '-')}/?ref=${user.uid}&campaign=${campaign.id}`;
+                            return (
+                                <TableRow key={campaign.id}>
+                                    <TableCell>
+                                        <div className="font-medium">{campaign.name}</div>
+                                        <div className="text-sm text-muted-foreground">{campaign.seller}</div>
+                                    </TableCell>
+                                    <TableCell className="font-semibold">{campaign.commissionRate}%</TableCell>
+                                    <TableCell>
+                                    <Badge>{campaign.status}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', campaign.id)}>
+                                            {copiedCampaignLink === campaign.id ? <ClipboardCheck className="mr-2 h-4 w-4 text-green-500"/> : <LinkIcon className="mr-2 h-4 w-4" />}
+                                            {copiedCampaignLink === campaign.id ? 'Copied!' : 'Copy Link'}
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            )
+                        })
+                   ) : (
+                    <TableRow>
+                        <TableCell colSpan={4} className="h-24 text-center">
+                            No campaigns assigned to you yet.
+                        </TableCell>
+                    </TableRow>
+                   )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -265,7 +274,7 @@ export default function GrowthPartnerDashboard() {
                             <TableHead>Campaign</TableHead>
                             <TableHead>Order ID</TableHead>
                             <TableHead>Order Amount</TableHead>
-                            <TableHead>Your Commission (5%)</TableHead>
+                            <TableHead>Your Commission</TableHead>
                             <TableHead>Status</TableHead>
                         </TableRow></TableHeader>
                         <TableBody>
@@ -314,5 +323,3 @@ export default function GrowthPartnerDashboard() {
     </div>
   );
 }
-
-    
