@@ -8,6 +8,7 @@ import {
   type Firestore,
 } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
+import { nanoid } from 'nanoid';
 
 /**
  * Logs an administrative action to the activityLogs collection.
@@ -31,6 +32,7 @@ export const logActivity = async (
 
   try {
     const logData = {
+      id: nanoid(),
       timestamp: serverTimestamp(),
       userId: currentUser.uid,
       userEmail: currentUser.email,

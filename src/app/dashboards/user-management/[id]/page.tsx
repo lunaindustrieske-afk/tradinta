@@ -51,6 +51,7 @@ import {
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { sendTransactionalEmail } from '@/lib/email';
+import { logActivity } from '@/lib/activity-log';
 
 
 type UserProfile = {
@@ -69,6 +70,26 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
     <p className="font-semibold">{value || 'N/A'}</p>
   </div>
 );
+
+const roles = [
+  { value: 'admin', label: 'Admin' },
+  { value: 'analytics', label: 'Analytics' },
+  { value: 'buyer', label: 'Buyer' },
+  { value: 'content-management', label: 'Content Management' },
+  { value: 'distributor', label: 'Distributor' },
+  { value: 'finance', label: 'Finance' },
+  { value: 'growth-partner', label: 'Growth Partner' },
+  { value: 'investor-partner', label: 'Investor Partner' },
+  { value: 'legal-compliance', label: 'Legal & Compliance' },
+  { value: 'logistics', label: 'Logistics' },
+  { value: 'manufacturer', label: 'Manufacturer' },
+  { value: 'marketing-manager', label: 'Marketing Manager' },
+  { value: 'operations-manager', label: 'Operations Manager' },
+  { value: 'support', label: 'Support' },
+  { value: 'tradcoin-airdrop', label: 'TradCoin Airdrop' },
+  { value: 'tradpay-admin', label: 'TradPay Admin' },
+  { value: 'user-management', label: 'User Management' },
+];
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -127,6 +148,12 @@ export default function UserDetailPage() {
     const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
     try {
       await updateDoc(userDocRef, { status: newStatus });
+      await logActivity(
+        firestore,
+        auth,
+        newStatus === 'suspended' ? 'USER_SUSPENDED' : 'USER_UNSUSPENDED',
+        `${newStatus === 'suspended' ? 'Suspended' : 'Unsuspended'} user ${user.fullName} (ID: ${user.id})`
+      );
       toast({
         title: `User ${newStatus === 'suspended' ? 'Suspended' : 'Unsuspended'}`,
         description: `${user.fullName}'s account is now ${newStatus}.`,
@@ -143,10 +170,16 @@ export default function UserDetailPage() {
   };
 
   const handleDeleteUser = async () => {
-    if (!userDocRef) return;
+    if (!userDocRef || !user) return;
     setIsProcessing(true);
     try {
       await deleteDoc(userDocRef);
+      await logActivity(
+        firestore,
+        auth,
+        'USER_DELETED',
+        `Deleted user profile for ${user.fullName} (ID: ${user.id})`
+      );
       // Note: This does not delete the Firebase Auth user. That requires an admin SDK call.
       toast({
         title: 'User Deleted',
@@ -165,10 +198,16 @@ export default function UserDetailPage() {
   };
 
   const handleRoleChange = async () => {
-    if (!userDocRef || !selectedRole || !user?.email) return;
+    if (!userDocRef || !selectedRole || !user?.email || !auth) return;
     setIsProcessing(true);
     try {
       await updateDoc(userDocRef, { role: selectedRole });
+      await logActivity(
+        firestore,
+        auth,
+        'ROLE_CHANGED',
+        `Changed role for ${user.fullName} (ID: ${user.id}) to ${selectedRole}`
+      );
        await sendTransactionalEmail({
         to: user.email,
         subject: 'Your Role on Tradinta Has Been Updated',
@@ -282,11 +321,9 @@ export default function UserDetailPage() {
                     <SelectValue placeholder="Select a role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="buyer">Buyer</SelectItem>
-                    <SelectItem value="manufacturer">Manufacturer</SelectItem>
-                    <SelectItem value="partner">Growth Partner</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
-                    <SelectItem value="super-admin">Super Admin</SelectItem>
+                    {roles.map(role => (
+                        <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
