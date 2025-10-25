@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useActionState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,14 +10,13 @@ import { Logo } from '@/components/logo';
 import { Mail, Loader2, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { handleRequestPasswordReset } from '@/app/(auth)/actions';
-import { useFormState } from 'react-dom';
 
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   
   const initialState = { message: '', success: false };
-  const [state, dispatch] = useFormState(handleRequestPasswordReset, initialState);
+  const [state, dispatch] = useActionState(handleRequestPasswordReset, initialState);
   const isEmailSent = state.success;
 
   return (

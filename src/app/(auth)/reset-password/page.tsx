@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useActionState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, KeyRound, Loader2, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
 import { handleResetPassword, verifyResetToken } from '@/app/(auth)/actions';
-import { useFormState } from 'react-dom';
 
 function ResetPasswordComponent() {
   const router = useRouter();
@@ -29,7 +28,7 @@ function ResetPasswordComponent() {
   const [verificationError, setVerificationError] = useState<string | null>(null);
 
   const initialState = { message: '', success: false };
-  const [state, dispatch] = useFormState(handleResetPassword, initialState);
+  const [state, dispatch] = useActionState(handleResetPassword, initialState);
   
   useEffect(() => {
     const checkToken = async () => {
