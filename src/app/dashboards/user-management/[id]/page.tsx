@@ -5,7 +5,10 @@ import * as React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { sendPasswordResetEmail } from 'firebase/auth';
+import {
+  handleRequestPasswordReset,
+  handleAdminRequestPasswordReset,
+} from '@/app/(auth)/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Card,
@@ -93,27 +96,25 @@ export default function UserDetailPage() {
   }, [user]);
 
   const handlePasswordReset = async () => {
-    if (!user?.email) return;
+    if (!user?.email) {
+        toast({ title: 'Error', description: 'User email is not available.', variant: 'destructive' });
+        return;
+    };
     setIsProcessing(true);
     try {
-      await sendPasswordResetEmail(auth, user.email);
-      await sendTransactionalEmail({
-        to: user.email,
-        subject: 'Your Password Has Been Reset',
-        htmlContent: `
-          <p>Hi ${user.fullName},</p>
-          <p>A password reset was initiated for your Tradinta account by an administrator. Please check your inbox for a link to create a new password.</p>
-          <p>If you did not request this, please contact support immediately.</p>
-        `,
-      });
-      toast({
-        title: 'Password Reset Email Sent',
-        description: `An email has been sent to ${user.email}.`,
-      });
+      const result = await handleAdminRequestPasswordReset(user.email);
+      if (result.success) {
+        toast({
+            title: 'Password Reset Email Sent',
+            description: result.message,
+        });
+      } else {
+        throw new Error(result.message);
+      }
     } catch (error: any) {
       toast({
-        title: 'Error',
-        description: error.message,
+        title: 'Error Sending Reset Email',
+        description: error.message || 'An unexpected error occurred.',
         variant: 'destructive',
       });
     } finally {
@@ -182,7 +183,11 @@ export default function UserDetailPage() {
         description: `User role has been changed to ${selectedRole} and an email notification has been sent.`,
       });
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Error updating role',
+        description: error.message,
+        variant: 'destructive'
+    });
     } finally {
       setIsProcessing(false);
     }
