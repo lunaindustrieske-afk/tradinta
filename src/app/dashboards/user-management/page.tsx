@@ -29,7 +29,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs, or } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 
@@ -141,27 +141,49 @@ export default function UserManagementPage() {
       isLoading: isLoadingAdmins,
     },
   ];
-  
+
   const handleSearch = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!firestore || !searchQuery.trim()) {
-        setSearchResults([]);
-        return;
-    };
+    const searchTerm = searchQuery.trim();
+    if (!firestore || !searchTerm) {
+      setSearchResults([]);
+      return;
+    }
     setIsSearching(true);
     setSearchResults([]);
 
-    const usersRef = collection(firestore, 'users');
-    const q = query(usersRef, or(
-        where('email', '==', searchQuery.trim()),
-        where('tradintaId', '==', searchQuery.trim())
-    ));
-    
-    const querySnapshot = await getDocs(q);
-    const users = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as UserProfile));
-    setSearchResults(users);
+    let userFound: UserProfile | null = null;
+
+    // Check if it's an email
+    if (searchTerm.includes('@')) {
+      const emailDocRef = doc(firestore, 'emails', searchTerm);
+      const emailDocSnap = await getDoc(emailDocRef);
+
+      if (emailDocSnap.exists()) {
+        const userId = emailDocSnap.data().userId;
+        const userDocRef = doc(firestore, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          userFound = { id: userDocSnap.id, ...userDocSnap.data() } as UserProfile;
+        }
+      }
+    } else { // Assume it's a Tradinta ID
+      const usersRef = collection(firestore, 'users');
+      const q = query(usersRef, where('tradintaId', '==', searchTerm), where('role', '!=', 'super-admin'));
+      const querySnapshot = await getDocs(q);
+      if (!querySnapshot.empty) {
+        const doc = querySnapshot.docs[0];
+        userFound = { id: doc.id, ...doc.data() } as UserProfile;
+      }
+    }
+
+    if (userFound) {
+      setSearchResults([userFound]);
+    }
+
     setIsSearching(false);
-  }
+  };
+  
 
   const renderTableRows = () => {
     if (isSearching) {
