@@ -540,6 +540,53 @@
         "discountPercentage"
       ]
     },
+    "GrowthPartnerCampaign": {
+        "title": "Growth Partner Campaign",
+        "type": "object",
+        "description": "Links a Growth Partner to a specific manufacturer for a promotional campaign.",
+        "properties": {
+            "id": { "type": "string", "description": "Unique identifier for the campaign." },
+            "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
+            "manufacturerId": { "type": "string", "description": "The UID of the Manufacturer being promoted." },
+            "name": { "type": "string", "description": "The name of the campaign (e.g., 'Jane Doe Q4 Promo for Constructa Ltd')." },
+            "trackingCode": { "type": "string", "description": "Unique code for referral links (e.g., 'JANE-CONST-Q4')." },
+            "commissionRate": { "type": "number", "description": "The commission rate for this campaign (e.g., 0.05 for 5%)." },
+            "status": { "type": "string", "enum": ["active", "inactive", "archived"], "description": "The current status of the campaign." },
+            "startDate": { "type": "string", "format": "date-time" },
+            "endDate": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "partnerId", "manufacturerId", "name", "trackingCode", "commissionRate", "status"]
+    },
+    "AttributedSale": {
+        "title": "Attributed Sale",
+        "type": "object",
+        "description": "Logs a sale that was successfully attributed to a Growth Partner.",
+        "properties": {
+            "id": { "type": "string" },
+            "orderId": { "type": "string", "description": "Reference to the Order ID." },
+            "partnerId": { "type": "string", "description": "The UID of the partner who gets credit." },
+            "campaignId": { "type": "string", "description": "The campaign that drove the sale." },
+            "orderTotal": { "type": "number", "description": "The total value of the order." },
+            "commissionEarned": { "type": "number", "description": "The amount of commission earned from this sale." },
+            "saleDate": { "type": "string", "format": "date-time" },
+            "status": { "type": "string", "enum": ["unpaid", "paid", "disputed"], "description": "The payout status of the commission." }
+        },
+        "required": ["id", "orderId", "partnerId", "campaignId", "orderTotal", "commissionEarned", "saleDate", "status"]
+    },
+    "PartnerEarning": {
+        "title": "Partner Earning",
+        "type": "object",
+        "description": "Aggregates earnings for a Growth Partner for a specific payout period.",
+        "properties": {
+            "id": { "type": "string" },
+            "partnerId": { "type": "string", "description": "The UID of the Growth Partner." },
+            "period": { "type": "string", "description": "The payout period (e.g., 'YYYY-MM')." },
+            "totalEarnings": { "type": "number", "description": "Total commission earned in this period." },
+            "status": { "type": "string", "enum": ["pending", "paid"], "description": "The status of the payout." },
+            "paidAt": { "type": "string", "format": "date-time", "description": "Timestamp when the payout was made." }
+        },
+        "required": ["id", "partnerId", "period", "totalEarnings", "status"]
+    },
     "Dispute": {
       "title": "Dispute",
       "type": "object",
@@ -725,6 +772,30 @@
           "description": "Stores marketing campaigns owned by a manufacturer. The 'manufacturerId' identifies the owner."
         }
       },
+       {
+        "path": "/growthPartnerCampaigns/{campaignId}",
+        "definition": {
+          "entityName": "GrowthPartnerCampaign",
+          "schema": { "$ref": "#/backend/entities/GrowthPartnerCampaign" },
+          "description": "Top-level collection for all partner campaigns for easy querying by marketing managers."
+        }
+      },
+      {
+        "path": "/attributedSales/{saleId}",
+        "definition": {
+          "entityName": "AttributedSale",
+          "schema": { "$ref": "#/backend/entities/AttributedSale" },
+          "description": "Top-level collection for all attributed sales for easy querying and commission calculation."
+        }
+      },
+      {
+        "path": "/partners/{partnerId}/earnings/{earningId}",
+        "definition": {
+          "entityName": "PartnerEarning",
+          "schema": { "$ref": "#/backend/entities/PartnerEarning" },
+          "description": "Stores aggregated earnings for each partner."
+        }
+      },
       {
         "path": "/disputes/{disputeId}",
         "definition": {
@@ -777,5 +848,3 @@
     "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages, SystemAlerts).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns, Reviews**: These are nested under the manufacturer to indicate ownership.  Reviews are further nested under products. Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, ActivityLogs, SystemAlerts**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`, `/systemAlerts/{alertId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
   }
 }
-
-    

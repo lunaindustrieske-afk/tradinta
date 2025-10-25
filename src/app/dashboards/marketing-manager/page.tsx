@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Megaphone, Users, BarChart, PlusCircle } from "lucide-react";
+import { Megaphone, Users, BarChart, PlusCircle, ExternalLink } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where } from "firebase/firestore";
 import { type Campaign } from '@/app/lib/definitions';
@@ -17,10 +17,13 @@ type UserProfile = {
     id: string;
     fullName: string;
     role: string;
-    // We don't have these fields yet, but can add later
-    // campaigns: number; 
-    // followers: string;
 };
+
+const mockPartnerCampaigns = [
+    { id: 'PCAMP-01', name: 'John Doe Q4 Promo', partner: 'John Doe', seller: 'Constructa Ltd', status: 'Active', sales: 450250, commission: 22512 },
+    { id: 'PCAMP-02', name: 'Jane Smith Influencer Push', partner: 'Jane Smith', seller: 'SuperBake Bakery', status: 'Active', sales: 120000, commission: 6000 },
+    { id: 'PCAMP-03', name: 'End of Year Clearance', partner: 'Kimani Traders', seller: 'PlastiCo Kenya', status: 'Finished', sales: 85000, commission: 4250 },
+];
 
 
 export default function MarketingDashboard() {
@@ -28,7 +31,6 @@ export default function MarketingDashboard() {
 
     const campaignsQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        // Use a collectionGroup query to get all campaigns across all manufacturers
         return query(collectionGroup(firestore, 'marketingCampaigns'));
     }, [firestore]);
 
@@ -54,7 +56,7 @@ export default function MarketingDashboard() {
             ));
         }
         if (!campaigns || campaigns.length === 0) {
-            return <TableRow><TableCell colSpan={6} className="text-center h-24">No campaigns found.</TableCell></TableRow>;
+            return <TableRow><TableCell colSpan={6} className="text-center h-24">No manufacturer campaigns found.</TableCell></TableRow>;
         }
         return campaigns.map((campaign) => (
             <TableRow key={campaign.id}>
@@ -66,6 +68,22 @@ export default function MarketingDashboard() {
                 <TableCell className="space-x-2">
                     <Button variant="outline" size="sm">Edit</Button>
                     <Button size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
+                </TableCell>
+            </TableRow>
+        ));
+    };
+    
+    const renderPartnerCampaignRows = () => {
+        return mockPartnerCampaigns.map((campaign) => (
+            <TableRow key={campaign.id}>
+                <TableCell className="font-medium">{campaign.name}</TableCell>
+                <TableCell>{campaign.partner}</TableCell>
+                <TableCell>{campaign.seller}</TableCell>
+                <TableCell><Badge variant={campaign.status === 'Active' ? 'default' : 'outline'}>{campaign.status}</Badge></TableCell>
+                <TableCell>KES {campaign.sales.toLocaleString()}</TableCell>
+                 <TableCell>KES {campaign.commission.toLocaleString()}</TableCell>
+                <TableCell className="space-x-2">
+                    <Button variant="outline" size="sm">View Details</Button>
                 </TableCell>
             </TableRow>
         ));
@@ -101,19 +119,52 @@ export default function MarketingDashboard() {
 
 
     return (
-        <Tabs defaultValue="campaigns">
-            <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="campaigns">Campaign Management</TabsTrigger>
+        <Tabs defaultValue="partner-campaigns">
+            <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="partner-campaigns">Growth Partner Campaigns</TabsTrigger>
+                <TabsTrigger value="manufacturer-campaigns">Manufacturer Campaigns</TabsTrigger>
                 <TabsTrigger value="ambassadors">Growth Partner Network</TabsTrigger>
                 <TabsTrigger value="promotions">Site Content</TabsTrigger>
             </TabsList>
             
-            <TabsContent value="campaigns">
+            <TabsContent value="partner-campaigns">
+                 <Card>
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <CardTitle>Growth Partner Campaigns</CardTitle>
+                                <CardDescription>Create and track commissions for campaigns run by partners.</CardDescription>
+                            </div>
+                            <Button><PlusCircle className="mr-2 h-4 w-4" /> New Partner Campaign</Button>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Campaign Name</TableHead>
+                                    <TableHead>Partner</TableHead>
+                                    <TableHead>Seller</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Attributed Sales</TableHead>
+                                    <TableHead>Commission Earned</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {renderPartnerCampaignRows()}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
+            <TabsContent value="manufacturer-campaigns">
                 <Card>
                     <CardHeader>
                         <div className="flex justify-between items-center">
                             <div>
-                                <CardTitle>Marketing Campaigns</CardTitle>
+                                <CardTitle>Manufacturer Ad Campaigns</CardTitle>
                                 <CardDescription>Manage promotional campaigns and ad placements across the platform.</CardDescription>
                             </div>
                             <Button><PlusCircle className="mr-2 h-4 w-4" /> Create New Campaign</Button>

@@ -2,209 +2,315 @@
 'use client';
 
 import React from 'react';
-import { useUser } from '@/firebase';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Copy, Link as LinkIcon, Users, BarChart, DollarSign, ExternalLink, Loader2 } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import {
+  Copy,
+  Link as LinkIcon,
+  Users,
+  BarChart,
+  DollarSign,
+  ExternalLink,
+  Loader2,
+  Wallet,
+  ClipboardCheck,
+} from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { collection, query, where } from 'firebase/firestore';
 
-// Mock data for demonstration until backend logic is complete in Stage 3
+// Mock data until backend is fully integrated
 const mockMetrics = {
-    clicks: 1256,
-    leads: 78,
-    attributedSales: 450250,
+  clicks: 1256,
+  signups: 78,
+  sales: 450250,
+  earnings: 22512.5,
 };
 
 const mockCampaigns = [
-    { id: 'CAMP-02', name: 'New Product Launch: Eco-Pack', seller: 'Constructa Ltd', status: 'Active' },
-    { id: 'CAMP-05', name: 'Q4 Food Expo Promotion', seller: 'SuperBake Bakery', status: 'Active' },
+    { id: 'PCAMP-01', name: 'Constructa Ltd Q4 Promo', seller: 'Constructa Ltd', commission: '5%', status: 'Active' },
+    { id: 'PCAMP-02', name: 'SuperBake Bakery Launch', seller: 'SuperBake Bakery', commission: '5%', status: 'Active' },
 ];
 
-const mockReferrals = [
-    { id: 'USER-010', name: 'John Buyer', date: '2023-11-15', status: 'Verified' },
-    { id: 'USER-011', name: 'Sarah Procures', date: '2023-11-14', status: 'Purchased' },
-    { id: 'USER-012', name: 'Kimani Traders', date: '2023-11-12', status: 'Verified' },
+const mockSales = [
+    { id: 'SALE-001', campaign: 'Constructa Ltd Q4 Promo', orderId: 'ORD-582', amount: 120000, commission: 6000, date: '2023-11-20', status: 'Unpaid' },
+    { id: 'SALE-002', campaign: 'SuperBake Bakery Launch', orderId: 'ORD-588', amount: 45000, commission: 2250, date: '2023-11-19', status: 'Unpaid' },
+     { id: 'SALE-003', campaign: 'Constructa Ltd Q4 Promo', orderId: 'ORD-591', amount: 210000, commission: 10500, date: '2023-11-18', status: 'Paid' },
+];
+
+const mockPayouts = [
+    { id: 'PAY-001', amount: 15000, date: '2023-11-01', status: 'Completed' },
 ];
 
 export default function GrowthPartnerDashboard() {
-    const { user, isUserLoading } = useUser();
-    const { toast } = useToast();
-    const [referralLink, setReferralLink] = React.useState('');
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [referralLink, setReferralLink] = React.useState('');
+  const [copiedLink, setCopiedLink] = React.useState(false);
+  const [copiedCampaignLink, setCopiedCampaignLink] = React.useState<string | null>(null);
 
-    React.useEffect(() => {
-        if (user) {
-            // In a real app, you might want to use a short-link service, but this is functional
-            const baseUrl = window.location.origin;
-            setReferralLink(`${baseUrl}/?ref=${user.uid}`);
-        }
-    }, [user]);
+  const campaignsQuery = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return query(collection(firestore, 'growthPartnerCampaigns'), where('partnerId', '==', user.uid));
+  }, [user, firestore]);
 
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(referralLink);
-        toast({
-            title: "Copied to Clipboard!",
-            description: "Your referral link has been copied.",
-        });
-    };
-    
-    if (isUserLoading) {
-        return (
-             <div className="space-y-6">
-                <Skeleton className="h-24 w-full" />
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                    <Skeleton className="h-32 w-full" />
-                </div>
-                 <Skeleton className="h-64 w-full" />
-            </div>
-        )
+  const { data: campaigns, isLoading: isLoadingCampaigns } = useCollection(campaignsQuery);
+
+
+  React.useEffect(() => {
+    if (user) {
+      const baseUrl = window.location.origin;
+      setReferralLink(`${baseUrl}/signup?ref=${user.uid}`);
     }
+  }, [user]);
 
-    if (!user) {
-        // This case should ideally be handled by middleware or layout checks
-        return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
-                 <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                 <p className="text-muted-foreground">Loading user data...</p>
-            </div>
-        );
+  const copyToClipboard = (link: string, type: 'general' | 'campaign', id?: string) => {
+    navigator.clipboard.writeText(link);
+    toast({
+      title: 'Copied to Clipboard!',
+      description: 'Your referral link has been copied.',
+    });
+    if (type === 'general') {
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2000);
+    } else {
+        setCopiedCampaignLink(id || null);
+        setTimeout(() => setCopiedCampaignLink(null), 2000);
     }
+  };
 
+  if (isUserLoading) {
     return (
-        <div className="space-y-6">
+      <div className="space-y-6">
+        <Skeleton className="h-24 w-full" />
+        <div className="grid gap-4 md:grid-cols-4">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+           <Skeleton className="h-32 w-full" />
+        </div>
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading user data...</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your Growth Partner Dashboard</CardTitle>
+          <CardDescription>
+            Track your impact, manage campaigns, and view your earnings.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Label htmlFor="referral-link" className="font-semibold">
+            Your Unique Referral Link
+          </Label>
+          <div className="flex gap-2 mt-1">
+            <Input id="referral-link" value={referralLink} readOnly />
+            <Button size="icon" onClick={() => copyToClipboard(referralLink, 'general')} aria-label="Copy referral link">
+              {copiedLink ? <ClipboardCheck className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Share this link to attribute new sign-ups to your account.
+          </p>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Link Clicks</CardTitle>
+            <LinkIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{mockMetrics.clicks.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Total clicks on your links</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Sign-ups</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{mockMetrics.signups}</div>
+            <p className="text-xs text-muted-foreground">New users from your link</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Attributed Sales</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              KES {mockMetrics.sales.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              From your referred users
+            </p>
+          </CardContent>
+        </Card>
+         <Card className="bg-primary/10 border-primary/20">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Earnings (Unpaid)</CardTitle>
+            <Wallet className="h-4 w-4 text-primary" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-primary">
+              KES {mockMetrics.earnings.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting next payout cycle
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Tabs defaultValue="campaigns">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="campaigns">Your Campaigns</TabsTrigger>
+          <TabsTrigger value="sales">Attributed Sales</TabsTrigger>
+          <TabsTrigger value="payouts">Payout History</TabsTrigger>
+        </TabsList>
+        <TabsContent value="campaigns">
+          <Card>
+            <CardHeader>
+              <CardTitle>Your Active Campaigns</CardTitle>
+              <CardDescription>
+                Promote these specific sellers to earn a commission on sales.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Campaign</TableHead>
+                    <TableHead>Commission</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Your Tracking Link</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockCampaigns.map((campaign) => {
+                    const campaignLink = `${window.location.origin}/manufacturer/${campaign.seller.toLowerCase().replace(/ /g, '-')}/?ref=${user.uid}&campaign=${campaign.id}`;
+                    return (
+                        <TableRow key={campaign.id}>
+                            <TableCell>
+                                <div className="font-medium">{campaign.name}</div>
+                                <div className="text-sm text-muted-foreground">{campaign.seller}</div>
+                            </TableCell>
+                            <TableCell className="font-semibold">{campaign.commission}</TableCell>
+                            <TableCell>
+                            <Badge>{campaign.status}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                                <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', campaign.id)}>
+                                    {copiedCampaignLink === campaign.id ? <ClipboardCheck className="mr-2 h-4 w-4 text-green-500"/> : <LinkIcon className="mr-2 h-4 w-4" />}
+                                    {copiedCampaignLink === campaign.id ? 'Copied!' : 'Copy Link'}
+                                </Button>
+                            </TableCell>
+                        </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="sales">
             <Card>
                 <CardHeader>
-                    <CardTitle>Your Growth Partner Dashboard</CardTitle>
-                    <CardDescription>Track your impact, manage campaigns, and view your earnings.</CardDescription>
+                    <CardTitle>Recent Attributed Sales</CardTitle>
+                    <CardDescription>Sales from users who used your links.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Label htmlFor="referral-link" className="font-semibold">Your Unique Referral Link</Label>
-                    <div className="flex gap-2 mt-1">
-                        <Input id="referral-link" value={referralLink} readOnly />
-                        <Button size="icon" onClick={copyToClipboard} aria-label="Copy referral link">
-                            <Copy className="h-4 w-4" />
-                        </Button>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-2">Share this link to attribute new sign-ups and sales to your account.</p>
+                    <Table>
+                        <TableHeader><TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Campaign</TableHead>
+                            <TableHead>Order ID</TableHead>
+                            <TableHead>Order Amount</TableHead>
+                            <TableHead>Your Commission (5%)</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>
+                            {mockSales.map(sale => (
+                                <TableRow key={sale.id}>
+                                    <TableCell>{sale.date}</TableCell>
+                                    <TableCell>{sale.campaign}</TableCell>
+                                    <TableCell>{sale.orderId}</TableCell>
+                                    <TableCell>KES {sale.amount.toLocaleString()}</TableCell>
+                                    <TableCell className="font-medium text-primary">KES {sale.commission.toLocaleString()}</TableCell>
+                                    <TableCell><Badge variant={sale.status === 'Paid' ? 'secondary' : 'default'}>{sale.status}</Badge></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
-
-            <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Link Clicks</CardTitle>
-                        <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{mockMetrics.clicks.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">Total clicks on your link</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Leads Generated</CardTitle>
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{mockMetrics.leads}</div>
-                        <p className="text-xs text-muted-foreground">New users signed up</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Attributed Sales</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">KES {mockMetrics.attributedSales.toLocaleString()}</div>
-                        <p className="text-xs text-muted-foreground">From your referred users</p>
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <Tabs defaultValue="campaigns">
-                <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="campaigns">Active Campaigns</TabsTrigger>
-                    <TabsTrigger value="referrals">Recent Referrals</TabsTrigger>
-                </TabsList>
-                <TabsContent value="campaigns">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Your Active Campaigns</CardTitle>
-                            <CardDescription>Products and shops you are currently promoting.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Campaign</TableHead>
-                                        <TableHead>Seller</TableHead>
-                                        <TableHead>Status</TableHead>
-                                        <TableHead>Actions</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {mockCampaigns.map((campaign) => (
-                                        <TableRow key={campaign.id}>
-                                            <TableCell className="font-medium">{campaign.name}</TableCell>
-                                            <TableCell>{campaign.seller}</TableCell>
-                                            <TableCell><Badge>{campaign.status}</Badge></TableCell>
-                                            <TableCell>
-                                                <Button variant="outline" size="sm" asChild>
-                                                    <Link href="#">
-                                                        <ExternalLink className="mr-2 h-3 w-3" /> View Brief
-                                                    </Link>
-                                                </Button>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-                 <TabsContent value="referrals">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Referrals</CardTitle>
-                            <CardDescription>New users who have signed up using your link.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>User Name</TableHead>
-                                        <TableHead>Sign-up Date</TableHead>
-                                        <TableHead>Status</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {mockReferrals.map((ref) => (
-                                        <TableRow key={ref.id}>
-                                            <TableCell className="font-medium">{ref.name}</TableCell>
-                                            <TableCell>{ref.date}</TableCell>
-                                            <TableCell>
-                                                <Badge variant={ref.status === 'Purchased' ? 'secondary' : 'outline'}>
-                                                    {ref.status}
-                                                </Badge>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </CardContent>
-                    </Card>
-                </TabsContent>
-            </Tabs>
-
-        </div>
-    );
+        </TabsContent>
+        <TabsContent value="payouts">
+            <Card>
+                 <CardHeader>
+                    <CardTitle>Payout History</CardTitle>
+                    <CardDescription>Record of commissions paid out to you.</CardDescription>
+                </CardHeader>
+                 <CardContent>
+                    <Table>
+                        <TableHeader><TableRow>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Amount</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow></TableHeader>
+                        <TableBody>
+                             {mockPayouts.map(payout => (
+                                <TableRow key={payout.id}>
+                                    <TableCell>{payout.date}</TableCell>
+                                    <TableCell>KES {payout.amount.toLocaleString()}</TableCell>
+                                    <TableCell><Badge variant="secondary">{payout.status}</Badge></TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </CardContent>
+            </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }
