@@ -18,6 +18,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { sendVerificationEmail } from "@/app/(auth)/actions";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
 function FactoryIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -64,6 +66,7 @@ export default function SignUpPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   
   const auth = useAuth();
   const firestore = useFirestore();
@@ -97,12 +100,14 @@ export default function SignUpPage() {
         businessName?: string;
         referredBy?: string;
         registrationDate: any;
+        emailVerified: boolean;
       } = {
         tradintaId: nanoid(8),
         email: user.email!,
         role: role,
         fullName: fullName,
         registrationDate: serverTimestamp(),
+        emailVerified: false,
       };
       
       const referralCode = localStorage.getItem('referralCode');
@@ -124,31 +129,16 @@ export default function SignUpPage() {
           verificationStatus: 'Unsubmitted',
         });
       }
-
-
-      toast({
-        title: "Account Created!",
-        description: "You have successfully signed up.",
-      });
+      
+      // 5. Send custom verification email
+      await sendVerificationEmail(user.uid, user.email!, fullName);
       
       if (referralCode) {
         localStorage.removeItem('referralCode');
       }
 
-      // 4. Redirect user
-      switch (role) {
-        case 'manufacturer':
-          router.push('/dashboards/seller-centre');
-          break;
-        case 'buyer':
-          router.push('/dashboards/buyer');
-          break;
-        case 'partner':
-           router.push('/dashboards/growth-partner');
-           break;
-        default:
-          router.push('/dashboards/seller-centre');
-      }
+      setIsSuccess(true);
+
 
     } catch (error: any) {
       toast({
@@ -160,6 +150,25 @@ export default function SignUpPage() {
       setIsLoading(false);
     }
   };
+  
+  if (isSuccess) {
+    return (
+      <div className="w-full min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="mx-auto w-full max-w-md space-y-8 text-center p-8">
+            <Alert>
+              <Mail className="h-5 w-5" />
+              <AlertTitle className="font-bold text-xl">Check Your Inbox!</AlertTitle>
+              <AlertDescription>
+                We've sent a verification link to <strong>{email}</strong>. Please click the link in the email to activate your Tradinta account.
+              </AlertDescription>
+            </Alert>
+            <Button asChild>
+                <Link href="/login">Back to Login</Link>
+            </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full min-h-screen lg:grid lg:grid-cols-2">

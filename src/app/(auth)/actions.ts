@@ -315,3 +315,114 @@ export async function handleResetPassword(
         return { message: error.message || 'An unexpected error occurred. Please try again.', success: false };
     }
 }
+
+export async function sendVerificationEmail(userId: string, email: string, name: string): Promise<void> {
+  const auth = getAuth();
+  const firestore = getFirestore();
+
+  try {
+    const token = randomBytes(32).toString('hex');
+    const expires = new Date();
+    expires.setHours(expires.getHours() + 24); // Token expires in 24 hours
+
+    const tokenDocRef = firestore.collection('emailVerificationTokens').doc(token);
+    await tokenDocRef.set({
+      userId: userId,
+      token: token,
+      expires: expires,
+    });
+
+    const verificationLink = `${process.env.NEXT_PUBLIC_APP_URL}/verify-email?token=${token}`;
+
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Welcome to Tradinta! Please Verify Your Email</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                  <td align="center" style="padding: 20px 0;">
+                      <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                          <tr>
+                              <td align="center" style="padding: 40px 20px; border-bottom: 1px solid #eeeeee;">
+                                  <img src="https://i.postimg.cc/NGkTK7Jc/Gemini-Generated-Image-e6p14ne6p14ne6p1-removebg-preview.png" alt="Tradinta Logo" width="150">
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding: 40px 30px;">
+                                  <h1 style="color: #333333; font-size: 24px;">Welcome to Tradinta, ${name}!</h1>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">Thank you for signing up. To complete your registration and secure your account, please verify your email address by clicking the button below:</p>
+                                  <p style="text-align: center; margin: 30px 0;">
+                                      <a href="${verificationLink}" style="background-color: #1D4ED8; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Verify My Email Address</a>
+                                  </p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">This link is valid for 24 hours. If you did not sign up for a Tradinta account, you can safely ignore this email.</p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5; margin-top: 30px;">Thanks,<br>The Tradinta Team</p>
+                              </td>
+                          </tr>
+                           <tr>
+                              <td style="padding: 20px 30px; font-size: 12px; color: #999999; text-align: center; border-top: 1px solid #eeeeee;">
+                                  <p>If you're having trouble with the button above, copy and paste this URL into your web browser:</p>
+                                  <p><a href="${verificationLink}" style="color: #1D4ED8; text-decoration: none;">${verificationLink}</a></p>
+                                  <p style="margin-top: 20px;">© ${new Date().getFullYear()} Tradinta. All rights reserved.</p>
+                              </td>
+                          </tr>
+                      </table>
+                  </td>
+              </tr>
+          </table>
+      </body>
+      </html>
+    `;
+
+    await sendTransactionalEmail({
+      to: email,
+      subject: 'Verify Your Email Address for Tradinta',
+      htmlContent: emailHtml,
+    });
+  } catch (error: any) {
+    console.error('Error sending verification email:', error);
+    // We don't want to block the sign-up flow if the email fails.
+    // The user can request a new verification email later.
+  }
+}
+
+export async function verifyEmailToken(token: string): Promise<{ success: boolean; message: string }> {
+    try {
+        const firestore = getFirestore();
+        const tokenDocRef = firestore.collection('emailVerificationTokens').doc(token);
+        const tokenDoc = await tokenDocRef.get();
+
+        if (!tokenDoc.exists) {
+            return { success: false, message: 'This verification link is invalid or has already been used.' };
+        }
+
+        const data = tokenDoc.data();
+        if (data?.expires.toDate() < new Date()) {
+            await tokenDocRef.delete();
+            return { success: false, message: 'This verification link has expired. Please request a new one.' };
+        }
+
+        const userId = data.userId;
+        const auth = getAuth();
+        
+        // Mark email as verified in Firebase Auth
+        await auth.updateUser(userId, { emailVerified: true });
+        
+        // Mark email as verified in Firestore user document
+        const userDocRef = firestore.collection('users').doc(userId);
+        await userDocRef.update({ emailVerified: true });
+
+        // Invalidate the token
+        await tokenDocRef.delete();
+        
+        return { success: true, message: 'Your email has been successfully verified!' };
+
+    } catch (error) {
+        console.error('Email token verification error:', error);
+        return { success: false, message: 'An error occurred while verifying your email.' };
+    }
+}

@@ -13,6 +13,8 @@ import { useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Mail } from "lucide-react";
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -60,6 +62,7 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
   const auth = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -71,19 +74,40 @@ export default function LoginPage() {
         return;
     }
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      if (!userCredential.user.emailVerified) {
+        setShowVerificationAlert(true);
+        // Do not proceed with login
+        await auth.signOut(); 
+        return;
+      }
+
       toast({
         title: "Login Successful",
         description: "Welcome back!",
       });
       router.push('/dashboards/seller-centre');
     } catch (error: any) {
+       let description = error.message;
+        if (error.code === 'auth/invalid-credential') {
+            description = 'Incorrect email or password. Please try again.';
+        }
       toast({
         title: "Login Failed",
-        description: error.message,
+        description: description,
         variant: "destructive",
       });
     }
+  };
+  
+  const handleResendVerification = () => {
+    // This is a placeholder. A server action would be needed to implement resending.
+    toast({
+      title: "Verification Email Sent",
+      description: "A new verification link has been sent to your email address.",
+    });
+    setShowVerificationAlert(false);
   };
 
   return (
@@ -114,6 +138,16 @@ export default function LoginPage() {
               Welcome Back to Tradinta.
             </h2>
           </div>
+            {showVerificationAlert && (
+                 <Alert variant="destructive">
+                  <Mail className="h-4 w-4" />
+                  <AlertTitle>Email Not Verified</AlertTitle>
+                  <AlertDescription>
+                    You must verify your email address before you can log in. Check your inbox for a verification link.
+                    <Button variant="link" className="p-0 h-auto ml-1" onClick={handleResendVerification}>Resend link</Button>
+                  </AlertDescription>
+                </Alert>
+            )}
           <form className="mt-8 space-y-6" onSubmit={handleLogin}>
             <div className="space-y-4 rounded-md shadow-sm">
               <div>
