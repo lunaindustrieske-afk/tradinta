@@ -2,6 +2,7 @@
 'use server';
 import { getFirestore } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
+import { type Product, type Manufacturer } from './definitions';
 
 // Initialize Firebase Admin SDK
 customInitApp();
@@ -99,4 +100,43 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
         console.error(`Error fetching blog post by slug (${slug}):`, error);
         return null;
     }
+}
+
+type ProductWithShopId = Product & { shopId: string };
+/**
+ * Fetches all published products and their manufacturer's shopId.
+ * This function runs on the server and uses the Admin SDK.
+ */
+export async function getAllProducts(): Promise<ProductWithShopId[]> {
+  try {
+    // 1. Fetch all manufacturers and create a map of UID to shopId
+    const manufCollection = db.collection('manufacturers');
+    const manufSnapshot = await manufCollection.get();
+    const manufMap = new Map<string, string>();
+    manufSnapshot.forEach(doc => {
+      const data = doc.data() as Manufacturer;
+      if (data.shopId) {
+        manufMap.set(doc.id, data.shopId);
+      }
+    });
+
+    // 2. Fetch all products using a collection group query
+    const productsQuery = db.collectionGroup('products').where('status', '==', 'published');
+    const productSnapshot = await productsQuery.get();
+    
+    const productsData = productSnapshot.docs.map(doc => {
+      const product = doc.data() as Product;
+      const shopId = manufMap.get(product.manufacturerId) || '';
+      return {
+        ...product,
+        id: doc.id,
+        shopId: shopId,
+      };
+    }).filter(p => p.shopId); // Only include products where a shopId could be found
+
+    return productsData;
+  } catch (error) {
+    console.error("Error fetching all products:", error);
+    return [];
+  }
 }

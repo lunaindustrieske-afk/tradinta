@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ import { useFirestore } from '@/firebase';
 import { collectionGroup, getDocs, query, where } from 'firebase/firestore';
 import { type Product, type Manufacturer } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getAllProducts } from '@/app/lib/data';
 
 const categories = [
   'Packaging',
@@ -58,10 +59,7 @@ const categories = [
 
 type ProductWithShopId = Product & { shopId: string };
 
-export default function ProductsPage() {
-  const [allProducts, setAllProducts] = useState<ProductWithShopId[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-
+const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWithShopId[] }) => {
   const [filters, setFilters] = useState({
     category: 'all',
     priceRange: [0, 200000],
@@ -70,58 +68,17 @@ export default function ProductsPage() {
   });
   const [searchQuery, setSearchQuery] = useState('');
 
-  const firestore = useFirestore();
-
-  useEffect(() => {
-    const fetchProductsAndManufacturers = async () => {
-      if (!firestore) return;
-      setIsLoading(true);
-
-      // 1. Fetch all manufacturers and create a map of UID to shopId
-      const manufCollection = collection(firestore, 'manufacturers');
-      const manufSnapshot = await getDocs(manufCollection);
-      const manufMap = new Map<string, string>();
-      manufSnapshot.forEach(doc => {
-        const data = doc.data() as Manufacturer;
-        if (data.shopId) {
-          manufMap.set(doc.id, data.shopId);
-        }
-      });
-
-      // 2. Fetch all products using a collection group query
-      const productsQuery = query(
-        collectionGroup(firestore, 'products'),
-        where('status', '==', 'published')
+  const filteredProducts = useMemo(() => {
+    return initialProducts.filter((product) => {
+      return (
+        (filters.category === 'all' || product.category === filters.category) &&
+        product.price >= filters.priceRange[0] &&
+        product.price <= filters.priceRange[1] &&
+        product.rating >= filters.rating &&
+        product.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      const productSnapshot = await getDocs(productsQuery);
-      
-      const productsData = productSnapshot.docs.map(doc => {
-        const product = doc.data() as Product;
-        const shopId = manufMap.get(product.manufacturerId) || '';
-        return {
-          ...product,
-          id: doc.id,
-          shopId: shopId,
-        };
-      }).filter(p => p.shopId); // Only include products where a shopId could be found
-
-      setAllProducts(productsData);
-      setIsLoading(false);
-    };
-
-    fetchProductsAndManufacturers();
-  }, [firestore]);
-
-
-  const filteredProducts = allProducts.filter((product) => {
-    return (
-      (filters.category === 'all' || product.category === filters.category) &&
-      product.price >= filters.priceRange[0] &&
-      product.price <= filters.priceRange[1] &&
-      product.rating >= filters.rating &&
-      product.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  });
+    });
+  }, [initialProducts, filters, searchQuery]);
 
   const FilterSidebar = () => (
     <Card className="p-4 lg:p-6">
@@ -200,16 +157,13 @@ export default function ProductsPage() {
   );
 
   return (
-    <div className="container mx-auto py-8">
+     <div className="container mx-auto py-8">
       <div className="grid lg:grid-cols-4 gap-8">
-        {/* Sidebar */}
         <div className="hidden lg:block lg:col-span-1">
           <FilterSidebar />
         </div>
 
-        {/* Main Content */}
         <div className="lg:col-span-3">
-          {/* Header and Search */}
           <div className="mb-6">
             <h1 className="text-4xl font-bold font-headline mb-2">
               Tradinta Marketplace
@@ -252,21 +206,9 @@ export default function ProductsPage() {
             </Sheet>
             </div>
           </div>
-
-          {/* Product Grid */}
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
-                    <Card key={i} className="overflow-hidden group flex flex-col">
-                        <Skeleton className="aspect-[4/3] w-full" />
-                        <div className="p-4 space-y-3">
-                            <Skeleton className="h-6 w-3/4" />
-                            <Skeleton className="h-4 w-1/2" />
-                            <Skeleton className="h-8 w-full" />
-                        </div>
-                    </Card>
-                ))
-            ) : filteredProducts.length > 0 ? (
+            {filteredProducts.length > 0 ? (
                  filteredProducts.map((product) => (
                   <Card key={product.id} className="overflow-hidden group flex flex-col">
                     <div className="flex-grow">
@@ -323,8 +265,7 @@ export default function ProductsPage() {
                 </div>
             )}
           </div>
-
-          {/* Pagination */}
+          
           <div className="mt-8">
             <Pagination>
               <PaginationContent>
@@ -351,5 +292,11 @@ export default function ProductsPage() {
         </div>
       </div>
     </div>
-  );
+  )
+}
+
+export default async function ProductsPage() {
+  const initialProducts = await getAllProducts();
+
+  return <ProductsPageContent initialProducts={initialProducts} />;
 }
