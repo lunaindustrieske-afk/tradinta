@@ -7,11 +7,12 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowRight, Coins, Gift, Heart, MessageSquare, Package, Search, Sparkles, Star, User, Wallet, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { useDoc, useFirestore, useUser, useMemoFirebase } from "@/firebase";
+import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 import { useToast } from "@/hooks/use-toast";
+import { nanoid } from "nanoid";
 
 const quickActions = [
   { title: "My Orders & RFQs", icon: <Package className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/orders" },
@@ -21,7 +22,7 @@ const quickActions = [
 ];
 
 type UserProfile = {
-    tradintaId: string;
+    tradintaId?: string;
     email: string;
     fullName: string;
 };
@@ -38,6 +39,19 @@ const ProfileCard = () => {
     }, [user, firestore]);
 
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
+
+    React.useEffect(() => {
+        // If user data is loaded and there is no tradintaId, generate one.
+        if (userDocRef && userProfile && !userProfile.tradintaId) {
+            const newId = nanoid(8);
+            updateDocumentNonBlocking(userDocRef, { tradintaId: newId });
+            toast({
+                title: "Tradinta ID Generated",
+                description: "Your unique ID has been created.",
+            });
+        }
+    }, [userProfile, userDocRef, toast]);
+
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -82,12 +96,16 @@ const ProfileCard = () => {
                 </div>
                  <div>
                     <p className="text-muted-foreground">Tradinta ID</p>
-                    <div className="flex items-center gap-2">
-                        <p className="font-semibold font-mono">{userProfile.tradintaId}</p>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopy(userProfile.tradintaId)}>
-                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                        </Button>
-                    </div>
+                     {userProfile.tradintaId ? (
+                        <div className="flex items-center gap-2">
+                            <p className="font-semibold font-mono">{userProfile.tradintaId}</p>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleCopy(userProfile.tradintaId!)}>
+                                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                        </div>
+                    ) : (
+                        <Skeleton className="h-5 w-24" />
+                    )}
                 </div>
             </CardContent>
         </Card>
