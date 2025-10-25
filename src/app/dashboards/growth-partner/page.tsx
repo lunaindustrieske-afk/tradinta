@@ -67,7 +67,7 @@ export default function GrowthPartnerDashboard() {
   const [copiedCampaignLink, setCopiedCampaignLink] = React.useState<string | null>(null);
 
   const campaignsQuery = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user?.uid || !firestore) return null;
     return query(collection(firestore, 'users', user.uid, 'growthPartnerCampaigns'));
   }, [user, firestore]);
 

@@ -74,7 +74,7 @@ export default function EditProductPage() {
   const productId = params.id as string;
 
   const productDocRef = useMemoFirebase(() => {
-    if (!user || !firestore || !productId) return null;
+    if (!user?.uid || !firestore || !productId) return null;
     return doc(firestore, 'manufacturers', user.uid, 'products', productId);
   }, [firestore, user, productId]);
 

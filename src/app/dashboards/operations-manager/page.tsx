@@ -11,6 +11,7 @@ import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebas
 import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
+import React from 'react';
 
 // Define types for our Firestore documents
 type VerificationEntity = {
@@ -253,5 +254,3 @@ export default function OperationsManagerDashboard() {
         </Tabs>
     );
 }
-
-    

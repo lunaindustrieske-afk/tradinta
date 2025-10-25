@@ -130,7 +130,7 @@ export default function NewProductPage() {
   };
 
   const handleSaveProduct = async (status: 'draft' | 'published') => {
-    if (!user || !firestore) {
+    if (!user?.uid || !firestore) {
         toast({ title: 'Error', description: 'User not authenticated or Firestore not available.', variant: 'destructive' });
         return;
     }

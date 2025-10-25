@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { logActivity } from "@/lib/activity-log";
+import React from 'react';
 
 
 type Manufacturer = {

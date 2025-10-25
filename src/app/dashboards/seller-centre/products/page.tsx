@@ -70,7 +70,7 @@ export default function SellerProductsPage() {
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock' | 'outOfStock'>('all');
 
   const productsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!user?.uid) return null;
     return query(
       collection(firestore, 'manufacturers', user.uid, 'products'),
       where('status', '!=', 'archived')
