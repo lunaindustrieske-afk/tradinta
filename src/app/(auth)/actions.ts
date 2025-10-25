@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore, serverTimestamp } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
 import { sendTransactionalEmail } from '@/lib/email';
 import { randomBytes } from 'crypto';
@@ -326,7 +326,7 @@ export async function createUserProfileInDB(uid: string, data: any) {
     const userDocRef = firestore.collection('users').doc(uid);
     await userDocRef.set({
       ...data,
-      registrationDate: serverTimestamp(),
+      registrationDate: FieldValue.serverTimestamp(),
     });
     return { success: true, message: 'User profile created successfully.' };
   } catch (error: any) {
