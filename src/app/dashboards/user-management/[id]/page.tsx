@@ -43,16 +43,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import { sendTransactionalEmail } from '@/lib/email';
 import { logActivity } from '@/lib/activity-log';
+import { Combobox } from '@/components/ui/combobox';
 
 
 type UserProfile = {
@@ -83,7 +77,7 @@ const roles = [
   { value: 'investor-partner', label: 'Investor Partner' },
   { value: 'legal-compliance', label: 'Legal & Compliance' },
   { value: 'logistics', label: 'Logistics' },
-  { value: 'manufacturer', label: 'Manufacturer' },
+  { value: 'manufacturer', label: 'Seller / Manufacturer' },
   { value: 'marketing-manager', label: 'Marketing Manager' },
   { value: 'operations-manager', label: 'Operations Manager' },
   { value: 'support', label: 'Support' },
@@ -327,16 +321,13 @@ export default function UserDetailPage() {
             <CardContent>
               <div className="grid gap-3 max-w-sm">
                 <Label htmlFor="role">User Role</Label>
-                <Select value={selectedRole} onValueChange={setSelectedRole}>
-                  <SelectTrigger id="role">
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {roles.map(role => (
-                        <SelectItem key={role.value} value={role.value}>{role.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Combobox
+                    options={roles}
+                    value={selectedRole}
+                    onValueChange={setSelectedRole}
+                    placeholder="Select a role..."
+                    emptyMessage="No roles found."
+                />
               </div>
             </CardContent>
             <CardFooter>

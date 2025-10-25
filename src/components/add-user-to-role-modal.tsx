@@ -23,6 +23,7 @@ import {
   updateDoc,
   limit,
 } from 'firebase/firestore';
+import { setUserRoleClaim } from '@/app/(auth)/actions';
 
 interface AddUserToRoleModalProps {
   isOpen: boolean;
@@ -71,9 +72,13 @@ export function AddUserToRoleModal({
       }
 
       const userDoc = querySnapshot.docs[0];
-      await updateDoc(userDoc.ref, {
-        role: roleValue,
-      });
+      
+      const result = await setUserRoleClaim(userDoc.id, roleValue);
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to set user role claim.');
+      }
+
 
       toast({
         title: 'Success!',
@@ -81,12 +86,12 @@ export function AddUserToRoleModal({
       });
 
       onOpenChange(false); // Close the modal on success
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning role:', error);
       toast({
         title: 'Assignment Failed',
         description:
-          'An error occurred while assigning the role. Please try again.',
+          error.message || 'An error occurred while assigning the role. Please try again.',
         variant: 'destructive',
       });
     } finally {
