@@ -118,7 +118,12 @@ export default function SignUpPage() {
       // 3. Create user profile document in 'users' collection
       await setDoc(doc(firestore, 'users', user.uid), userProfileData);
 
-      // 4. If manufacturer, also create a document in 'manufacturers' collection
+      // 4. Create email lookup document
+      await setDoc(doc(firestore, 'emails', user.email!), {
+        userId: user.uid
+      });
+
+      // 5. If manufacturer, also create a document in 'manufacturers' collection
       if (role === 'manufacturer') {
         userProfileData.businessName = businessName;
         await setDoc(doc(firestore, 'manufacturers', user.uid), {
@@ -130,7 +135,7 @@ export default function SignUpPage() {
         });
       }
       
-      // 5. Send custom verification email
+      // 6. Send custom verification email
       await sendVerificationEmail(user.uid, user.email!, fullName);
       
       if (referralCode) {
