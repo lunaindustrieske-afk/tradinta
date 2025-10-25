@@ -28,7 +28,7 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getHomepageBanners, getRecentBlogPosts } from '@/app/lib/data';
+import { getHomepageBanners, getAllBlogPosts } from '@/app/lib/data';
 import { manufacturers, products as mockProducts } from '@/app/lib/mock-data';
 
 
@@ -190,7 +190,9 @@ const HeroCarousel = async () => {
 
 
 export default async function HomePage() {
-  const blogPosts = await getRecentBlogPosts();
+  const blogPosts = await getAllBlogPosts();
+  const recentBlogPosts = blogPosts.slice(0, 3);
+
 
   return (
     <>
@@ -310,8 +312,8 @@ export default async function HomePage() {
               </Button>
             </div>
              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {blogPosts && blogPosts.length > 0 ? (
-                blogPosts.map(post => (
+              {recentBlogPosts && recentBlogPosts.length > 0 ? (
+                recentBlogPosts.map(post => (
                   <Card key={post.id}>
                     <CardContent className="p-6">
                       <h3 className="font-bold text-lg mb-2">{post.title}</h3>

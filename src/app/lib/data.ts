@@ -20,6 +20,9 @@ type BlogPost = {
   id: string;
   title: string;
   slug: string;
+  author: string;
+  content: string;
+  publishedAt: any;
 };
 
 /**
@@ -51,16 +54,15 @@ export async function getHomepageBanners(): Promise<HomepageBanner[]> {
 }
 
 /**
- * Fetches the 3 most recent published blog posts from Firestore.
+ * Fetches all published blog posts from Firestore.
  * This function runs on the server and uses the Admin SDK, bypassing security rules.
  */
-export async function getRecentBlogPosts(): Promise<BlogPost[]> {
+export async function getAllBlogPosts(): Promise<BlogPost[]> {
     try {
         const postsSnapshot = await db
             .collection('blogPosts')
             .where('status', '==', 'published')
             .orderBy('publishedAt', 'desc')
-            .limit(3)
             .get();
 
         if (postsSnapshot.empty) {
@@ -73,7 +75,28 @@ export async function getRecentBlogPosts(): Promise<BlogPost[]> {
         } as BlogPost));
 
     } catch (error) {
-        console.error("Error fetching recent blog posts:", error);
+        console.error("Error fetching blog posts:", error);
         return [];
+    }
+}
+
+/**
+ * Fetches a single blog post by its slug.
+ * This function runs on the server and uses the Admin SDK.
+ */
+export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> {
+    try {
+        const postQuery = db.collection('blogPosts').where('slug', '==', slug).limit(1);
+        const querySnapshot = await postQuery.get();
+
+        if (querySnapshot.empty) {
+            return null;
+        }
+
+        const doc = querySnapshot.docs[0];
+        return { id: doc.id, ...doc.data() } as BlogPost;
+    } catch (error) {
+        console.error(`Error fetching blog post by slug (${slug}):`, error);
+        return null;
     }
 }

@@ -1,12 +1,11 @@
-'use client';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import { getAllBlogPosts } from '@/app/lib/data';
 
 type BlogPost = {
   id: string;
@@ -17,23 +16,8 @@ type BlogPost = {
   publishedAt: any;
 };
 
-export default function BlogPage() {
-  const firestore = useFirestore();
-  const { isUserLoading: isAuthLoading } = useUser();
-
-  const postsQuery = useMemoFirebase(() => {
-    // Wait for both firestore and authentication to be ready before creating the query.
-    if (!firestore || isAuthLoading) return null;
-    return query(
-      collection(firestore, 'blogPosts'),
-      where('status', '==', 'published'),
-      orderBy('publishedAt', 'desc')
-    );
-  }, [firestore, isAuthLoading]);
-
-  const { data: posts, isLoading } = useCollection<BlogPost>(postsQuery);
-
-  const isDataLoading = isLoading || isAuthLoading;
+export default async function BlogPage() {
+  const posts = await getAllBlogPosts();
 
   return (
     <div className="container mx-auto py-12">
@@ -45,23 +29,7 @@ export default function BlogPage() {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {isDataLoading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <Card key={i}>
-                <Skeleton className="h-48 w-full" />
-                <CardHeader>
-                  <Skeleton className="h-6 w-3/4 mb-2" />
-                  <Skeleton className="h-4 w-1/2" />
-                </CardHeader>
-                <CardContent>
-                  <Skeleton className="h-12 w-full" />
-                </CardContent>
-                <CardFooter>
-                    <Skeleton className="h-8 w-24" />
-                </CardFooter>
-              </Card>
-            ))
-          : posts?.map((post) => (
+        {posts.length > 0 ? posts?.map((post) => (
               <Card key={post.id} className="flex flex-col">
                 <div className="relative aspect-video w-full overflow-hidden rounded-t-lg">
                     <Image src={`https://picsum.photos/seed/${post.id}/600/400`} alt={post.title} fill className="object-cover" />
@@ -85,13 +53,14 @@ export default function BlogPage() {
                   </Button>
                 </CardFooter>
               </Card>
-            ))}
+            ))
+          : (
+            <div className="md:col-span-3 text-center py-16 text-muted-foreground">
+                <p>No articles published yet. Check back soon!</p>
+            </div>
+          )
+        }
       </div>
-       {posts && posts.length === 0 && !isDataLoading && (
-        <div className="text-center py-16 text-muted-foreground">
-            <p>No articles published yet. Check back soon!</p>
-        </div>
-      )}
     </div>
   );
 }
