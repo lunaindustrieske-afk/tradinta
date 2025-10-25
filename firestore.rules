@@ -1,5 +1,5 @@
 /**
- * @description This ruleset enforces a strict ownership model for manufacturers, shops, buyers, products, orders, order items, payments, and marketing campaigns on the Tradinta platform.
+ * @description This ruleset enforces a strict ownership model for manufacturers, shops, buyers, products, orders, order items, payments, and marketing campaigns on the Tradinta platform. It also introduces access control for Growth Partner campaigns and related entities.
  * @dataStructure
  *   - /manufacturers/{manufacturerId}: Stores manufacturer profiles.
  *   - /buyers/{buyerId}: Stores buyer profiles.
@@ -9,6 +9,9 @@
  *   - /orders/{orderId}/orderItems/{orderItemId}: Stores individual items within an order.
  *   - /payments/{paymentId}: Stores payment details.
  *   - /shops/{shopId}/marketingCampaigns/{marketingCampaignId}: Stores marketing campaigns for each shop.
+ *   - /growthPartnerCampaigns/{campaignId}: Stores campaigns for Growth Partners, accessible to the partner and the associated manufacturer.
+ *   - /partners/{partnerId}/attributedSales/{saleId}: Logs sales attributed to a specific partner.  Only accessible to the partner.
+ *   - /partnerEarnings/{partnerId}: Aggregates earnings for each Growth Partner. Only accessible to the partner.
  * @keySecurityDecisions
  *   - Manufacturers and buyers can only access their own profiles.
  *   - Shops can only be created and managed by their associated manufacturer.
@@ -17,10 +20,13 @@
  *   - Order items are accessible only within the context of their parent order.
  *   - Payments are linked to orders and accessible only within the context of their parent order.
  *   - Marketing campaigns can only be created and managed within their associated shop.
+ *   - GrowthPartnerCampaigns are accessible to the partner and the associated manufacturer.
+ *   - AttributedSales and PartnerEarnings are only accessible to the partner.
  *   - Listing manufacturers or buyers is disallowed.
  * @denormalizationForAuthorization
  *   - 'shopId' is denormalized into Products and MarketingCampaigns to enable shop-specific access control without extra reads.
  *   - 'shopId' and 'buyerId' are denormalized into Orders to facilitate order listing and access control based on the shop or buyer.
+ *   - 'manufacturerId' and 'partnerId' are denormalized into GrowthPartnerCampaigns to allow partner and manufacturer specific access.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -156,6 +162,52 @@ service cloud.firestore {
       allow delete: if isSignedIn() && isExistingManufacturerOfShop(shopId) && resource.data.shopId == shopId;
     }
 
+    /**
+     * @description Controls access to Growth Partner Campaigns.  Allows access to the partner and the associated manufacturer.
+     * @path /growthPartnerCampaigns/{campaignId}
+     * @allow (get) - Authenticated user who is either the partner or the manufacturer associated with the campaign.
+     * @allow (create, update, delete) - Authenticated user who is the manufacturer associated with the campaign.
+     * @deny (get) - Authenticated user who is neither the partner nor the manufacturer.
+     * @principle Enforces shared access based on partner and manufacturer relationships.
+     */
+    match /growthPartnerCampaigns/{campaignId} {
+      allow get: if isSignedIn() && (isPartnerOfCampaign(campaignId) || isManufacturerOfCampaign(campaignId));
+      allow list: if false;
+      allow create: if isSignedIn() && isManufacturerOfCampaign(campaignId) && request.resource.data.id == campaignId;
+      allow update: if isSignedIn() && isManufacturerOfCampaign(campaignId) && resource.data.id == campaignId;
+      allow delete: if isSignedIn() && isExistingManufacturerOfCampaign(campaignId);
+    }
+
+    /**
+     * @description Controls access to Attributed Sales. Only the partner can access these.
+     * @path /partners/{partnerId}/attributedSales/{saleId}
+     * @allow (get, list, create, update, delete) - Authenticated user who is the partner.
+     * @deny (get, list, create, update, delete) - Authenticated user who is not the partner.
+     * @principle Enforces partner ownership for all operations.
+     */
+    match /partners/{partnerId}/attributedSales/{saleId} {
+      allow get: if isSignedIn() && isOwner(partnerId);
+      allow list: if isSignedIn() && isOwner(partnerId);
+      allow create: if isSignedIn() && isOwner(partnerId) && request.resource.data.partnerId == partnerId && request.resource.data.id == saleId;
+      allow update: if isSignedIn() && isOwner(partnerId) && resource.data.partnerId == partnerId && resource.data.id == saleId;
+      allow delete: if isSignedIn() && isExistingOwner(partnerId) && resource.data.partnerId == partnerId;
+    }
+
+    /**
+     * @description Controls access to Partner Earnings. Only the partner can access these.
+     * @path /partnerEarnings/{partnerId}
+     * @allow (get, list, create, update, delete) - Authenticated user who is the partner.
+     * @deny (get, list, create, update, delete) - Authenticated user who is not the partner.
+     * @principle Enforces partner ownership for all operations.
+     */
+    match /partnerEarnings/{partnerId} {
+      allow get: if isSignedIn() && isOwner(partnerId);
+      allow list: if isSignedIn() && isOwner(partnerId);
+      allow create: if isSignedIn() && isOwner(partnerId) && request.resource.data.partnerId == partnerId && request.resource.data.id == partnerId;
+      allow update: if isSignedIn() && isOwner(partnerId) && resource.data.partnerId == partnerId && resource.data.id == partnerId;
+      allow delete: if isSignedIn() && isExistingOwner(partnerId);
+    }
+
     // --- Helper Functions ---
 
     function isSignedIn() {
@@ -192,6 +244,18 @@ service cloud.firestore {
 
     function isExistingShopOfOrder(orderId) {
       return isSignedIn() && isShopOfOrder(orderId) && resource != null;
+    }
+
+    function isPartnerOfCampaign(campaignId) {
+      return isSignedIn() && get(/databases/$(database)/documents/growthPartnerCampaigns/$(campaignId)).data.partnerId == request.auth.uid;
+    }
+
+    function isManufacturerOfCampaign(campaignId) {
+      return isSignedIn() && get(/databases/$(database)/documents/growthPartnerCampaigns/$(campaignId)).data.manufacturerId == request.auth.uid;
+    }
+
+    function isExistingManufacturerOfCampaign(campaignId) {
+      return isSignedIn() && isManufacturerOfCampaign(campaignId) && resource != null;
     }
   }
 }
