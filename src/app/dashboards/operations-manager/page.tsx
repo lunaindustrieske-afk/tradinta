@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileWarning, CheckCircle, Clock, Users, Package, BarChart, AlertCircle, Handshake, Loader2, BookUser } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
 import { collection, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -47,6 +47,7 @@ type ActivityLog = {
 
 export default function OperationsManagerDashboard() {
     const firestore = useFirestore();
+    const auth = useAuth();
 
     // --- Data Fetching Hooks ---
     const pendingVerificationsQuery = useMemoFirebase(() => {

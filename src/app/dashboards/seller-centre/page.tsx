@@ -128,7 +128,7 @@ export default function SellerDashboard() {
     const firestore = useFirestore();
 
     const reviewsQuery = useMemoFirebase(() => {
-        if (!user) return null;
+        if (!user || !firestore) return null;
         // Query all 'reviews' collection groups where the manufacturerId matches
         return query(
             collectionGroup(firestore, 'reviews'), 
@@ -372,5 +372,6 @@ export default function SellerDashboard() {
         </div>
     );
 }
+
 
     
