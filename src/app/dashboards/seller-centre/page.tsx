@@ -205,11 +205,11 @@ export default function SellerDashboardPage() {
       orderBy('createdAt', 'desc'),
       limit(5)
     );
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: reviews, isLoading: isLoadingReviews } =
     useCollection<Review>(reviewsQuery);
-  
+
   if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -563,5 +563,3 @@ export default function SellerDashboardPage() {
     </div>
   );
 }
-
-    
