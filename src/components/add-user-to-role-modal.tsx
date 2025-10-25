@@ -119,9 +119,9 @@ export function AddUserToRoleModal({
               <Input
                 id="tradintaId"
                 value={tradintaId}
-                onChange={(e) => setTradintaId(e.target.value.toUpperCase())}
+                onChange={(e) => setTradintaId(e.target.value)}
                 className="col-span-3"
-                placeholder="e.g. A8B2C3D4"
+                placeholder="e.g. a8B2c3D4"
                 maxLength={8}
                 required
               />
