@@ -1,17 +1,25 @@
 
-import { initializeApp, getApp, getApps } from 'firebase-admin/app';
-import { credential } from 'firebase-admin';
+import { initializeApp, getApps, ServiceAccount, credential } from 'firebase-admin/app';
 
-const adminConfig = {
-  // We can leave these empty, as they will be populated by the
-  // GOOGLE_APPLICATION_CREDENTIALS env var.
-  // We can also add these to a service account file.
-};
+function getServiceAccount(): ServiceAccount {
+  const serviceAccountB64 = process.env.FIREBASE_SERVICE_ACCOUNT_KEY_B64;
+  if (!serviceAccountB64) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_KEY_B64 environment variable is not set.');
+  }
+  
+  try {
+    const decodedServiceAccount = Buffer.from(serviceAccountB64, 'base64').toString('utf8');
+    return JSON.parse(decodedServiceAccount);
+  } catch (error) {
+    console.error("Failed to parse Firebase service account key:", error);
+    throw new Error("The Firebase service account key is not a valid Base64 encoded JSON string.");
+  }
+}
 
 export function customInitApp() {
   if (getApps().length === 0) {
     initializeApp({
-      credential: credential.applicationDefault(),
+      credential: credential.cert(getServiceAccount()),
     });
   }
 }
