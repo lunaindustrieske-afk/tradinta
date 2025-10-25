@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -31,6 +30,8 @@ import { doc, collectionGroup, query, where, orderBy, limit } from "firebase/fir
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Review } from "@/app/lib/definitions";
 import { formatDistanceToNow } from 'date-fns';
+import { useRole } from '@/hooks/use-role';
+import { PermissionDenied } from '@/components/ui/permission-denied';
 
 const products = [
     { id: 'PROD-001', name: 'Industrial Grade Cement', stock: 1200, status: 'Live' },
@@ -123,7 +124,7 @@ const VerificationStatusCard = ({ manufacturerId }: { manufacturerId: string }) 
 };
 
 
-export default function SellerDashboard() {
+function SellerDashboardContent() {
     const { user } = useUser();
     const firestore = useFirestore();
 
@@ -373,5 +374,25 @@ export default function SellerDashboard() {
     );
 }
 
-
+export default function SellerDashboardPage() {
+    const { user, isUserLoading } = useUser();
+    const { role, isRoleLoading } = useRole(user?.uid);
     
+    const isLoading = isUserLoading || isRoleLoading;
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+    
+    // Check if the user has the 'manufacturer' role
+    if (role !== 'manufacturer') {
+        return <PermissionDenied />;
+    }
+    
+    // If the user is a manufacturer, render the dashboard
+    return <SellerDashboardContent />;
+}
