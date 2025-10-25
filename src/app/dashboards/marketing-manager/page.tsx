@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Megaphone, Users, BarChart, PlusCircle } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, collectionGroup, query, where } from "firebase/firestore";
-import type { Campaign } from '@/app/lib/definitions';
+import { type Campaign } from '@/app/lib/definitions';
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
