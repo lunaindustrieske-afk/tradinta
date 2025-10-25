@@ -387,11 +387,11 @@ export default function SellerDashboardPage() {
         );
     }
     
-    // Check if the user has the 'manufacturer' role
-    if (role !== 'manufacturer') {
+    // Allow access if the user is a manufacturer OR a super-admin
+    if (role !== 'manufacturer' && role !== 'super-admin') {
         return <PermissionDenied />;
     }
     
-    // If the user is a manufacturer, render the dashboard
+    // If the user has the correct role, render the dashboard
     return <SellerDashboardContent />;
 }
