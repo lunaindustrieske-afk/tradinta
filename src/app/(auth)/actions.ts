@@ -85,6 +85,13 @@ export async function handleRequestPasswordReset(
             success: true,
         };
     }
+     // Catch errors from sendTransactionalEmail
+    if (error.message && error.message.includes('ZeptoMail API Error')) {
+      return {
+        message: error.message,
+        success: false,
+      };
+    }
     return {
       message: 'An unexpected error occurred. Please try again.',
       success: false,
