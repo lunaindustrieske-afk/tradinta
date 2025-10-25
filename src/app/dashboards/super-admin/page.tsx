@@ -165,21 +165,21 @@ export default function SuperAdminDashboard() {
 
     const adminRoles = [
         { name: 'Super Admin', count: 1, isLoading: false },
-        { name: 'Admin', count: 1, isLoading: false },
-        { name: 'Operations', count: 1, isLoading: false },
-        { name: 'Marketing', count: 1, isLoading: false },
-        { name: 'Finance', count: 1, isLoading: false },
-        { name: 'Support', count: 1, isLoading: false },
-        { name: 'Legal & Compliance', count: 1, isLoading: false },
-        { name: 'Content Management', count: 1, isLoading: false },
-        { name: 'User Management', count: 1, isLoading: false },
-        { name: 'Analytics', count: 1, isLoading: false },
-        { name: 'Logistics', count: 0, isLoading: false },
+        { name: 'Admin', count: users?.filter(u => u.role === 'admin').length, isLoading: isLoadingUsers },
+        { name: 'Operations', count: users?.filter(u => u.role === 'operations-manager').length, isLoading: isLoadingUsers },
+        { name: 'Marketing', count: users?.filter(u => u.role === 'marketing-manager').length, isLoading: isLoadingUsers },
+        { name: 'Finance', count: users?.filter(u => u.role === 'finance').length, isLoading: isLoadingUsers },
+        { name: 'Support', count: users?.filter(u => u.role === 'support').length, isLoading: isLoadingUsers },
+        { name: 'Legal & Compliance', count: users?.filter(u => u.role === 'legal-compliance').length, isLoading: isLoadingUsers },
+        { name: 'Content Management', count: users?.filter(u => u.role === 'content-management').length, isLoading: isLoadingUsers },
+        { name: 'User Management', count: users?.filter(u => u.role === 'user-management').length, isLoading: isLoadingUsers },
+        { name: 'Analytics', count: users?.filter(u => u.role === 'analytics').length, isLoading: isLoadingUsers },
+        { name: 'Logistics', count: users?.filter(u => u.role === 'logistics').length, isLoading: isLoadingUsers },
     ];
 
     const tradpayRoles = [
-        { name: 'TradPay Admins', count: 1, isLoading: false },
-        { name: 'TradCoin Airdrop Admins', count: 1, isLoading: false },
+        { name: 'TradPay Admins', count: users?.filter(u => u.role === 'tradpay-admin').length, isLoading: isLoadingUsers },
+        { name: 'TradCoin Airdrop Admins', count: users?.filter(u => u.role === 'tradcoin-airdrop').length, isLoading: isLoadingUsers },
     ]
 
 
