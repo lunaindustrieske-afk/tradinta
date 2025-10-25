@@ -1,3 +1,4 @@
+
 'use client';
 
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
@@ -30,7 +31,6 @@ import { doc, collectionGroup, query, where, orderBy, limit } from "firebase/fir
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Review } from "@/app/lib/definitions";
 import { formatDistanceToNow } from 'date-fns';
-import { useRole } from '@/hooks/use-role';
 import { PermissionDenied } from '@/components/ui/permission-denied';
 
 const products = [
@@ -375,10 +375,9 @@ function SellerDashboardContent() {
 }
 
 export default function SellerDashboardPage() {
-    const { user, isUserLoading } = useUser();
-    const { role, isRoleLoading } = useRole(user?.uid);
+    const { user, isUserLoading, role } = useUser();
     
-    const isLoading = isUserLoading || isRoleLoading;
+    const isLoading = isUserLoading;
 
     if (isLoading) {
         return (

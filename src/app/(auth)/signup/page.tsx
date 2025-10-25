@@ -12,13 +12,13 @@ import { useState } from "react";
 import { Logo } from "@/components/logo";
 import Image from "next/image";
 import { useAuth, useFirestore } from "@/firebase";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
-import { sendVerificationEmail } from "@/app/(auth)/actions";
+import { sendVerificationEmail, setUserRoleClaim } from "@/app/(auth)/actions";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 
@@ -75,6 +75,10 @@ export default function SignUpPage() {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth || !firestore) {
+      toast({ title: "Services not available", variant: "destructive" });
+      return;
+    }
     if (password !== confirmPassword) {
       toast({
         title: "Passwords do not match",
@@ -90,12 +94,20 @@ export default function SignUpPage() {
       // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
+      
+      // Set user's display name in Auth profile
+      await updateProfile(user, { displayName: fullName });
 
-      // 2. Prepare user profile data
+      // 2. Set custom claim for the role
+      const roleResult = await setUserRoleClaim(user.uid, role);
+      if (!roleResult.success) {
+        throw new Error(roleResult.message);
+      }
+
+      // 3. Prepare user profile data (without role)
       const userProfileData: {
         tradintaId: string;
         email: string;
-        role: string;
         fullName: string;
         businessName?: string;
         referredBy?: string;
@@ -104,7 +116,6 @@ export default function SignUpPage() {
       } = {
         tradintaId: nanoid(8),
         email: user.email!,
-        role: role,
         fullName: fullName,
         registrationDate: serverTimestamp(),
         emailVerified: false,
@@ -115,15 +126,15 @@ export default function SignUpPage() {
         userProfileData.referredBy = referralCode;
       }
 
-      // 3. Create user profile document in 'users' collection
+      // 4. Create user profile document in 'users' collection
       await setDoc(doc(firestore, 'users', user.uid), userProfileData);
 
-      // 4. Create email lookup document
+      // 5. Create email lookup document
       await setDoc(doc(firestore, 'emails', user.email!), {
         userId: user.uid
       });
 
-      // 5. If manufacturer, also create a document in 'manufacturers' collection
+      // 6. If manufacturer, also create a document in 'manufacturers' collection
       if (role === 'manufacturer') {
         userProfileData.businessName = businessName;
         await setDoc(doc(firestore, 'manufacturers', user.uid), {
@@ -135,7 +146,7 @@ export default function SignUpPage() {
         });
       }
       
-      // 6. Send custom verification email
+      // 7. Send custom verification email
       await sendVerificationEmail(user.uid, user.email!, fullName);
       
       if (referralCode) {

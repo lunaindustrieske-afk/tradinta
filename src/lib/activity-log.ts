@@ -12,6 +12,7 @@ import { nanoid } from 'nanoid';
 
 /**
  * Logs an administrative action to the activityLogs collection.
+ * This function is now purely for logging and does not send emails.
  *
  * @param firestore - The Firestore database instance.
  * @param auth - The Firebase Auth instance.
@@ -20,27 +21,29 @@ import { nanoid } from 'nanoid';
  */
 export const logActivity = async (
   firestore: Firestore,
-  auth: Auth,
+  auth: Auth | null, // Can be null if auth is not available
   action: string,
   details: string
 ) => {
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    console.error('Cannot log activity: User not authenticated.');
-    return;
-  }
+  const currentUser = auth?.currentUser;
+
+  // It's possible an admin action is triggered by a system process without a user,
+  // so we handle the case where currentUser might be null.
+  const userEmail = currentUser?.email || 'system@tradinta.com';
+  const userId = currentUser?.uid || 'system';
 
   try {
     const logData = {
       id: nanoid(),
       timestamp: serverTimestamp(),
-      userId: currentUser.uid,
-      userEmail: currentUser.email,
+      userId: userId,
+      userEmail: userEmail,
       action,
       details,
     };
     await addDoc(collection(firestore, 'activityLogs'), logData);
   } catch (error) {
     console.error('Failed to write activity log:', error);
+    // In a production environment, you might want to send this to a more robust logging service.
   }
 };

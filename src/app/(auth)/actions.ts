@@ -11,6 +11,19 @@ import { randomBytes } from 'crypto';
 // Initialize Firebase Admin SDK
 customInitApp();
 
+export async function setUserRoleClaim(userId: string, role: string): Promise<{ success: boolean; message: string; }> {
+  const auth = getAuth();
+  try {
+    // Set custom user claims
+    await auth.setCustomUserClaims(userId, { role });
+    // In a production app, you might want to log this action
+    return { success: true, message: `Successfully set role to ${role} for user ${userId}` };
+  } catch (error: any) {
+    console.error('Error setting custom claims:', error);
+    return { success: false, message: error.message || 'An unexpected error occurred.' };
+  }
+}
+
 const ResetRequestSchema = z.object({
   email: z.string().email('Invalid email address.'),
 });
@@ -317,7 +330,6 @@ export async function handleResetPassword(
 }
 
 export async function sendVerificationEmail(userId: string, email: string, name: string): Promise<void> {
-  const auth = getAuth();
   const firestore = getFirestore();
 
   try {

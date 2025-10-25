@@ -7,6 +7,7 @@ import { useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import {
   handleAdminRequestPasswordReset,
+  setUserRoleClaim,
 } from '@/app/(auth)/actions';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -149,12 +150,14 @@ export default function UserDetailPage() {
     const newStatus = user.status === 'suspended' ? 'active' : 'suspended';
     try {
       await updateDoc(userDocRef, { status: newStatus });
-      await logActivity(
-        firestore,
-        auth,
-        newStatus === 'suspended' ? 'USER_SUSPENDED' : 'USER_UNSUSPENDED',
-        `${newStatus === 'suspended' ? 'Suspended' : 'Unsuspended'} user ${user.fullName} (ID: ${user.id})`
-      );
+      if (firestore && auth) {
+        await logActivity(
+          firestore,
+          auth,
+          newStatus === 'suspended' ? 'USER_SUSPENDED' : 'USER_UNSUSPENDED',
+          `${newStatus === 'suspended' ? 'Suspended' : 'Unsuspended'} user ${user.fullName} (ID: ${user.id})`
+        );
+      }
       toast({
         title: `User ${newStatus === 'suspended' ? 'Suspended' : 'Unsuspended'}`,
         description: `${user.fullName}'s account is now ${newStatus}.`,
@@ -175,12 +178,14 @@ export default function UserDetailPage() {
     setIsProcessing(true);
     try {
       await deleteDoc(userDocRef);
-      await logActivity(
-        firestore,
-        auth,
-        'USER_DELETED',
-        `Deleted user profile for ${user.fullName} (ID: ${user.id})`
-      );
+      if (firestore && auth) {
+        await logActivity(
+          firestore,
+          auth,
+          'USER_DELETED',
+          `Deleted user profile for ${user.fullName} (ID: ${user.id})`
+        );
+      }
       // Note: This does not delete the Firebase Auth user. That requires an admin SDK call.
       toast({
         title: 'User Deleted',
@@ -199,16 +204,20 @@ export default function UserDetailPage() {
   };
 
   const handleRoleChange = async () => {
-    if (!userDocRef || !selectedRole || !user?.email || !auth) return;
+    if (!selectedRole || !user?.email || !auth) return;
     setIsProcessing(true);
     try {
-      await updateDoc(userDocRef, { role: selectedRole });
-      await logActivity(
-        firestore,
-        auth,
-        'ROLE_CHANGED',
-        `Changed role for ${user.fullName} (ID: ${user.id}) to ${selectedRole}`
-      );
+      const result = await setUserRoleClaim(userId, selectedRole);
+      if (!result.success) throw new Error(result.message);
+
+      if(firestore) {
+        await logActivity(
+            firestore,
+            auth,
+            'ROLE_CHANGED',
+            `Changed role for ${user.fullName} (ID: ${user.id}) to ${selectedRole}`
+        );
+      }
        await sendTransactionalEmail({
         to: user.email,
         subject: 'Your Role on Tradinta Has Been Updated',
@@ -220,7 +229,7 @@ export default function UserDetailPage() {
       });
       toast({
         title: 'Role Updated',
-        description: `User role has been changed to ${selectedRole} and an email notification has been sent.`,
+        description: `User role has been changed to ${selectedRole} and an email notification has been sent. The user may need to log out and log back in for the change to take effect.`,
       });
     } catch (error: any) {
       toast({
