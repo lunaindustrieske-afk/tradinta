@@ -1,7 +1,9 @@
 
+
 export type Product = {
   id: string;
   name: string;
+  slug: string;
   description: string;
   price: number;
   stock: number;
@@ -10,7 +12,7 @@ export type Product = {
   imageHint: string;
   rating: number;
   reviewCount: number;
-  manufacturerId: string;
+  manufacturerId: string; // Firebase UID of the manufacturer
 };
 
 export type Order = {
@@ -35,7 +37,8 @@ export type Campaign = {
 };
 
 export type Manufacturer = {
-  id: string;
+  id: string; // Firebase UID
+  shopId: string; // Short, unique, URL-friendly ID
   slug: string;
   name: string;
   logoUrl: string;
@@ -63,5 +66,19 @@ export type Manufacturer = {
     comment: string;
   }[];
 };
+
+export type Review = {
+  id: string;
+  productId: string;
+  productName: string;
+  buyerId: string;
+  buyerName: string;
+  buyerAvatar?: string;
+  rating: number;
+  comment: string;
+  createdAt: any; // Firestore timestamp
+  status: 'pending' | 'approved' | 'rejected';
+};
+    
 
     

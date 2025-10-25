@@ -35,12 +35,13 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { useFirestore } from '@/firebase';
-import { collection, query, where, limit, getDocs, collectionGroup } from 'firebase/firestore';
-import { type Manufacturer } from '@/lib/definitions';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, limit, getDocs, collectionGroup, doc } from 'firebase/firestore';
+import { type Manufacturer, type Review } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { allProducts } from '@/app/lib/mock-data'; // temp for related products
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
 
 type Product = {
   id: string;
@@ -63,27 +64,6 @@ type Product = {
 };
 
 const relatedProducts = allProducts.slice(1, 5); // This should be replaced with real data logic
-
-const reviews = [
-    { 
-        id: 'rev-1',
-        author: 'BuildRight Const.',
-        rating: 5,
-        comment: 'Reliable supplier with consistent quality. Our go-to for all major projects.',
-        product: 'Industrial Grade Cement',
-        date: '2 days ago',
-        avatar: 'https://picsum.photos/seed/rev1/32/32'
-    },
-    { 
-        id: 'rev-2',
-        author: 'Home Builders Inc.',
-        rating: 4,
-        comment: 'Good products and fair pricing. Sometimes lead times can be longer than stated.',
-        product: 'Steel Reinforcement Bars',
-        date: '1 week ago',
-        avatar: 'https://picsum.photos/seed/rev2/32/32'
-    }
-]
 
 export default function ProductDetailPage() {
     const params = useParams();
@@ -139,6 +119,17 @@ export default function ProductDetailPage() {
             setMainImage(product.imageUrl);
         }
     }, [product, mainImage]);
+
+    const reviewsQuery = useMemoFirebase(() => {
+        if (!firestore || !product) return null;
+        return query(
+            collection(firestore, 'manufacturers', product.manufacturerId, 'products', product.id, 'reviews'),
+            where('status', '==', 'approved')
+        );
+    }, [firestore, product]);
+
+    const { data: reviews, isLoading: isLoadingReviews } = useCollection<Review>(reviewsQuery);
+
 
     if (isLoading) {
         return (
@@ -327,7 +318,7 @@ export default function ProductDetailPage() {
                     <TabsTrigger value="description">Description</TabsTrigger>
                     <TabsTrigger value="specs">Specifications</TabsTrigger>
                     <TabsTrigger value="packaging">Packaging</TabsTrigger>
-                    <TabsTrigger value="reviews">Reviews ({product.reviewCount})</TabsTrigger>
+                    <TabsTrigger value="reviews">Reviews ({reviews?.length || 0})</TabsTrigger>
                 </TabsList>
                 <TabsContent value="description" className="prose prose-sm max-w-none text-muted-foreground mt-4">
                     <p>{product.description}</p>
@@ -347,30 +338,41 @@ export default function ProductDetailPage() {
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4">
                      <CardContent className="space-y-4">
-                            {reviews.map(review => (
-                                <div key={review.id} className="p-4 border rounded-lg space-y-2">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar>
-                                                <AvatarImage src={review.avatar} />
-                                                <AvatarFallback>{review.author.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-semibold">{review.author}</p>
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <p>{review.date}</p>
+                            {isLoadingReviews ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-20 w-full" />
+                                    <Skeleton className="h-20 w-full" />
+                                </div>
+                            ) : reviews && reviews.length > 0 ? (
+                                reviews.map(review => (
+                                    <div key={review.id} className="p-4 border rounded-lg space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={review.buyerAvatar} />
+                                                    <AvatarFallback>{review.buyerName?.charAt(0) || 'U'}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-semibold">{review.buyerName}</p>
+                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <p>{review.createdAt ? formatDistanceToNow(review.createdAt.toDate()) : ''} ago</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="flex items-center">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="flex items-center">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
-                                            ))}
-                                        </div>
+                                        <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
                                     </div>
-                                    <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <p>No reviews for this product yet.</p>
                                 </div>
-                            ))}
+                            )}
                         </CardContent>
                 </TabsContent>
             </Tabs>
@@ -431,3 +433,5 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
+    

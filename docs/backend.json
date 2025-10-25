@@ -339,6 +339,24 @@
         "status"
       ]
     },
+    "Review": {
+        "title": "Review",
+        "type": "object",
+        "description": "Represents a single customer review for a product.",
+        "properties": {
+            "id": { "type": "string", "description": "Unique identifier for the review." },
+            "productId": { "type": "string", "description": "Reference to the Product ID." },
+            "productName": { "type": "string", "description": "Denormalized product name for easier display." },
+            "buyerId": { "type": "string", "description": "Reference to the Buyer's UID." },
+            "buyerName": { "type": "string", "description": "Denormalized buyer's name." },
+            "buyerAvatar": { "type": "string", "format": "uri", "description": "Denormalized buyer's avatar URL." },
+            "rating": { "type": "number", "description": "The star rating given (1-5)." },
+            "comment": { "type": "string", "description": "The text content of the review." },
+            "createdAt": { "type": "string", "format": "date-time", "description": "Timestamp when the review was submitted." },
+            "status": { "type": "string", "enum": ["pending", "approved", "rejected"], "description": "The moderation status of the review." }
+        },
+        "required": ["id", "productId", "buyerId", "rating", "createdAt", "status"]
+    },
     "Order": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Order",
@@ -668,6 +686,14 @@
         }
       },
       {
+        "path": "/manufacturers/{manufacturerId}/products/{productId}/reviews/{reviewId}",
+        "definition": {
+          "entityName": "Review",
+          "schema": { "$ref": "#/backend/entities/Review" },
+          "description": "Stores reviews for a specific product."
+        }
+      },
+      {
         "path": "/buyers/{buyerId}/orders/{orderId}",
         "definition": {
           "entityName": "Order",
@@ -720,8 +746,7 @@
         "definition": {
           "entityName": "HomepageBanner",
           "schema": { "$ref": "#/backend/entities/HomepageBanner" },
-          "description": "Stores data for the homepage carousel slides. This collection should have public read access.",
-          "publicRead": true
+          "description": "Stores data for the homepage carousel slides. This collection should have public read access."
         }
       },
       {
@@ -729,8 +754,7 @@
         "definition": {
           "entityName": "BlogPost",
           "schema": { "$ref": "#/backend/entities/BlogPost" },
-          "description": "Stores blog posts for the 'Insights' section. This collection should have public read access.",
-          "publicRead": true
+          "description": "Stores blog posts for the 'Insights' section. This collection should have public read access."
         }
       },
       {
@@ -750,6 +774,8 @@
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages, SystemAlerts).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns**: These are nested under the manufacturer to indicate ownership.  Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, ActivityLogs, SystemAlerts**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`, `/systemAlerts/{alertId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
+    "reasoning": "The Firestore structure is designed to support a B2B marketplace connecting manufacturers and buyers. Key considerations include: \n\n1.  **Authorization Independence:**  Manufacturer-owned entities (Products, MarketingCampaigns) are stored under the manufacturer's document ID.  This allows direct rule evaluation without needing to `get()` the manufacturer document. Similarly, Buyer-owned entities (Orders, Quotations) are structured under the buyer's ID. Quotations denormalize both `buyerId` and `manufacturerId` to allow easier querying and security rule creation.\n2.  **Structural Segregation:**  Each entity type (Manufacturers, Buyers, Products, Orders, etc.) resides in its own top-level collection where appropriate (Users, Manufacturers, Buyers, Disputes, ActivityLogs, HomepageBanners, BlogPosts, SitePages, SystemAlerts).  This promotes homogeneous security postures within each collection.\n3.  **Access Modeling:**\n    *   **Manufacturers and Buyers**: Their profiles are stored directly at `/manufacturers/{manufacturerId}` and `/buyers/{buyerId}` respectively. Access control is based on `request.auth.uid` matching the `manufacturerId` or `buyerId`.\n    *   **Products, MarketingCampaigns, Reviews**: These are nested under the manufacturer to indicate ownership.  Reviews are further nested under products. Rules will enforce that only the manufacturer can create/modify these.\n    *   **Orders**: Located under the buyer (`/buyers/{buyerId}/orders/{orderId}`), reflecting buyer ownership.\n    *   **Quotations, Disputes, ActivityLogs, SystemAlerts**: Stored in a top-level collection (`/quotations/{quotationId}`, `/disputes/{disputeId}`, `/activityLogs/{logId}`, `/systemAlerts/{alertId}`) with denormalized IDs to enable easier querying by admins/ops managers without complex collection group queries and to enable simpler rule creation without `get()` calls.\n4. **QAPs Compliance:** Segregation by entity type ensures that list operations are secure. For example, listing products under a manufacturer only requires access to that manufacturer's product subcollection. The denormalized `buyerId` and `manufacturerId` fields in the `quotations` and `disputes` collections enable secure listing for relevant parties or admins without complex queries."
   }
 }
+
+    

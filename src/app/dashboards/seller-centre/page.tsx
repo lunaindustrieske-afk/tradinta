@@ -9,10 +9,8 @@ import {
     Package, 
     ShoppingCart, 
     FileText, 
-    BarChart, 
     Star, 
     DollarSign, 
-    MoreVertical,
     ArrowRight,
     Lock,
     Banknote,
@@ -21,15 +19,18 @@ import {
     CheckCircle,
     Clock,
     AlertTriangle,
-    ShieldCheck
+    ShieldCheck,
+    Loader2
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useDoc, useUser, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collectionGroup, query, where, orderBy, limit } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { Review } from "@/app/lib/definitions";
+import { formatDistanceToNow } from 'date-fns';
 
 const products = [
     { id: 'PROD-001', name: 'Industrial Grade Cement', stock: 1200, status: 'Live' },
@@ -41,27 +42,6 @@ const orders = [
     { id: 'ORD-006', customer: 'BuildRight Const.', total: 450000, status: 'Pending Fulfillment' },
     { id: 'ORD-008', customer: 'Yum Foods', total: 66000, status: 'Shipped' },
 ];
-
-const reviews = [
-    { 
-        id: 'rev-1',
-        author: 'BuildRight Const.',
-        rating: 5,
-        comment: 'Reliable supplier with consistent quality. Our go-to for all major projects.',
-        product: 'Industrial Grade Cement',
-        date: '2 days ago',
-        avatar: 'https://picsum.photos/seed/rev1/32/32'
-    },
-    { 
-        id: 'rev-2',
-        author: 'Home Builders Inc.',
-        rating: 4,
-        comment: 'Good products and fair pricing. Sometimes lead times can be longer than stated.',
-        product: 'Steel Reinforcement Bars',
-        date: '1 week ago',
-        avatar: 'https://picsum.photos/seed/rev2/32/32'
-    }
-]
 
 type VerificationStatus = 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
 
@@ -145,6 +125,21 @@ const VerificationStatusCard = ({ manufacturerId }: { manufacturerId: string }) 
 
 export default function SellerDashboard() {
     const { user } = useUser();
+    const firestore = useFirestore();
+
+    const reviewsQuery = useMemoFirebase(() => {
+        if (!user) return null;
+        // Query all 'reviews' collection groups where the manufacturerId matches
+        return query(
+            collectionGroup(firestore, 'reviews'), 
+            where('manufacturerId', '==', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(5)
+        );
+    }, [firestore, user]);
+
+    const { data: reviews, isLoading: isLoadingReviews } = useCollection<Review>(reviewsQuery);
+
 
     return (
         <div className="space-y-6">
@@ -241,36 +236,47 @@ export default function SellerDashboard() {
                             <CardDescription>Manage your shop's reputation and engage with buyers.</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            {reviews.map(review => (
-                                <div key={review.id} className="p-4 border rounded-lg space-y-2">
-                                    <div className="flex justify-between items-start">
-                                        <div className="flex items-center gap-3">
-                                            <Avatar>
-                                                <AvatarImage src={review.avatar} />
-                                                <AvatarFallback>{review.author.charAt(0)}</AvatarFallback>
-                                            </Avatar>
-                                            <div>
-                                                <p className="font-semibold">{review.author}</p>
-                                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                    <p>on {review.product}</p>
-                                                    <span className="mx-1">•</span>
-                                                    <p>{review.date}</p>
+                            {isLoadingReviews ? (
+                                <div className="space-y-4">
+                                    <Skeleton className="h-24 w-full" />
+                                    <Skeleton className="h-24 w-full" />
+                                </div>
+                            ) : reviews && reviews.length > 0 ? (
+                                reviews.map(review => (
+                                    <div key={review.id} className="p-4 border rounded-lg space-y-2">
+                                        <div className="flex justify-between items-start">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar>
+                                                    <AvatarImage src={review.buyerAvatar} />
+                                                    <AvatarFallback>{review.buyerName?.charAt(0) || 'U'}</AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <p className="font-semibold">{review.buyerName}</p>
+                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                        <p>on {review.productName}</p>
+                                                        <span className="mx-1">•</span>
+                                                        <p>{review.createdAt ? formatDistanceToNow(review.createdAt.toDate()) : ''} ago</p>
+                                                    </div>
                                                 </div>
                                             </div>
+                                            <div className="flex items-center">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <div className="flex items-center">
-                                            {[...Array(5)].map((_, i) => (
-                                                <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
-                                            ))}
+                                        <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
+                                        <div className="flex items-center gap-2 pl-11 pt-1">
+                                            <Button size="sm" variant="outline"><MessageSquare className="mr-2 h-4 w-4"/> Reply</Button>
+                                            <Button size="sm" variant="ghost">Report</Button>
                                         </div>
                                     </div>
-                                    <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
-                                     <div className="flex items-center gap-2 pl-11 pt-1">
-                                        <Button size="sm" variant="outline"><MessageSquare className="mr-2 h-4 w-4"/> Reply</Button>
-                                        <Button size="sm" variant="ghost">Report</Button>
-                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 text-muted-foreground">
+                                    <p>No reviews yet.</p>
                                 </div>
-                            ))}
+                            )}
                         </CardContent>
                     </Card>
 
@@ -366,3 +372,5 @@ export default function SellerDashboard() {
         </div>
     );
 }
+
+    
