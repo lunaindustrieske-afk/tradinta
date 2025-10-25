@@ -1,9 +1,16 @@
+
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/logo';
 import { ShieldAlert } from 'lucide-react';
+import { useUser } from '@/firebase';
+import { Badge } from './badge';
 
 export function PermissionDenied() {
+  const { role } = useUser();
+
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] bg-background text-center p-4">
       <Logo className="w-48 mb-8" />
@@ -12,9 +19,19 @@ export function PermissionDenied() {
       <p className="text-muted-foreground max-w-md mb-8">
         You do not have the necessary permissions to view this page. If you believe this is an error, please contact your administrator.
       </p>
+
+      {process.env.NODE_ENV === 'development' && (
+        <div className="mb-8 p-4 bg-muted rounded-md text-sm">
+            <p className="font-semibold">Debugging Information:</p>
+            <p className="text-muted-foreground">
+                Your current role is: <Badge variant="outline">{role || 'Not detected'}</Badge>
+            </p>
+        </div>
+      )}
+
       <div className="flex gap-4">
         <Button asChild>
-          <Link href="/dashboards">Go to My Dashboard</Link>
+          <Link href="/dashboards/seller-centre">Go to My Dashboard</Link>
         </Button>
         <Button variant="outline" asChild>
           <Link href="/">Back to Homepage</Link>

@@ -5,6 +5,7 @@ import React, { DependencyList, createContext, useContext, ReactNode, useMemo, u
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged, IdTokenResult } from 'firebase/auth';
+import { FirebaseErrorListener } from '@/components/FirebaseErrorListener';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -85,7 +86,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       auth,
       async (firebaseUser) => { // Auth state determined
         if (firebaseUser) {
-          const idTokenResult: IdTokenResult = await firebaseUser.getIdTokenResult();
+          const idTokenResult: IdTokenResult = await firebaseUser.getIdTokenResult(true); // Force refresh
           const userRole = (idTokenResult.claims.role as string) || null;
           setUserAuthState({ user: firebaseUser, role: userRole, isUserLoading: false, userError: null });
         } else {
@@ -117,6 +118,7 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
 
   return (
     <FirebaseContext.Provider value={contextValue}>
+      <FirebaseErrorListener />
       {children}
     </FirebaseContext.Provider>
   );
