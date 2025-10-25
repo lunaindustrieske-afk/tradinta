@@ -136,13 +136,7 @@ export default function HomePage() {
     );
   }, [firestore]);
 
-  const blogPostsQuery = useMemoFirebase(() => {
-    if(!firestore) return null;
-    return query(collection(firestore, 'blogPosts'), where('status', '==', 'published'), orderBy('publishedAt', 'desc'), limit(3));
-  }, [firestore]);
-
   const { data: banners, isLoading: isLoadingBanners } = useCollection<HomepageBanner>(bannersQuery);
-  const { data: blogPosts, isLoading: isLoadingBlogPosts } = useCollection<BlogPost>(blogPostsQuery);
 
   const HeroCarousel = () => {
     if (isLoadingBanners) {
@@ -361,32 +355,6 @@ export default function HomePage() {
                       </div>
                   ))}
               </div>
-          </section>
-
-          {/* 9. News / Insights */}
-          <section>
-            <h2 className="text-3xl font-bold mb-6 text-center font-headline">News & Insights</h2>
-             <div className="grid md:grid-cols-3 gap-6">
-                {isLoadingBlogPosts ? (
-                    Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-40" />)
-                ) : blogPosts && blogPosts.length > 0 ? (
-                    blogPosts.map(post => (
-                        <Card key={post.id} className="p-6">
-                            <CardTitle className="text-lg mb-2">{post.title}</CardTitle>
-                            <Button variant="link" asChild className="p-0 h-auto">
-                                <Link href={`/blog/${post.slug}`}>Read More <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                            </Button>
-                        </Card>
-                    ))
-                ) : (
-                    <p className="md:col-span-3 text-center text-muted-foreground">No recent posts.</p>
-                )}
-            </div>
-            <div className="text-center mt-8">
-                <Button variant="outline" asChild>
-                    <Link href="/blog">Visit Tradinta Insights</Link>
-                </Button>
-            </div>
           </section>
 
           {/* 10. Call-to-Action Strip */}
