@@ -133,7 +133,9 @@ export default function UserManagementPage() {
                     </Badge>
                 </TableCell>
                 <TableCell className="space-x-2">
-                    <Button size="sm" variant="outline">Manage</Button>
+                    <Button size="sm" variant="outline" asChild>
+                        <Link href={`/dashboards/user-management/${user.id}`}>Manage</Link>
+                    </Button>
                 </TableCell>
             </TableRow>
         ));
