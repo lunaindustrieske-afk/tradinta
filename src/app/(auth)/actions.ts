@@ -315,22 +315,3 @@ export async function handleResetPassword(
         return { message: error.message || 'An unexpected error occurred. Please try again.', success: false };
     }
 }
-
-// New Server Action for creating user profile
-export async function createUserProfileInDB(uid: string, data: any) {
-  if (!uid) {
-    return { success: false, message: 'User ID is missing.' };
-  }
-  try {
-    const firestore = getFirestore();
-    const userDocRef = firestore.collection('users').doc(uid);
-    await userDocRef.set({
-      ...data,
-      registrationDate: FieldValue.serverTimestamp(),
-    });
-    return { success: true, message: 'User profile created successfully.' };
-  } catch (error: any) {
-    console.error('Error creating user profile in DB:', error);
-    return { success: false, message: `Failed to create user profile: ${error.message}` };
-  }
-}

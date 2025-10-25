@@ -1,8 +1,11 @@
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 export const firebaseConfig = {
-  "projectId": "studio-5267749204-831e7",
-  "appId": "1:284690700687:web:478969ca656e372eee13fa",
-  "apiKey": "AIzaSyDucCz6Y6xpCm5deFQR0MHwv2OXfVATQGY",
-  "authDomain": "studio-5267749204-831e7.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "284690700687"
+  apiKey: "AIzaSyCMLVq9qZm1mpU6Dau89S1XEjv6LLtfAgE",
+  authDomain: "tradintacommercetc.firebaseapp.com",
+  projectId: "tradintacommercetc",
+  storageBucket: "tradintacommercetc.appspot.com",
+  messagingSenderId: "599903410843",
+  appId: "1:599903410843:web:40035a7eb6f4e4cbffc43e",
+  measurementId: "G-LFJGJ4RQTN"
 };

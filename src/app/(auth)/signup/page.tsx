@@ -11,13 +11,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useState } from "react";
 import { Logo } from "@/components/logo";
 import Image from "next/image";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2 } from "lucide-react";
 import { nanoid } from "nanoid";
-import { createUserProfileInDB } from "@/app/(auth)/actions";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 
 function FactoryIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -66,6 +66,7 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const { toast } = useToast();
 
@@ -83,7 +84,7 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
-      // 1. Create user in Firebase Auth (Client-side)
+      // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
@@ -95,37 +96,41 @@ export default function SignUpPage() {
         fullName: string;
         businessName?: string;
         referredBy?: string;
+        registrationDate: any;
       } = {
         tradintaId: nanoid(8),
         email: user.email!,
         role: role,
         fullName: fullName,
+        registrationDate: serverTimestamp(),
       };
-
-      if (role === 'manufacturer') {
-        userProfileData.businessName = businessName;
-      }
       
       const referralCode = localStorage.getItem('referralCode');
       if (referralCode) {
         userProfileData.referredBy = referralCode;
       }
 
-      // 3. Call Server Action to create user profile in Firestore
-      const profileResult = await createUserProfileInDB(user.uid, userProfileData);
+      // 3. Create user profile document in 'users' collection
+      await setDoc(doc(firestore, 'users', user.uid), userProfileData);
 
-      if (!profileResult.success) {
-        // If DB write fails, we should ideally handle this, e.g., by deleting the auth user
-        // or queuing a retry. For now, we'll show an error.
-        throw new Error(profileResult.message || "Failed to save user profile.");
+      // 4. If manufacturer, also create a document in 'manufacturers' collection
+      if (role === 'manufacturer') {
+        userProfileData.businessName = businessName;
+        await setDoc(doc(firestore, 'manufacturers', user.uid), {
+          ownerName: fullName,
+          shopName: businessName,
+          email: user.email,
+          registrationDate: serverTimestamp(),
+          verificationStatus: 'Unsubmitted',
+        });
       }
+
 
       toast({
         title: "Account Created!",
         description: "You have successfully signed up.",
       });
       
-      // Clear the referral code after it has been used
       if (referralCode) {
         localStorage.removeItem('referralCode');
       }
