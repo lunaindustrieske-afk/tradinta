@@ -86,6 +86,7 @@ const roles = [
   { value: 'marketing-manager', label: 'Marketing Manager' },
   { value: 'operations-manager', label: 'Operations Manager' },
   { value: 'support', label: 'Support' },
+  { value: 'super-admin', label: 'Super Admin' },
   { value: 'tradcoin-airdrop', label: 'TradCoin Airdrop' },
   { value: 'tradpay-admin', label: 'TradPay Admin' },
   { value: 'user-management', label: 'User Management' },
