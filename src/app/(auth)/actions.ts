@@ -3,7 +3,7 @@
 
 import { z } from 'zod';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, serverTimestamp } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
 import { sendTransactionalEmail } from '@/lib/email';
 import { randomBytes } from 'crypto';
@@ -314,4 +314,23 @@ export async function handleResetPassword(
         console.error('Password reset failed:', error);
         return { message: error.message || 'An unexpected error occurred. Please try again.', success: false };
     }
+}
+
+// New Server Action for creating user profile
+export async function createUserProfileInDB(uid: string, data: any) {
+  if (!uid) {
+    return { success: false, message: 'User ID is missing.' };
+  }
+  try {
+    const firestore = getFirestore();
+    const userDocRef = firestore.collection('users').doc(uid);
+    await userDocRef.set({
+      ...data,
+      registrationDate: serverTimestamp(),
+    });
+    return { success: true, message: 'User profile created successfully.' };
+  } catch (error: any) {
+    console.error('Error creating user profile in DB:', error);
+    return { success: false, message: `Failed to create user profile: ${error.message}` };
+  }
 }

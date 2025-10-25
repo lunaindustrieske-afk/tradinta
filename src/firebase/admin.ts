@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { credential, ServiceAccount } from 'firebase-admin';
 
@@ -16,11 +17,14 @@ function getServiceAccount(): ServiceAccount {
   }
 }
 
+// A function to initialize the Firebase Admin SDK.
+// It ensures that it's only initialized once.
 export function customInitApp() {
-  if (getApps().length === 0) {
-    return initializeApp({
-      credential: credential.cert(getServiceAccount()),
-    });
+  if (getApps().length > 0) {
+    return getApps()[0];
   }
-  return getApps()[0];
+  
+  return initializeApp({
+    credential: credential.cert(getServiceAccount()),
+  });
 }
