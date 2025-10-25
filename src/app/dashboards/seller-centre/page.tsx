@@ -512,9 +512,7 @@ function SellerDashboardContent() {
 export default function SellerDashboardPage() {
   const { user, isUserLoading, role } = useUser();
 
-  const isLoading = isUserLoading;
-
-  if (isLoading) {
+  if (isUserLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -522,7 +520,7 @@ export default function SellerDashboardPage() {
     );
   }
 
-  // Allow access if the user is a manufacturer OR a super-admin
+  // Allow access if the user's role is loaded and is either 'manufacturer' OR 'super-admin'
   if (role !== 'manufacturer' && role !== 'super-admin') {
     return <PermissionDenied />;
   }

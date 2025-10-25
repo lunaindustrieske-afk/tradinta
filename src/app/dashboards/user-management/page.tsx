@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -29,7 +30,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, getDocs, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
@@ -45,6 +46,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { PermissionDenied } from '@/components/ui/permission-denied';
 
 type UserProfile = {
   id: string;
@@ -82,7 +84,7 @@ const SummaryCard = ({
   </Card>
 );
 
-export default function UserManagementPage() {
+function UserManagementContent() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -302,91 +304,110 @@ export default function UserManagementPage() {
       </TableRow>
     ));
   };
+    return (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                <CardTitle>User Management</CardTitle>
+                <CardDescription>
+                    Oversee all users, manage roles, and control access across the
+                    platform.
+                </CardDescription>
+                </CardHeader>
+            </Card>
 
-  return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>User Management</CardTitle>
-          <CardDescription>
-            Oversee all users, manage roles, and control access across the
-            platform.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {summaryCards.map((item) => (
-          <SummaryCard key={item.title} {...item} />
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <CardTitle>Find & Manage Users</CardTitle>
-              <CardDescription>
-                Search for specific users or load the complete user list.
-              </CardDescription>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {summaryCards.map((item) => (
+                <SummaryCard key={item.title} {...item} />
+                ))}
             </div>
-            <form onSubmit={handleSearch} className="flex items-center gap-2 w-full md:w-auto">
-              <div className="relative flex-grow">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by email or ID..."
-                  className="pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Button type="submit" disabled={isSearching}>
-                {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
-                Search
-              </Button>
-            </form>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex justify-end gap-2 mb-4">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="destructive">
-                        <AlertTriangle className="mr-2 h-4 w-4"/> Load All Users
+
+            <Card>
+                <CardHeader>
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                    <div>
+                    <CardTitle>Find & Manage Users</CardTitle>
+                    <CardDescription>
+                        Search for specific users or load the complete user list.
+                    </CardDescription>
+                    </div>
+                    <form onSubmit={handleSearch} className="flex items-center gap-2 w-full md:w-auto">
+                    <div className="relative flex-grow">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                        placeholder="Search by email or ID..."
+                        className="pl-8"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <Button type="submit" disabled={isSearching}>
+                        {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4"/>}
+                        Search
                     </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Loading all users can be slow and may cause performance issues on your browser if the user base is very large. Proceed with caution.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleLoadAll}>Continue</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            <Button variant="outline" onClick={handleExportCsv}>
-                <File className="mr-2 h-4 w-4" /> Export to CSV
-            </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Tradinta ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Primary Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>{renderTableRows()}</TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  );
+                    </form>
+                </div>
+                </CardHeader>
+                <CardContent>
+                <div className="flex justify-end gap-2 mb-4">
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive">
+                                <AlertTriangle className="mr-2 h-4 w-4"/> Load All Users
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                            Loading all users can be slow and may cause performance issues on your browser if the user base is very large. Proceed with caution.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleLoadAll}>Continue</AlertDialogAction>
+                        </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                    <Button variant="outline" onClick={handleExportCsv}>
+                        <File className="mr-2 h-4 w-4" /> Export to CSV
+                    </Button>
+                </div>
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Tradinta ID</TableHead>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Primary Role</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                    </TableHeader>
+                    <TableBody>{renderTableRows()}</TableBody>
+                </Table>
+                </CardContent>
+            </Card>
+        </div>
+    );
 }
+
+
+export default function UserManagementPage() {
+    const { user, isUserLoading, role } = useUser();
+    
+    if (isUserLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        );
+    }
+
+    if (role !== 'user-management' && role !== 'admin' && role !== 'super-admin') {
+        return <PermissionDenied />;
+    }
+
+    return <UserManagementContent />;
+}
+

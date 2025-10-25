@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -7,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck, Shield, BookUser, Settings, FileWarning } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from 'next/link';
@@ -16,6 +17,7 @@ import { AddUserToRoleModal } from '@/components/add-user-to-role-modal';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { PermissionDenied } from '@/components/ui/permission-denied';
 
 
 type UserProfile = {
@@ -56,7 +58,7 @@ const RoleCard = ({ title, count, isLoading, onAddUser }: { title: string, count
 );
 
 
-export default function SuperAdminDashboard() {
+function SuperAdminDashboardContent() {
     const firestore = useFirestore();
     const router = useRouter();
     const pathname = usePathname();
@@ -489,4 +491,24 @@ export default function SuperAdminDashboard() {
             </Tabs>
         </>
     );
+}
+
+
+export default function SuperAdminDashboardPage() {
+  const { user, isUserLoading, role } = useUser();
+
+  if (isUserLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Allow access ONLY if the user's role is 'super-admin'.
+  if (role !== 'super-admin') {
+    return <PermissionDenied />;
+  }
+
+  return <SuperAdminDashboardContent />;
 }
