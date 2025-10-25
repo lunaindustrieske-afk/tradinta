@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Mock data for demonstration until backend logic is complete in Stage 3
 const mockMetrics = {
