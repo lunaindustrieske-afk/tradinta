@@ -13,13 +13,18 @@ customInitApp();
 
 export async function setUserRoleClaim(userId: string, role: string): Promise<{ success: boolean; message: string; }> {
   const auth = getAuth();
+  const firestore = getFirestore();
   try {
-    // Set custom user claims
+    // 1. Set custom user claims for security/permissions
     await auth.setCustomUserClaims(userId, { role });
-    // In a production app, you might want to log this action
+
+    // 2. Update the user's document in Firestore for display purposes
+    const userDocRef = firestore.collection('users').doc(userId);
+    await userDocRef.update({ role: role });
+
     return { success: true, message: `Successfully set role to ${role} for user ${userId}` };
   } catch (error: any) {
-    console.error('Error setting custom claims:', error);
+    console.error('Error setting custom claims and updating user document:', error);
     return { success: false, message: error.message || 'An unexpected error occurred.' };
   }
 }
@@ -504,3 +509,5 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
         return { success: false, message: 'An error occurred while verifying your email.' };
     }
 }
+
+    

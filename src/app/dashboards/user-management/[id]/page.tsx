@@ -79,7 +79,7 @@ const roles = [
   { value: 'content-management', label: 'Content Management' },
   { value: 'distributor', label: 'Distributor' },
   { value: 'finance', label: 'Finance' },
-  { value: 'growth-partner', label: 'Growth Partner' },
+  { value: 'partner', label: 'Growth Partner' },
   { value: 'investor-partner', label: 'Investor Partner' },
   { value: 'legal-compliance', label: 'Legal & Compliance' },
   { value: 'logistics', label: 'Logistics' },
@@ -207,6 +207,7 @@ export default function UserDetailPage() {
     if (!selectedRole || !user?.email || !auth) return;
     setIsProcessing(true);
     try {
+      // This server action now updates both the custom claim and the Firestore doc
       const result = await setUserRoleClaim(userId, selectedRole);
       if (!result.success) throw new Error(result.message);
 
@@ -418,3 +419,5 @@ export default function UserDetailPage() {
     </div>
   );
 }
+
+    
