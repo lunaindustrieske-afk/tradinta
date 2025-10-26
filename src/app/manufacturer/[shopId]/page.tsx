@@ -1,10 +1,10 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import {
   Star,
   ShieldCheck,
@@ -333,5 +333,3 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
     </div>
   );
 }
-
-    
