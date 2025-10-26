@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -53,7 +52,7 @@ import {
 } from '@/firebase';
 import {
   doc,
-  collectionGroup,
+  collection,
   query,
   where,
   orderBy,
@@ -67,22 +66,6 @@ import { formatDistanceToNow } from 'date-fns';
 import { setUserRoleClaim } from '@/app/(auth)/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-
-const products = [
-  { id: 'PROD-001', name: 'Industrial Grade Cement', stock: 1200, status: 'Live' },
-  {
-    id: 'PROD-003',
-    name: 'HDPE Plastic Pellets',
-    stock: 0,
-    status: 'Out of Stock',
-  },
-  {
-    id: 'PROD-004',
-    name: 'Recycled Kraft Paper Rolls',
-    stock: 300,
-    status: 'Live',
-  },
-];
 
 const orders = [
   {
@@ -100,6 +83,28 @@ type VerificationStatus =
   | 'Pending Admin'
   | 'Action Required'
   | 'Verified';
+  
+type ManufacturerData = {
+  shopName?: string;
+  tagline?: string;
+  description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  businessLicenseNumber?: string;
+  kraPin?: string;
+  address?: string;
+  phone?: string;
+  paymentPolicy?: string;
+  shippingPolicy?: string;
+  returnPolicy?: string;
+  verificationStatus?: VerificationStatus;
+};
+
+type Product = {
+  id: string;
+  name: string;
+  status: 'draft' | 'published' | 'archived';
+};
 
 const statusInfo: Record<
   VerificationStatus,
@@ -199,76 +204,107 @@ const VerificationStatusCard = ({
 };
 
 const ApplyToBecomeManufacturer = () => {
-    const { user } = useUser();
-    const firestore = useFirestore();
-    const { toast } = useToast();
-    const router = useRouter();
-    const [isApplying, setIsApplying] = React.useState(false);
+  const { user } = useUser();
+  const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isApplying, setIsApplying] = React.useState(false);
 
-    const handleApply = async () => {
-        if (!user || !firestore) return;
+  const handleApply = async () => {
+    if (!user || !firestore) return;
 
-        setIsApplying(true);
-        try {
-            // 1. Change user role via server action
-            const roleResult = await setUserRoleClaim(user.uid, 'manufacturer');
-            if (!roleResult.success) {
-                throw new Error(roleResult.message || "Failed to update user role.");
-            }
+    setIsApplying(true);
+    try {
+      // 1. Change user role via server action
+      const roleResult = await setUserRoleClaim(user.uid, 'manufacturer');
+      if (!roleResult.success) {
+        throw new Error(roleResult.message || 'Failed to update user role.');
+      }
 
-            // 2. Create the initial manufacturer document
-            const manufacturerRef = doc(firestore, 'manufacturers', user.uid);
-            await setDoc(manufacturerRef, {
-                ownerName: user.displayName,
-                email: user.email,
-                registrationDate: serverTimestamp(),
-                verificationStatus: 'Unsubmitted',
-            });
-            
-            toast({
-                title: 'Application Started!',
-                description: "You're now ready to set up your manufacturer profile.",
-            });
+      // 2. Create the initial manufacturer document
+      const manufacturerRef = doc(firestore, 'manufacturers', user.uid);
+      await setDoc(manufacturerRef, {
+        ownerName: user.displayName,
+        email: user.email,
+        registrationDate: serverTimestamp(),
+        verificationStatus: 'Unsubmitted',
+      });
 
-            // Forcing a hard reload to ensure the new user role and claims are fetched
-            window.location.reload();
+      toast({
+        title: 'Application Started!',
+        description: "You're now ready to set up your manufacturer profile.",
+      });
 
-        } catch (error: any) {
-            toast({
-                title: 'Application Failed',
-                description: error.message || 'An unexpected error occurred.',
-                variant: 'destructive',
-            });
-            setIsApplying(false);
+      // Forcing a hard reload to ensure the new user role and claims are fetched
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: 'Application Failed',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+      setIsApplying(false);
+    }
+  };
+
+  return (
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <Card className="max-w-lg text-center">
+        <CardHeader>
+          <CardTitle className="flex flex-col items-center gap-2">
+            <Factory className="w-12 h-12 text-primary" />
+            Become a Manufacturer on Tradinta
+          </CardTitle>
+          <CardDescription>
+            Join hundreds of verified manufacturers and expand your reach
+            across Africa.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="text-left space-y-2">
+          <p className="flex items-start">
+            <ShieldCheck className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1" />
+            <span>List your products in our B2B marketplace.</span>
+          </p>
+          <p className="flex items-start">
+            <ShoppingCart className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1" />
+            <span>
+              Receive direct orders and quotation requests from verified buyers.
+            </span>
+          </p>
+          <p className="flex items-start">
+            <Wallet className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1" />
+            <span>Utilize secure payments with TradPay escrow.</span>
+          </p>
+        </CardContent>
+        <CardFooter>
+          <Button className="w-full" onClick={handleApply} disabled={isApplying}>
+            {isApplying ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            {isApplying ? 'Setting up your shop...' : 'Start Your Application'}
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+};
+
+const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => {
+    if (!manufacturer) return 0;
+    const fields = [
+        'shopName', 'tagline', 'description', 'logoUrl', 'bannerUrl', 
+        'businessLicenseNumber', 'kraPin', 'address', 'phone', 
+        'paymentPolicy', 'shippingPolicy', 'returnPolicy'
+    ];
+    const totalFields = fields.length;
+    let completedFields = 0;
+    
+    fields.forEach(field => {
+        if (manufacturer[field as keyof ManufacturerData]) {
+            completedFields++;
         }
-    };
+    });
 
-    return (
-        <div className="flex justify-center items-center min-h-[60vh]">
-            <Card className="max-w-lg text-center">
-                <CardHeader>
-                    <CardTitle className="flex flex-col items-center gap-2">
-                        <Factory className="w-12 h-12 text-primary" />
-                        Become a Manufacturer on Tradinta
-                    </CardTitle>
-                    <CardDescription>
-                        Join hundreds of verified manufacturers and expand your reach across Africa.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="text-left space-y-2">
-                     <p className="flex items-start"><ShieldCheck className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1"/><span>List your products in our B2B marketplace.</span></p>
-                     <p className="flex items-start"><ShoppingCart className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1"/><span>Receive direct orders and quotation requests from verified buyers.</span></p>
-                     <p className="flex items-start"><Wallet className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1"/><span>Utilize secure payments with TradPay escrow.</span></p>
-                </CardContent>
-                <CardFooter>
-                    <Button className="w-full" onClick={handleApply} disabled={isApplying}>
-                        {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
-                        {isApplying ? 'Setting up your shop...' : 'Start Your Application'}
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
-    );
+    return Math.round((completedFields / totalFields) * 100);
 }
 
 export default function SellerDashboardPage() {
@@ -280,8 +316,8 @@ export default function SellerDashboardPage() {
     return doc(firestore, 'manufacturers', user.uid);
   }, [user, firestore]);
   
-  const { data: manufacturer, isLoading: isLoadingManufacturer } = useDoc<{shopName?: string}>(manufacturerDocRef);
-
+  const { data: manufacturer, isLoading: isLoadingManufacturer } = useDoc<ManufacturerData>(manufacturerDocRef);
+  const profileCompleteness = calculateProfileCompleteness(manufacturer);
 
   const reviewsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -293,8 +329,20 @@ export default function SellerDashboardPage() {
     );
   }, [firestore, user?.uid]);
 
+  const recentProductsQuery = useMemoFirebase(() => {
+    if (!user?.uid || !firestore) return null;
+    return query(
+      collection(firestore, 'manufacturers', user.uid, 'products'),
+      orderBy('updatedAt', 'desc'),
+      limit(3)
+    );
+  }, [firestore, user?.uid]);
+
   const { data: reviews, isLoading: isLoadingReviews } =
     useCollection<Review>(reviewsQuery);
+    
+  const { data: recentProducts, isLoading: isLoadingRecentProducts } = 
+    useCollection<Product>(recentProductsQuery);
 
   if (isUserLoading) {
     return (
@@ -305,12 +353,11 @@ export default function SellerDashboardPage() {
     );
   }
 
-  // Allow access if the user is already a manufacturer/admin, OR if they have no prohibitive role.
   const isManufacturer = role === 'manufacturer' || role === 'super-admin' || role === 'admin';
   const canApply = !role || role === 'buyer' || role === 'partner' || role === 'influencer';
   
   if (!isManufacturer && !canApply) {
-    return <ApplyToBecomeManufacturer />;
+      return <ApplyToBecomeManufacturer />;
   }
 
   if (!isManufacturer) {
@@ -587,8 +634,8 @@ export default function SellerDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center">
               <Image
-                src="https://picsum.photos/seed/mfg1/64/64"
-                alt="Shop Logo"
+                src={manufacturer?.logoUrl || "https://picsum.photos/seed/mfg1/64/64"}
+                alt={shopName || 'Shop Logo'}
                 width={56}
                 height={56}
                 className="rounded-lg mr-4"
@@ -601,9 +648,9 @@ export default function SellerDashboardPage() {
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
                 Complete your profile to attract more buyers. Your current
-                completion rate is 85%.
+                completion rate is {profileCompleteness}%.
               </p>
-              <Progress value={85} className="mb-4 h-2" />
+              <Progress value={profileCompleteness} className="mb-4 h-2" />
             </CardContent>
             <CardFooter>
               <Button asChild variant="secondary" className="w-full">
@@ -620,32 +667,42 @@ export default function SellerDashboardPage() {
               <CardTitle>Products at a Glance</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {products.map((product) => (
-                    <TableRow key={product.id}>
-                      <TableCell className="font-medium">
-                        {product.name}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            product.status === 'Live' ? 'default' : 'destructive'
-                          }
-                        >
-                          {product.status}
-                        </Badge>
-                      </TableCell>
+              {isLoadingRecentProducts ? (
+                <div className="space-y-2">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+              ) : recentProducts && recentProducts.length > 0 ? (
+                <Table>
+                    <TableHeader>
+                    <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Status</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                    </TableHeader>
+                    <TableBody>
+                    {recentProducts.map((product) => (
+                        <TableRow key={product.id}>
+                        <TableCell className="font-medium">
+                            {product.name}
+                        </TableCell>
+                        <TableCell>
+                            <Badge
+                            variant={
+                                product.status === 'published' ? 'default' : 'destructive'
+                            }
+                            >
+                            {product.status}
+                            </Badge>
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+                </Table>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">No products found.</p>
+              )}
             </CardContent>
             <CardFooter>
               <Button asChild variant="outline" className="w-full">
