@@ -22,6 +22,10 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
     const [preview, setPreview] = React.useState<string | null>(initialUrl || null);
     const [isLoading, setIsLoading] = React.useState(false);
     const { toast } = useToast();
+    
+    React.useEffect(() => {
+        setPreview(initialUrl || null);
+    }, [initialUrl]);
 
     const onDrop = React.useCallback((acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
