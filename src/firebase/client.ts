@@ -4,6 +4,7 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
 import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getAnalytics, isSupported } from 'firebase/analytics';
 import { firebaseConfig } from '@/firebase/config';
 
 // This file is for CLIENT-SIDE Firebase initialization ONLY.
@@ -25,24 +26,26 @@ export function getFirebaseClientServices(): FirebaseClientServices {
     return firebaseClientServices;
   }
 
+  let app: FirebaseApp;
   if (getApps().length > 0) {
-    const app = getApp();
-    firebaseClientServices = {
-      firebaseApp: app,
-      auth: getAuth(app),
-      firestore: getFirestore(app),
-    };
-    return firebaseClientServices;
+    app = getApp();
+  } else {
+    app = initializeApp(firebaseConfig);
   }
 
-  const firebaseApp = initializeApp(firebaseConfig);
-  const auth = getAuth(firebaseApp);
-  const firestore = getFirestore(firebaseApp);
+  // Conditionally initialize Analytics only on the client side
+  if (typeof window !== 'undefined') {
+    isSupported().then(supported => {
+      if (supported) {
+        getAnalytics(app);
+      }
+    });
+  }
   
   firebaseClientServices = {
-    firebaseApp,
-    auth,
-    firestore,
+    firebaseApp: app,
+    auth: getAuth(app),
+    firestore: getFirestore(app),
   };
 
   return firebaseClientServices;

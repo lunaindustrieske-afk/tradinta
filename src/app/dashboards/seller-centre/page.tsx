@@ -38,6 +38,7 @@ import {
   Loader2,
   Wallet,
   BookCopy,
+  Factory,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -57,11 +58,16 @@ import {
   where,
   orderBy,
   limit,
+  setDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Review } from '@/app/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { PermissionDenied } from '@/components/ui/permission-denied';
+import { setUserRoleClaim } from '@/app/(auth)/actions';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 const products = [
   { id: 'PROD-001', name: 'Industrial Grade Cement', stock: 1200, status: 'Live' },
@@ -193,6 +199,79 @@ const VerificationStatusCard = ({
   );
 };
 
+const ApplyToBecomeManufacturer = () => {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const router = useRouter();
+    const [isApplying, setIsApplying] = React.useState(false);
+
+    const handleApply = async () => {
+        if (!user || !firestore) return;
+
+        setIsApplying(true);
+        try {
+            // 1. Change user role via server action
+            const roleResult = await setUserRoleClaim(user.uid, 'manufacturer');
+            if (!roleResult.success) {
+                throw new Error(roleResult.message || "Failed to update user role.");
+            }
+
+            // 2. Create the initial manufacturer document
+            const manufacturerRef = doc(firestore, 'manufacturers', user.uid);
+            await setDoc(manufacturerRef, {
+                ownerName: user.displayName,
+                email: user.email,
+                registrationDate: serverTimestamp(),
+                verificationStatus: 'Unsubmitted',
+            });
+            
+            toast({
+                title: 'Application Started!',
+                description: "You're now ready to set up your manufacturer profile.",
+            });
+
+            // Forcing a hard reload to ensure the new user role and claims are fetched
+            window.location.reload();
+
+        } catch (error: any) {
+            toast({
+                title: 'Application Failed',
+                description: error.message || 'An unexpected error occurred.',
+                variant: 'destructive',
+            });
+            setIsApplying(false);
+        }
+    };
+
+    return (
+        <div className="flex justify-center items-center min-h-[60vh]">
+            <Card className="max-w-lg text-center">
+                <CardHeader>
+                    <CardTitle className="flex flex-col items-center gap-2">
+                        <Factory className="w-12 h-12 text-primary" />
+                        Become a Manufacturer on Tradinta
+                    </CardTitle>
+                    <CardDescription>
+                        Join hundreds of verified manufacturers and expand your reach across Africa.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="text-left space-y-2">
+                     <p className="flex items-start"><ShieldCheck className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1"/><span>List your products in our B2B marketplace.</span></p>
+                     <p className="flex items-start"><ShoppingCart className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1"/><span>Receive direct orders and quotation requests from verified buyers.</span></p>
+                     <p className="flex items-start"><Wallet className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1"/><span>Utilize secure payments with TradPay escrow.</span></p>
+                </CardContent>
+                <CardFooter>
+                    <Button className="w-full" onClick={handleApply} disabled={isApplying}>
+                        {isApplying ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : null}
+                        {isApplying ? 'Setting up your shop...' : 'Start Your Application'}
+                    </Button>
+                </CardFooter>
+            </Card>
+        </div>
+    );
+}
+
 export default function SellerDashboardPage() {
   const { user, isUserLoading, role } = useUser();
   const firestore = useFirestore();
@@ -219,9 +298,15 @@ export default function SellerDashboardPage() {
     );
   }
 
-  const hasAccess = role === 'manufacturer' || role === 'super-admin';
-  if (!hasAccess) {
+  const isManufacturer = role === 'manufacturer' || role === 'super-admin';
+  const canApply = role === 'buyer' || role === 'partner';
+
+  if (!isManufacturer && !canApply) {
     return <PermissionDenied />;
+  }
+
+  if (!isManufacturer && canApply) {
+      return <ApplyToBecomeManufacturer />;
   }
 
   return (
