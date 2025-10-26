@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2, BarChart2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
+import { useCollection, useFirestore, useMemoFirebase, useAuth, useDoc } from "@/firebase";
 import { collection, query, where, doc, collectionGroup } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -32,8 +32,6 @@ type Manufacturer = {
 type Product = {
   id: string;
   name: string;
-  manufacturerId: string;
-  shopName?: string; // Denormalized for display
   imageUrl?: string;
   status: 'draft' | 'published' | 'archived';
   stock: number;
@@ -45,40 +43,40 @@ export default function AdminDashboard() {
     const auth = useAuth();
     const { toast } = useToast();
     
+    // --- State for Product Catalog ---
+    const [shopIdQuery, setShopIdQuery] = React.useState('');
+    const [searchedShopId, setSearchedShopId] = React.useState<string | null>(null);
     const [productSearchQuery, setProductSearchQuery] = React.useState('');
-    const [productStatusFilter, setProductStatusFilter] = React.useState<'all' | 'published' | 'draft' | 'archived'>('all');
 
+    // --- Data Fetching ---
     const manufacturersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return collection(firestore, 'manufacturers');
     }, [firestore]);
 
-    const allProductsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collectionGroup(firestore, 'products');
-    }, [firestore]);
-
     const { data: allManufacturers, isLoading: isLoadingManufacturers } = useCollection<Manufacturer>(manufacturersQuery);
-    const { data: allProducts, isLoading: isLoadingProducts } = useCollection<Product>(allProductsQuery);
     
-    const productsWithSeller = React.useMemo(() => {
-        if (!allProducts || !allManufacturers) return null;
-        const manufacturerMap = new Map(allManufacturers.map(m => [m.id, m.shopName]));
-        return allProducts.map(p => ({
-            ...p,
-            shopName: manufacturerMap.get(p.manufacturerId) || 'Unknown Seller'
-        }));
-    }, [allProducts, allManufacturers]);
+    // Fetch products ONLY for the searched shop
+    const shopProductsQuery = useMemoFirebase(() => {
+        if (!firestore || !searchedShopId) return null;
+        return collection(firestore, `manufacturers/${searchedShopId}/products`);
+    }, [firestore, searchedShopId]);
 
-    const filteredProducts = React.useMemo(() => {
-        if (!productsWithSeller) return [];
-        return productsWithSeller.filter(product => {
-            const matchesSearch = product.name.toLowerCase().includes(productSearchQuery.toLowerCase()) || product.shopName?.toLowerCase().includes(productSearchQuery.toLowerCase());
-            const matchesStatus = productStatusFilter === 'all' || product.status === productStatusFilter;
-            return matchesSearch && matchesStatus;
-        });
-    }, [productsWithSeller, productSearchQuery, productStatusFilter]);
+    const { data: shopProducts, isLoading: isLoadingShopProducts } = useCollection<Product>(shopProductsQuery);
 
+    const searchedManufacturer = useMemoFirebase(() => {
+      if(!allManufacturers || !searchedShopId) return null;
+      return allManufacturers.find(m => m.id === searchedShopId);
+    }, [allManufacturers, searchedShopId]);
+
+
+    const filteredShopProducts = React.useMemo(() => {
+        if (!shopProducts) return [];
+        return shopProducts.filter(product => 
+            product.name.toLowerCase().includes(productSearchQuery.toLowerCase())
+        );
+    }, [shopProducts, productSearchQuery]);
+    
 
     const pendingVerifications = React.useMemo(() => {
         if (!allManufacturers) return null;
@@ -132,6 +130,21 @@ export default function AdminDashboard() {
             default: return 'default';
         }
     };
+    
+    const handleShopSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        const manuf = allManufacturers?.find(m => m.id === shopIdQuery);
+        if (manuf) {
+            setSearchedShopId(shopIdQuery);
+        } else {
+            toast({
+                title: "Shop Not Found",
+                description: "No manufacturer found with that Shop ID.",
+                variant: "destructive"
+            });
+            setSearchedShopId(null);
+        }
+    }
 
 
     const renderVerificationRows = () => {
@@ -203,12 +216,11 @@ export default function AdminDashboard() {
     }
     
     const renderProductCatalogRows = () => {
-        if (isLoadingProducts || isLoadingManufacturers) {
+        if (isLoadingShopProducts) {
             return Array.from({length: 5}).map((_, i) => (
                 <TableRow key={`skel-prod-${i}`}>
                     <TableCell className="hidden sm:table-cell"><Skeleton className="h-16 w-16 rounded-md" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-6 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
@@ -216,10 +228,10 @@ export default function AdminDashboard() {
                 </TableRow>
             ))
         }
-        if (!filteredProducts || filteredProducts.length === 0) {
-            return <TableRow><TableCell colSpan={7} className="text-center h-24">No products found for the current filter.</TableCell></TableRow>
+        if (!filteredShopProducts || filteredShopProducts.length === 0) {
+            return <TableRow><TableCell colSpan={6} className="text-center h-24">No products found for this shop.</TableCell></TableRow>
         }
-        return filteredProducts.map((product) => (
+        return filteredShopProducts.map((product) => (
             <TableRow key={product.id}>
                  <TableCell className="hidden sm:table-cell">
                     <Image
@@ -231,7 +243,6 @@ export default function AdminDashboard() {
                     />
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>{product.shopName}</TableCell>
                 <TableCell><Badge variant={getStatusVariant(product.status)}>{product.status}</Badge></TableCell>
                 <TableCell>{product.price?.toLocaleString() || 'N/A'}</TableCell>
                 <TableCell>{product.stock > 0 ? product.stock : <Badge variant="destructive">Out of Stock</Badge>}</TableCell>
@@ -324,48 +335,55 @@ export default function AdminDashboard() {
             <TabsContent value="catalog">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Product Catalog</CardTitle>
-                        <CardDescription>View and manage all products across the Tradinta platform.</CardDescription>
+                        <CardTitle>Product Catalog Explorer</CardTitle>
+                        <CardDescription>Search for a specific shop by its ID to view and manage its products.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="relative flex-1">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Search by product or seller..." className="pl-8" value={productSearchQuery} onChange={e => setProductSearchQuery(e.target.value)} />
+                        <form onSubmit={handleShopSearch} className="flex items-center gap-2 mb-6 p-4 border rounded-lg bg-muted/50">
+                            <Search className="h-5 w-5 text-muted-foreground" />
+                            <Input 
+                                placeholder="Enter Manufacturer/Shop ID..." 
+                                className="flex-grow bg-background" 
+                                value={shopIdQuery}
+                                onChange={e => setShopIdQuery(e.target.value)}
+                            />
+                            <Button type="submit">Find Shop</Button>
+                        </form>
+
+                        {searchedShopId && (
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                  <div>
+                                    <h3 className="font-semibold">Showing products for: <span className="text-primary">{searchedManufacturer?.shopName}</span></h3>
+                                    <p className="text-sm text-muted-foreground">Shop ID: {searchedShopId}</p>
+                                  </div>
+                                  <div className="relative flex-1 max-w-xs">
+                                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                      <Input placeholder="Search within this shop..." className="pl-8" value={productSearchQuery} onChange={e => setProductSearchQuery(e.target.value)} />
+                                  </div>
+                                </div>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
+                                            <TableHead>Product Name</TableHead>
+                                            <TableHead>Status</TableHead>
+                                            <TableHead>Price (KES)</TableHead>
+                                            <TableHead>Stock</TableHead>
+                                            <TableHead>Actions</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {renderProductCatalogRows()}
+                                    </TableBody>
+                                </Table>
                             </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                <Button variant="outline" size="sm" className="ml-4 gap-1">
-                                    <ListFilter className="h-3.5 w-3.5" />
-                                    <span>Filter</span>
-                                </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'all'} onCheckedChange={() => setProductStatusFilter('all')}>All</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'published'} onCheckedChange={() => setProductStatusFilter('published')}>Published</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'draft'} onCheckedChange={() => setProductStatusFilter('draft')}>Draft</DropdownMenuCheckboxItem>
-                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'archived'} onCheckedChange={() => setProductStatusFilter('archived')}>Archived</DropdownMenuCheckboxItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
-                                    <TableHead>Product Name</TableHead>
-                                    <TableHead>Seller</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Price (KES)</TableHead>
-                                    <TableHead>Stock</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {renderProductCatalogRows()}
-                            </TableBody>
-                        </Table>
+                        )}
+                        {!searchedShopId && (
+                             <div className="text-center py-12 text-muted-foreground">
+                                <p>Enter a shop ID above to begin browsing products.</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </TabsContent>
