@@ -123,6 +123,26 @@ const trustMetrics = [
     { value: '4.8/5', label: 'Manufacturer Satisfaction' },
 ];
 
+const HeroContent = () => (
+  <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
+    <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 font-headline">
+      Powering Africa’s Manufacturers — Buy Direct. Sell Smart.
+    </h1>
+    <p className="text-lg md:text-xl text-primary-foreground max-w-3xl mb-8">
+      Tradinta connects verified manufacturers, distributors, and buyers across Africa with secure payments and marketing tools.
+    </p>
+    <div className="flex flex-col sm:flex-row gap-4">
+      <Button size="lg" asChild>
+        <Link href="/signup">Open a Manufacturer Shop</Link>
+      </Button>
+      <Button size="lg" variant="secondary" asChild>
+        <Link href="/products">Explore Verified Products</Link>
+      </Button>
+    </div>
+  </div>
+);
+
+
 const HeroCarousel = async () => {
     const banners = await getHomepageBanners();
 
@@ -137,17 +157,7 @@ const HeroCarousel = async () => {
               className="object-cover"
               data-ai-hint="industrial warehouse"
             />
-             <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4 font-headline">
-                Powering Africa’s Manufacturers
-              </h1>
-              <p className="text-lg md:text-xl text-primary-foreground max-w-3xl mb-8">
-                The leading B2B marketplace to source directly from verified factories.
-              </p>
-              <Button size="lg" asChild>
-                <Link href="/products">Explore Products</Link>
-              </Button>
-            </div>
+             <HeroContent />
           </div>
       );
     }
@@ -177,8 +187,21 @@ const HeroCarousel = async () => {
               </div>
             </CarouselItem>
           ))}
+           {/* Add the main static content as the last slide */}
+           <CarouselItem>
+                <div className="relative w-full h-full">
+                    <Image
+                        src="https://picsum.photos/seed/hero-main/1600/600"
+                        alt="Tradinta Marketplace"
+                        fill
+                        className="object-cover"
+                        data-ai-hint="digital trade network"
+                    />
+                    <HeroContent />
+                </div>
+            </CarouselItem>
         </CarouselContent>
-        {banners.length > 1 && (
+        {banners.length > 0 && (
             <>
                 <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
                 <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
