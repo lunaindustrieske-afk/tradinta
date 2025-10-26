@@ -36,6 +36,21 @@ import {
   Search,
   Star,
   Loader2,
+  Factory,
+  Building2,
+  UtensilsCrossed,
+  Sparkles,
+  Home,
+  Printer,
+  Car,
+  BookOpen,
+  Shirt,
+  Armchair,
+  Sprout,
+  HeartPulse,
+  Bolt,
+  Award,
+  Handshake,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -45,19 +60,30 @@ import { collectionGroup, getDocs, query, where } from 'firebase/firestore';
 import { type Product, type Manufacturer } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAllProducts } from '@/app/lib/data';
+import { categories } from '@/app/lib/categories';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-const categories = [
-  'Packaging',
-  'Chemicals',
-  'Construction',
-  'Beauty',
-  'Food & Beverage',
-  'Electrical',
-  'Textiles',
-  'Plastics & Polymers',
-];
 
 type ProductWithShopId = Product & { shopId: string };
+
+const categoryIcons: Record<string, React.ReactNode> = {
+    "Industrial & Manufacturing Supplies": <Factory className="w-5 h-5" />,
+    "Construction & Building Materials": <Building2 className="w-5 h-5" />,
+    "Food & Beverage": <UtensilsCrossed className="w-5 h-5" />,
+    "Beauty, Hygiene & Personal Care": <Sparkles className="w-5 h-5" />,
+    "Cleaning & Home Care": <Home className="w-5 h-5" />,
+    "Packaging, Printing & Branding": <Printer className="w-5 h-5" />,
+    "Automotive & Transport Supplies": <Car className="w-5 h-5" />,
+    "Office, School & Stationery Supplies": <BookOpen className="w-5 h-5" />,
+    "Fashion, Textiles & Apparel": <Shirt className="w-5 h-5" />,
+    "Furniture & Home Goods": <Armchair className="w-5 h-5" />,
+    "Agriculture & Agri-Processing": <Sprout className="w-5 h-5" />,
+    "Medical, Health & Safety": <HeartPulse className="w-5 h-5" />,
+    "Energy & Utilities": <Bolt className="w-5 h-5" />,
+    "Local & Small Manufacturers (Made in Kenya)": <Award className="w-5 h-5" />,
+    "Services & Trade Support": <Handshake className="w-5 h-5" />,
+};
 
 const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWithShopId[] }) => {
   const [filters, setFilters] = useState({
@@ -87,7 +113,7 @@ const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWith
         <div>
           <Label className="font-semibold">Category</Label>
           <Select
-            defaultValue="all"
+            value={filters.category}
             onValueChange={(value) =>
               setFilters({ ...filters, category: value })
             }
@@ -98,8 +124,8 @@ const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWith
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
+                <SelectItem key={cat.name} value={cat.name}>
+                  {cat.name}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -158,20 +184,47 @@ const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWith
 
   return (
      <div className="container mx-auto py-8">
-      <div className="grid lg:grid-cols-4 gap-8">
+      <div className="mb-6">
+          <h1 className="text-4xl font-bold font-headline mb-2">
+              Tradinta Marketplace
+          </h1>
+          <p className="text-muted-foreground">
+              Source directly from Africa’s top manufacturers.
+          </p>
+      </div>
+
+       <div className="sticky top-14 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-4 px-4 border-b">
+         <ScrollArea className="w-full whitespace-nowrap">
+            <div className="flex w-max space-x-2">
+                 <Button
+                    variant={filters.category === 'all' ? 'default' : 'outline'}
+                    className="rounded-full"
+                    onClick={() => setFilters({ ...filters, category: 'all' })}
+                >
+                    All Categories
+                </Button>
+                {categories.map((cat) => (
+                    <Button
+                        key={cat.name}
+                        variant={filters.category === cat.name ? 'default' : 'outline'}
+                        className="rounded-full"
+                        onClick={() => setFilters({ ...filters, category: cat.name })}
+                    >
+                        {categoryIcons[cat.name]}
+                        <span className="ml-2">{cat.name}</span>
+                    </Button>
+                ))}
+            </div>
+            <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+       </div>
+
+      <div className="grid lg:grid-cols-4 gap-8 mt-6">
         <div className="hidden lg:block lg:col-span-1">
           <FilterSidebar />
         </div>
 
         <div className="lg:col-span-3">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold font-headline mb-2">
-              Tradinta Marketplace
-            </h1>
-            <p className="text-muted-foreground">
-              Source directly from Africa’s top manufacturers.
-            </p>
-          </div>
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="relative flex-grow">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
