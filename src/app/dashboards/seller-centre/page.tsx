@@ -275,6 +275,14 @@ export default function SellerDashboardPage() {
   const { user, isUserLoading, role } = useUser();
   const firestore = useFirestore();
 
+  const manufacturerDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'manufacturers', user.uid);
+  }, [user, firestore]);
+  
+  const { data: manufacturer, isLoading: isLoadingManufacturer } = useDoc<{shopName?: string}>(manufacturerDocRef);
+
+
   const reviewsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
@@ -299,7 +307,7 @@ export default function SellerDashboardPage() {
 
   // Allow access if the user is already a manufacturer/admin, OR if they have no prohibitive role.
   const isManufacturer = role === 'manufacturer' || role === 'super-admin' || role === 'admin';
-  const canApply = !role || role === 'buyer' || role === 'partner';
+  const canApply = !role || role === 'buyer' || role === 'partner' || role === 'influencer';
   
   if (!isManufacturer && !canApply) {
     return <ApplyToBecomeManufacturer />;
@@ -309,14 +317,17 @@ export default function SellerDashboardPage() {
       return <ApplyToBecomeManufacturer />;
   }
 
+  const shopName = manufacturer?.shopName;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Constructa Ltd. Shop Dashboard</CardTitle>
+          {isLoadingManufacturer ? <Skeleton className="h-8 w-2/3" /> : (
+            <CardTitle>{shopName ? `${shopName} Shop Dashboard` : "Your Shop Dashboard"}</CardTitle>
+          )}
           <CardDescription>
-            Your central hub for managing your shop, products, and orders.
+            {shopName ? "Your central hub for managing your shop, products, and orders." : "Welcome! Name your shop in your profile to get started."}
           </CardDescription>
         </CardHeader>
       </Card>
