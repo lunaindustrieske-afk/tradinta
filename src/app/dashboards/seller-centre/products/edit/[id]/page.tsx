@@ -44,11 +44,14 @@ import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { generateSlug } from '@/lib/utils';
+import { Separator } from '@/components/ui/separator';
 
 type ProductData = {
     name: string;
     description: string;
     imageUrl: string;
+    bannerUrl?: string; // New field for the main banner
+    otherImageUrls?: string[]; // New field for additional images
     price: string;
     moq: string;
     sku: string;
@@ -89,11 +92,13 @@ export default function EditProductPage() {
   const [formKey, setFormKey] = React.useState(Date.now());
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
 
   // Form State
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
+  const [bannerUrl, setBannerUrl] = React.useState('');
   const [price, setPrice] = React.useState('');
   const [moq, setMoq] = React.useState('');
   const [sku, setSku] = React.useState('');
@@ -116,6 +121,7 @@ export default function EditProductPage() {
         setName(productData.name || '');
         setDescription(productData.description || '');
         setImageUrl(productData.imageUrl || '');
+        setBannerUrl(productData.bannerUrl || '');
         setPrice(String(productData.price || ''));
         setMoq(String(productData.moq || ''));
         setSku(productData.sku || '');
@@ -206,7 +212,8 @@ export default function EditProductPage() {
             stock: Number(stock) || 0,
             category: selectedCategory?.name || '',
             subcategory: selectedSubCategory || '',
-            imageUrl,
+            imageUrl, // This is now the secondary/thumbnail image
+            bannerUrl, // This is the main banner image
             tags,
             weight,
             dimensions,
@@ -234,6 +241,8 @@ export default function EditProductPage() {
         setIsSaving(false);
     }
   }
+
+  const isSaveDisabled = isSaving || isUploading;
 
   if (isProductLoading) {
     return (
@@ -270,11 +279,11 @@ export default function EditProductPage() {
           Edit Product
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="outline" size="sm" onClick={() => handleUpdateProduct('draft')} disabled={isSaving}>
+          <Button variant="outline" size="sm" onClick={() => handleUpdateProduct('draft')} disabled={isSaveDisabled}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save as Draft
           </Button>
-          <Button size="sm" onClick={() => handleUpdateProduct('published')} disabled={isSaving}>
+          <Button size="sm" onClick={() => handleUpdateProduct('published')} disabled={isSaveDisabled}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save and Publish
           </Button>
@@ -390,6 +399,42 @@ export default function EditProductPage() {
           </Card>
           <Card>
             <CardHeader>
+              <CardTitle>Product Media</CardTitle>
+              <CardDescription>
+                Upload a main banner and additional images to showcase your product.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <PhotoUpload
+                    label="Main Banner Image"
+                    onUpload={setBannerUrl}
+                    onLoadingChange={setIsUploading}
+                    initialUrl={bannerUrl}
+                />
+                <Separator />
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                    <PhotoUpload
+                        label="Additional Image 1"
+                        onUpload={setImageUrl}
+                        onLoadingChange={setIsUploading}
+                        initialUrl={imageUrl}
+                    />
+                    {/* Add more PhotoUpload components here for more images */}
+                     <PhotoUpload
+                        label="Additional Image 2"
+                        onUpload={(url) => {}} // Placeholder
+                        onLoadingChange={setIsUploading}
+                    />
+                     <PhotoUpload
+                        label="Additional Image 3"
+                        onUpload={(url) => {}} // Placeholder
+                        onLoadingChange={setIsUploading}
+                    />
+                </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
               <CardTitle>Specifications & Packaging</CardTitle>
             </CardHeader>
             <CardContent>
@@ -415,21 +460,6 @@ export default function EditProductPage() {
                   <Textarea id="packagingDetails" placeholder="Describe the product packaging..." className="min-h-24" value={packagingDetails} onChange={(e) => setPackagingDetails(e.target.value)} />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Media</CardTitle>
-              <CardDescription>
-                Upload high-quality images to showcase your product.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <PhotoUpload
-                    label="Main Product Image"
-                    onUpload={setImageUrl}
-                    initialUrl={imageUrl}
-                />
             </CardContent>
           </Card>
         </div>
@@ -520,11 +550,11 @@ export default function EditProductPage() {
         </div>
       </div>
       <div className="flex items-center justify-center gap-2 md:hidden">
-         <Button variant="outline" size="sm" onClick={() => handleUpdateProduct('draft')} disabled={isSaving}>
+         <Button variant="outline" size="sm" onClick={() => handleUpdateProduct('draft')} disabled={isSaveDisabled}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save as Draft
           </Button>
-          <Button size="sm" onClick={() => handleUpdateProduct('published')} disabled={isSaving}>
+          <Button size="sm" onClick={() => handleUpdateProduct('published')} disabled={isSaveDisabled}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save and Publish
           </Button>

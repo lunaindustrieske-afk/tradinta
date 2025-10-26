@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -12,12 +11,13 @@ import { Label } from '@/components/ui/label';
 
 interface PhotoUploadProps extends React.HTMLAttributes<HTMLDivElement> {
   onUpload: (url: string) => void;
+  onLoadingChange?: (isLoading: boolean) => void;
   initialUrl?: string | null;
   label: string;
 }
 
 const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
-  ({ onUpload, initialUrl, label, className, ...props }, ref) => {
+  ({ onUpload, onLoadingChange, initialUrl, label, className, ...props }, ref) => {
     const [file, setFile] = React.useState<File | null>(null);
     const [preview, setPreview] = React.useState<string | null>(initialUrl || null);
     const [isLoading, setIsLoading] = React.useState(false);
@@ -26,6 +26,11 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
     React.useEffect(() => {
         setPreview(initialUrl || null);
     }, [initialUrl]);
+    
+    const setLoading = (loading: boolean) => {
+      setIsLoading(loading);
+      onLoadingChange?.(loading);
+    }
 
     const onDrop = React.useCallback((acceptedFiles: File[]) => {
       if (acceptedFiles.length > 0) {
@@ -40,7 +45,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
 
     const handleUpload = async (fileToUpload: File) => {
       if (!fileToUpload) return;
-      setIsLoading(true);
+      setLoading(true);
 
       try {
         // 1. Get signature from our new API route
@@ -101,7 +106,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           variant: 'destructive',
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
