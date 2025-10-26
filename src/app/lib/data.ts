@@ -118,7 +118,9 @@ export async function getAllProducts(): Promise<ProductWithShopId[]> {
     });
 
     // 2. Fetch all products using a collection group query
-    const productsQuery = db.collectionGroup('products').where('status', '==', 'published');
+    const productsQuery = db.collectionGroup('products')
+      .where('status', '==', 'published')
+      .orderBy('createdAt', 'desc');
     const productSnapshot = await productsQuery.get();
     
     const productsData = productSnapshot.docs.map(doc => {
@@ -134,6 +136,8 @@ export async function getAllProducts(): Promise<ProductWithShopId[]> {
     return productsData;
   } catch (error) {
     console.error("Error fetching all products:", error);
+    // In a production environment, you might re-throw the error
+    // or return a specific error object. For now, we return an empty array.
     return [];
   }
 }
