@@ -74,7 +74,6 @@ export const ROLES: Record<string, Role> = {
       PERMISSIONS.USERS.UPDATE_ROLE,
       PERMISSIONS.USERS.UPDATE_STATUS,
       PERMISSIONS.USERS.SEND_PASSWORD_RESET,
-      PERMISSIONS.USERS.DELETE,
     ],
   },
   'operations-manager': {
