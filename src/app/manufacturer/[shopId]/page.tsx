@@ -13,10 +13,9 @@ import {
   CheckCircle,
   Truck,
   Banknote,
-  Search,
-  ListFilter,
   Globe,
   MessageSquare,
+  Sparkles,
 } from 'lucide-react';
 import {
   Card,
@@ -36,16 +35,17 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { type Product, type Manufacturer } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
 
-export default function ManufacturerPage({ params }: { params: { shopId: string } }) {
-  const shopId = params.shopId;
+export default function ManufacturerPage() {
+  const shopId = useParams().shopId as string;
   const firestore = useFirestore();
 
   const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
@@ -75,18 +75,31 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
 
   const { data: manufacturerProducts, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
 
+   const reviewsQuery = useMemoFirebase(() => {
+    if (!firestore || !manufacturer) return null;
+    return query(collection(firestore, 'reviews'), where('manufacturerId', '==', manufacturer.id), where('status', '==', 'approved'));
+  }, [firestore, manufacturer]);
+  const { data: reviews, isLoading: isLoadingReviews } = useCollection(reviewsQuery);
+
+
   if (isLoading) {
     return (
-        <div className="bg-muted/20">
-            <div className="relative h-48 md:h-64 w-full bg-muted"></div>
-            <div className="container -mt-24 pb-12">
-                 <div className="flex flex-col md:flex-row items-start gap-6">
-                     <Skeleton className="h-32 w-32 rounded-full border-4 border-background bg-muted" />
-                     <div className="pt-8 space-y-2">
-                        <Skeleton className="h-10 w-64" />
-                        <Skeleton className="h-6 w-80" />
-                     </div>
-                 </div>
+        <div className="bg-background">
+            <div className="container mx-auto px-4 py-12">
+                <Skeleton className="h-6 w-1/3 mb-12" />
+                <div className="relative bg-muted/30 rounded-lg p-8 md:p-12 mb-12">
+                    <div className="grid md:grid-cols-3 items-center gap-8">
+                         <div className="md:col-span-2 space-y-4">
+                            <Skeleton className="h-12 w-3/4" />
+                            <Skeleton className="h-6 w-full" />
+                            <Skeleton className="h-6 w-1/2" />
+                         </div>
+                         <div className="flex justify-center md:justify-end">
+                            <Skeleton className="h-32 w-32 rounded-full" />
+                         </div>
+                    </div>
+                </div>
+                <Skeleton className="h-96 w-full" />
             </div>
         </div>
     )
@@ -97,239 +110,183 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
   }
 
   return (
-    <div className="bg-muted/20">
-      {/* Hero Section */}
-      <div className="relative h-48 md:h-64 w-full">
-        <Image
-          src={manufacturer.coverImageUrl || 'https://picsum.photos/seed/mfg-cover/1600/400'}
-          alt={`${manufacturer.name} cover image`}
-          fill
-          className="object-cover"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
-      </div>
-      <div className="container -mt-16 md:-mt-24 pb-12">
-        <div className="flex flex-col md:flex-row items-start gap-6">
-          <div className="relative flex-shrink-0">
-            <Image
-              src={manufacturer.logoUrl || 'https://picsum.photos/seed/mfg-logo/128/128'}
-              alt={`${manufacturer.name} logo`}
-              width={128}
-              height={128}
-              className="rounded-full border-4 border-background bg-background"
-            />
-          </div>
-          <div className="flex-grow pt-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-3xl font-bold font-headline text-background md:text-foreground">{manufacturer.name}</h1>
-                        {manufacturer.isVerified && <ShieldCheck className="h-7 w-7 text-green-400" />}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
-                        <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span>{manufacturer.rating || 'N/A'} Seller Rating</span>
+    <div className="bg-background">
+        <div className="container mx-auto px-4 py-8">
+             <Breadcrumb className="mb-6">
+                <BreadcrumbList>
+                <BreadcrumbItem>
+                    <BreadcrumbLink asChild><Link href="/">Home</Link></BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator />
+                <BreadcrumbItem>
+                    <BreadcrumbPage>{manufacturer.name}</BreadcrumbPage>
+                </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
+            
+            {/* --- Hero Section --- */}
+            <div className="relative bg-muted/30 rounded-lg p-8 md:p-12 mb-12 overflow-hidden">
+                <div className="absolute -top-1/4 -right-1/4 w-1/2 h-[150%] bg-primary/5 rounded-full blur-3xl -z-10"></div>
+                <div className="grid md:grid-cols-3 items-center gap-8">
+                     <div className="md:col-span-2">
+                        <div className="flex items-center gap-3 mb-4">
+                            <h1 className="text-4xl font-bold font-headline">{manufacturer.name}</h1>
+                             {manufacturer.isVerified && <ShieldCheck className="h-8 w-8 text-green-500" />}
                         </div>
-                        <div className="flex items-center gap-1">
-                            <Building className="w-4 h-4" />
-                            <span>{manufacturer.industry || 'N/A'}</span>
+                        <p className="text-lg text-muted-foreground mb-6 max-w-2xl">{manufacturer.overview}</p>
+                         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+                            <div className="flex items-center gap-2">
+                                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                <span><span className="font-bold text-foreground">{manufacturer.rating || 'N/A'}</span> / 5 Rating</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Building className="w-4 h-4" />
+                                <span>{manufacturer.industry || 'N/A'}</span>
+                            </div>
+                             <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                <span>Member since {manufacturer.memberSince || 'N/A'}</span>
+                            </div>
                         </div>
-                         <div className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>Member since {manufacturer.memberSince || 'N/A'}</span>
-                        </div>
-                    </div>
-                </div>
-                <div className="flex gap-2 self-start sm:self-center">
-                    <Button><MessageSquare className="mr-2 h-4 w-4" /> Contact</Button>
-                    <Button variant="outline">Follow</Button>
+                     </div>
+                     <div className="hidden md:flex justify-end items-center">
+                        <Image
+                          src={manufacturer.logoUrl || 'https://picsum.photos/seed/mfg-logo/200/200'}
+                          alt={`${manufacturer.name} logo`}
+                          width={160}
+                          height={160}
+                          className="rounded-full border-4 border-background bg-background shadow-lg"
+                        />
+                     </div>
                 </div>
             </div>
-          </div>
-        </div>
-        
-        {/* Main content with tabs */}
-        <Tabs defaultValue="products" className="mt-8">
-            <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-                <TabsTrigger value="products">Products</TabsTrigger>
-                <TabsTrigger value="about">About</TabsTrigger>
-                <TabsTrigger value="logistics">Trade & Logistics</TabsTrigger>
-                <TabsTrigger value="reviews">Reviews ({manufacturer.reviews?.length || 0})</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="products" className="mt-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Product Catalog</CardTitle>
-                        <CardDescription>Browse all products from {manufacturer.name}</CardDescription>
-                         <div className="flex flex-col md:flex-row gap-2 pt-4">
-                            <div className="relative flex-grow">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                <Input placeholder="Search in this shop..." className="pl-10" />
-                            </div>
-                            <Button variant="outline" className="w-full md:w-auto"><ListFilter className="mr-2 h-4 w-4" /> Filter</Button>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {isLoadingProducts ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-80 w-full" />) :
-                            manufacturerProducts && manufacturerProducts.length > 0 ? (
-                                manufacturerProducts.map((product) => (
-                                <Card key={product.id} className="overflow-hidden group flex flex-col">
-                                  <div className="flex-grow">
-                                    <Link href={`/products/${shopId}/${product.slug}`}>
-                                    <CardContent className="p-0">
-                                    <div className="relative aspect-[4/3] overflow-hidden">
-                                        <Image
-                                        src={product.imageUrl || 'https://picsum.photos/seed/product/600/400'}
-                                        alt={product.name}
-                                        fill
-                                        className="object-cover group-hover:scale-105 transition-transform"
-                                        data-ai-hint={product.imageHint || 'product photo'}
-                                        />
-                                    </div>
-                                    <div className="p-4 space-y-1">
-                                        <h3 className="font-semibold leading-tight h-10 truncate">{product.name}</h3>
-                                        <p className="text-primary font-bold text-lg">KES {product.price.toLocaleString()}</p>
-                                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                            <span>{product.rating || 'N/A'}</span>
-                                            <span>({product.reviewCount || 0})</span>
-                                        </div>
-                                    </div>
-                                    </CardContent>
-                                    </Link>
-                                    </div>
-                                    <CardFooter className="p-4 pt-0">
-                                      <RequestQuoteModal product={product}>
-                                        <Button className="w-full">Request Quotation</Button>
-                                      </RequestQuoteModal>
-                                    </CardFooter>
-                                </Card>
-                            ))) : (
-                                <div className="col-span-full text-center py-12 text-muted-foreground">
-                                    <p>This manufacturer has not published any products yet.</p>
-                                </div>
-                            )}
-                        </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
 
-            <TabsContent value="about" className="mt-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>About {manufacturer.name}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="prose prose-sm max-w-none text-muted-foreground">
-                        <p>{manufacturer.overview}</p>
-                        <div className="not-prose grid md:grid-cols-2 gap-6 mt-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Business Details</CardTitle>
-                                </CardHeader>
-                                <CardContent className="text-sm space-y-2">
-                                     <p><strong>Business Type:</strong> {manufacturer.businessType || 'N/A'}</p>
-                                     <p><strong>Location:</strong> {manufacturer.location || 'N/A'}</p>
-                                     <p><strong>Workforce:</strong> {manufacturer.workforceSize || 'N/A'}</p>
-                                     <p><strong>Main Export Markets:</strong> {manufacturer.exportMarkets?.join(', ') || 'N/A'}</p>
-                                </CardContent>
-                            </Card>
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle className="text-lg">Certifications</CardTitle>
-                                </CardHeader>
-                                <CardContent className="text-sm space-y-2">
-                                    {manufacturer.certifications?.map(cert => (
-                                        <div key={cert} className="flex items-center gap-2">
-                                            <CheckCircle className="h-4 w-4 text-green-500" />
-                                            <span>{cert}</span>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
+            {/* --- Product Catalog --- */}
+            <section id="products" className="mb-16">
+                 <div className="flex items-center justify-between mb-8">
+                     <h2 className="text-3xl font-bold font-headline">Product Catalog</h2>
+                     <Button variant="outline" asChild><Link href="/products">View All Products</Link></Button>
+                 </div>
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {isLoadingProducts ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-80 w-full" />) :
+                    manufacturerProducts && manufacturerProducts.length > 0 ? (
+                        manufacturerProducts.map((product) => (
+                        <Card key={product.id} className="overflow-hidden group flex flex-col hover:shadow-xl transition-shadow duration-300">
+                            <div className="flex-grow">
+                            <Link href={`/products/${shopId}/${product.slug}`}>
+                            <CardContent className="p-0">
+                            <div className="relative aspect-video overflow-hidden">
+                                <Image
+                                src={product.imageUrl || 'https://picsum.photos/seed/product/600/400'}
+                                alt={product.name}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform"
+                                data-ai-hint={product.imageHint || 'product photo'}
+                                />
+                            </div>
+                            <div className="p-4 space-y-1">
+                                <h3 className="font-semibold leading-tight h-10 truncate">{product.name}</h3>
+                                <p className="text-primary font-bold text-lg">KES {product.price.toLocaleString()}</p>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                    <span>{product.rating || 'N/A'}</span>
+                                    <span>({product.reviewCount || 0})</span>
+                                </div>
+                            </div>
+                            </CardContent>
+                            </Link>
+                            </div>
+                            <CardFooter className="p-4 pt-0">
+                                <RequestQuoteModal product={product}>
+                                <Button className="w-full">Request Quotation</Button>
+                                </RequestQuoteModal>
+                            </CardFooter>
+                        </Card>
+                    ))) : (
+                        <div className="col-span-full text-center py-12 text-muted-foreground">
+                            <p>This manufacturer has not published any products yet.</p>
                         </div>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            
-            <TabsContent value="logistics" className="mt-6">
-                 <Card>
-                    <CardHeader>
-                        <CardTitle>Trade & Logistics Information</CardTitle>
-                        <CardDescription>Key details for sourcing and shipping.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        <Card>
-                            <CardHeader className="flex-row items-center gap-4 space-y-0">
-                                <Banknote className="h-8 w-8 text-primary"/>
-                                <div>
-                                    <CardTitle className="text-base">Payment</CardTitle>
-                                    <CardDescription>Accepted Methods</CardDescription>
-                                </div>
-                            </CardHeader>
-                            <CardContent>{manufacturer.paymentMethods?.join(', ') || 'Not specified'}</CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="flex-row items-center gap-4 space-y-0">
-                                <Truck className="h-8 w-8 text-primary"/>
-                                <div>
-                                    <CardTitle className="text-base">Delivery</CardTitle>
-                                    <CardDescription>Terms & Lead Time</CardDescription>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <p>{manufacturer.deliveryTerms?.join(', ') || 'Not specified'}</p>
-                                <p className="text-sm text-muted-foreground">Lead time: {manufacturer.leadTime || 'Not specified'}</p>
-                            </CardContent>
-                        </Card>
-                        <Card>
-                            <CardHeader className="flex-row items-center gap-4 space-y-0">
-                                <Globe className="h-8 w-8 text-primary"/>
-                                <div>
-                                    <CardTitle className="text-base">Production</CardTitle>
-                                    <CardDescription>Capacity & MOQ</CardDescription>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <p>Capacity: {manufacturer.productionCapacity || 'Not specified'}</p>
-                                <p className="text-sm text-muted-foreground">Min. Order: {manufacturer.moq || 'Not specified'} units</p>
-                            </CardContent>
-                        </Card>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            <TabsContent value="reviews" className="mt-6">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Ratings & Reviews</CardTitle>
-                        <CardDescription>Feedback from verified buyers.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {manufacturer.reviews?.map(review => (
-                             <div key={review.id} className="border-t py-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <div className="flex">
-                                        {[...Array(5)].map((_, i) => (
-                                            <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
-                                        ))}
+                    )}
+                </div>
+            </section>
+
+             <Separator className="my-16" />
+
+            {/* --- Trade & Logistics --- */}
+            <section id="trade" className="mb-16">
+                 <h2 className="text-3xl font-bold font-headline mb-8 text-center">Trade & Logistics Information</h2>
+                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex-row items-center gap-4 space-y-0">
+                            <div className="p-3 bg-primary/10 rounded-full"><Banknote className="h-6 w-6 text-primary"/></div>
+                            <CardTitle className="text-lg">Payment Methods</CardTitle>
+                        </CardHeader>
+                        <CardContent>{manufacturer.paymentMethods?.join(', ') || 'Not specified'}</CardContent>
+                    </Card>
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex-row items-center gap-4 space-y-0">
+                            <div className="p-3 bg-primary/10 rounded-full"><Truck className="h-6 w-6 text-primary"/></div>
+                            <CardTitle className="text-lg">Delivery Terms</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>{manufacturer.deliveryTerms?.join(', ') || 'Not specified'}</p>
+                            <p className="text-sm text-muted-foreground">Lead time: {manufacturer.leadTime || 'Not specified'}</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="hover:bg-muted/50 transition-colors">
+                        <CardHeader className="flex-row items-center gap-4 space-y-0">
+                           <div className="p-3 bg-primary/10 rounded-full"> <Globe className="h-6 w-6 text-primary"/></div>
+                            <CardTitle className="text-lg">Production</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p>Capacity: {manufacturer.productionCapacity || 'Not specified'}</p>
+                            <p className="text-sm text-muted-foreground">Min. Order: {manufacturer.moq || 'Not specified'} units</p>
+                        </CardContent>
+                    </Card>
+                 </div>
+            </section>
+
+             <Separator className="my-16" />
+
+            {/* --- Reviews Section --- */}
+            <section id="reviews" className="mb-16">
+                <h2 className="text-3xl font-bold font-headline mb-8 text-center">What Buyers Are Saying</h2>
+                <div className="max-w-4xl mx-auto space-y-6">
+                    {isLoadingReviews ? Array.from({length: 2}).map((_, i) => <Skeleton key={i} className="h-32 w-full" />) :
+                     reviews && reviews.length > 0 ? (
+                        reviews.map((review: any) => (
+                             <Card key={review.id} className="p-6">
+                                <div className="flex items-start gap-4">
+                                    <Avatar>
+                                        <AvatarImage src={review.buyerAvatar || ''} />
+                                        <AvatarFallback>{review.buyerName?.charAt(0) || 'U'}</AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-grow">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="font-semibold">{review.buyerName}</p>
+                                                <p className="text-xs text-muted-foreground">{review.createdAt ? formatDistanceToNow(review.createdAt.toDate()) : ''} ago</p>
+                                            </div>
+                                            <div className="flex items-center">
+                                                {[...Array(5)].map((_, i) => (
+                                                    <Star key={i} className={`h-5 w-5 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <p className="text-muted-foreground mt-2 text-sm italic">"{review.comment}"</p>
                                     </div>
-                                     <p className="font-semibold">{review.author}</p>
                                 </div>
-                                <p className="text-muted-foreground">{review.comment}</p>
-                            </div>
-                        ))}
-                        {!manufacturer.reviews || manufacturer.reviews.length === 0 && (
-                            <div className="text-center text-muted-foreground py-8">
-                                <p>No reviews yet for this manufacturer.</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </TabsContent>
-        </Tabs>
-      </div>
+                            </Card>
+                        ))
+                    ) : (
+                        <div className="text-center text-muted-foreground py-8">
+                            <p>No reviews yet for this manufacturer.</p>
+                        </div>
+                    )}
+                </div>
+            </section>
+
+        </div>
     </div>
   );
 }
