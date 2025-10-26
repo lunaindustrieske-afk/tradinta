@@ -8,8 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserPlus, ShieldAlert, Users, Loader2, Package, ShoppingCart, Users2, User, Signal, Building, Handshake, Landmark, Scale, Megaphone, LifeBuoy, Wallet, FileText, ArrowRight, Coins, BarChart, Truck, Shield, BookUser, Settings, FileWarning, ShieldCheck } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, query, where, orderBy, limit, collectionGroup } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
+import { collection, query, where, orderBy, limit, collectionGroup, doc, setDoc } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -18,6 +18,19 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { PermissionDenied } from '@/components/ui/permission-denied';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 type UserProfile = {
@@ -44,6 +57,10 @@ type SystemAlert = {
     status: 'new' | 'acknowledged' | 'resolved';
 }
 
+type PlatformSettings = {
+    allowUnverifiedUploads?: boolean;
+}
+
 const RoleCard = ({ title, count, isLoading, onAddUser }: { title: string, count?: number, isLoading: boolean, onAddUser: () => void }) => (
     <Card className="hover:bg-muted/50 transition-colors flex items-center p-3 justify-between">
         <div className="flex flex-col">
@@ -61,6 +78,7 @@ const RoleCard = ({ title, count, isLoading, onAddUser }: { title: string, count
 export default function SuperAdminDashboardPage() {
     const { isUserLoading, role } = useUser();
     const firestore = useFirestore();
+    const { toast } = useToast();
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -80,47 +98,17 @@ export default function SuperAdminDashboardPage() {
         router.push(`${pathname}?${params.toString()}`);
     };
 
-    const usersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'users'));
-    }, [firestore]);
-
-     const sellersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'manufacturers'));
-    }, [firestore]);
-
-     const buyersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('role', '==', 'buyer'));
-    }, [firestore]);
+    // --- Data Fetching ---
+    const usersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users')) : null, [firestore]);
+    const sellersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'manufacturers')) : null, [firestore]);
+    const buyersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'buyer')) : null, [firestore]);
+    const partnersQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'users'), where('role', '==', 'partner')) : null, [firestore]);
+    const productsQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'products')) : null, [firestore]);
+    const ordersQuery = useMemoFirebase(() => firestore ? query(collectionGroup(firestore, 'orders')) : null, [firestore]);
+    const activityLogsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'activityLogs'), orderBy('timestamp', 'desc'), limit(50)) : null, [firestore]);
+    const criticalAlertsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'systemAlerts'), where('status', '==', 'new'), where('severity', '==', 'critical')) : null, [firestore]);
+    const platformSettingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'platformSettings', 'config') : null, [firestore]);
     
-    const partnersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'users'), where('role', '==', 'partner'));
-    }, [firestore]);
-
-
-    const productsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collectionGroup(firestore, 'products'));
-    }, [firestore]);
-
-     const ordersQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collectionGroup(firestore, 'orders'));
-    }, [firestore]);
-
-    const activityLogsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'activityLogs'), orderBy('timestamp', 'desc'), limit(50));
-    }, [firestore]);
-    
-    const criticalAlertsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'systemAlerts'), where('status', '==', 'new'), where('severity', '==', 'critical'));
-    }, [firestore]);
-
     const { data: users, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
     const { data: sellers, isLoading: isLoadingSellers } = useCollection(sellersQuery);
     const { data: buyers, isLoading: isLoadingBuyers } = useCollection(buyersQuery);
@@ -129,8 +117,17 @@ export default function SuperAdminDashboardPage() {
     const { data: orders, isLoading: isLoadingOrders } = useCollection(ordersQuery);
     const { data: activityLogs, isLoading: isLoadingLogs } = useCollection<ActivityLog>(activityLogsQuery);
     const { data: criticalAlerts, isLoading: isLoadingAlerts } = useCollection<SystemAlert>(criticalAlertsQuery);
+    const { data: platformSettings, isLoading: isLoadingSettings } = useDoc<PlatformSettings>(platformSettingsRef);
 
-    
+    const handleSettingChange = (key: keyof PlatformSettings, value: boolean) => {
+        if (!platformSettingsRef) return;
+        updateDocumentNonBlocking(platformSettingsRef, { [key]: value });
+        toast({
+            title: "Setting Updated",
+            description: "The platform setting has been changed.",
+        });
+    };
+
     const renderLogRows = () => {
         if (isLoadingLogs) {
              return Array.from({ length: 4 }).map((_, i) => (
@@ -437,6 +434,42 @@ export default function SuperAdminDashboardPage() {
                             <CardFooter>
                                 <Button>Save Financial Settings</Button>
                             </CardFooter>
+                        </Card>
+                        
+                        <Card>
+                            <CardHeader><CardTitle>Product Settings</CardTitle></CardHeader>
+                            <CardContent>
+                                {isLoadingSettings ? <Skeleton className="h-12 w-full" /> : (
+                                    <AlertDialog>
+                                        <div className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                            <div className="space-y-0.5">
+                                                <Label htmlFor="allow-unverified-upload">Allow Unverified Sellers to Upload</Label>
+                                                <p className="text-xs text-muted-foreground">If enabled, new sellers can add products before their profile is verified. Products will remain as drafts.</p>
+                                            </div>
+                                            <AlertDialogTrigger asChild>
+                                                <Switch id="allow-unverified-upload" checked={platformSettings?.allowUnverifiedUploads || false} />
+                                            </AlertDialogTrigger>
+                                        </div>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    {platformSettings?.allowUnverifiedUploads 
+                                                        ? "This will prevent new, unverified sellers from uploading any products until their profile is approved."
+                                                        : "This will allow new sellers to start uploading products immediately after signing up, before they are verified."
+                                                    }
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleSettingChange('allowUnverifiedUploads', !platformSettings?.allowUnverifiedUploads)}>
+                                                    Continue
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                )}
+                            </CardContent>
                         </Card>
 
                         <Card>
