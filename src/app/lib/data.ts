@@ -1,12 +1,9 @@
 
 'use server';
-import { getFirestore } from 'firebase-admin/firestore';
-import { customInitApp } from '@/firebase/admin';
+import { getDb } from '@/app/lib/firebase-admin';
 import { type Product, type Manufacturer } from './definitions';
 
-// Initialize Firebase Admin SDK
-customInitApp();
-const db = getFirestore();
+const db = getDb();
 
 // Define types for our data
 type HomepageBanner = {
