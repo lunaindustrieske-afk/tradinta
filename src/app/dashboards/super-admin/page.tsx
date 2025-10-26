@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { PermissionDenied } from '@/components/ui/permission-denied';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -121,7 +121,7 @@ export default function SuperAdminDashboardPage() {
 
     const handleSettingChange = (key: keyof PlatformSettings, value: boolean) => {
         if (!platformSettingsRef) return;
-        updateDocumentNonBlocking(platformSettingsRef, { [key]: value });
+        setDocumentNonBlocking(platformSettingsRef, { [key]: value }, { merge: true });
         toast({
             title: "Setting Updated",
             description: "The platform setting has been changed.",
@@ -444,7 +444,7 @@ export default function SuperAdminDashboardPage() {
                                         <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                             <div className="space-y-0.5">
                                                 <Label htmlFor="allow-unverified-upload">Allow Unverified Sellers to Upload</Label>
-                                                <p className="text-xs text-muted-foreground">If enabled, new sellers can add products before their profile is verified. Products will remain as drafts.</p>
+                                                <p className="text-xs text-muted-foreground">If enabled, new sellers can add products before their profile is approved. Products will remain as drafts.</p>
                                             </div>
                                             <AlertDialogTrigger asChild>
                                                 <Switch id="allow-unverified-upload" checked={platformSettings?.allowUnverifiedUploads || false} />
