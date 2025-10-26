@@ -104,7 +104,7 @@ type ProductWithShopId = Product & { shopId: string };
  * Fetches all published products and their manufacturer's shopId.
  * This function runs on the server and uses the Admin SDK.
  */
-export async function getAllProducts(): Promise<ProductWithShopId[]> {
+export async function getAllProducts(): Promise<any[]> {
   try {
     // 1. Fetch all manufacturers and create a map of UID to shopId
     const manufCollection = db.collection('manufacturers');
@@ -124,10 +124,22 @@ export async function getAllProducts(): Promise<ProductWithShopId[]> {
     const productSnapshot = await productsQuery.get();
     
     const productsData = productSnapshot.docs.map(doc => {
-      const product = doc.data() as Product;
-      const shopId = manufMap.get(product.manufacturerId) || '';
+      const productData = doc.data();
+      
+      // Sanitize Firestore Timestamps
+      const sanitizedData: { [key: string]: any } = {};
+      for (const key in productData) {
+        const value = productData[key];
+        if (value && typeof value.toDate === 'function') { // Check if it's a Firestore Timestamp
+          sanitizedData[key] = value.toDate().toISOString();
+        } else {
+          sanitizedData[key] = value;
+        }
+      }
+
+      const shopId = manufMap.get(sanitizedData.manufacturerId) || '';
       return {
-        ...product,
+        ...sanitizedData,
         id: doc.id,
         shopId: shopId,
       };
