@@ -443,8 +443,12 @@ export default function SuperAdminDashboardPage() {
                                     <AlertDialog>
                                         <div className="flex flex-row items-center justify-between rounded-lg border p-4">
                                             <div className="space-y-0.5">
-                                                <Label htmlFor="allow-unverified-upload">Allow Unverified Sellers to Upload</Label>
-                                                <p className="text-xs text-muted-foreground">If enabled, new sellers can add products before their profile is approved. Products will remain as drafts.</p>
+                                                <Label htmlFor="allow-unverified-upload" className={cn(platformSettings?.allowUnverifiedUploads ? 'text-green-600' : 'text-destructive')}>
+                                                    Product Uploads for Unverified Sellers are currently {platformSettings?.allowUnverifiedUploads ? 'ENABLED' : 'DISABLED'}
+                                                </Label>
+                                                <p className="text-xs text-muted-foreground">
+                                                    This switch controls whether new sellers can add products before their profile is fully verified.
+                                                </p>
                                             </div>
                                             <AlertDialogTrigger asChild>
                                                 <Switch id="allow-unverified-upload" checked={platformSettings?.allowUnverifiedUploads || false} />
@@ -452,11 +456,11 @@ export default function SuperAdminDashboardPage() {
                                         </div>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                                 <AlertDialogDescription>
                                                     {platformSettings?.allowUnverifiedUploads 
-                                                        ? "This will prevent new, unverified sellers from uploading any products until their profile is approved."
-                                                        : "This will allow new sellers to start uploading products immediately after signing up, before they are verified."
+                                                        ? "You are about to DISABLE product uploads for unverified sellers. New sellers will need to be fully verified before they can add any products."
+                                                        : "You are about to ENABLE product uploads for unverified sellers. They will be able to add products, but the products will remain as drafts with limited visibility until verification is complete."
                                                     }
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
