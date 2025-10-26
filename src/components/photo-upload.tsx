@@ -41,7 +41,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
         // Automatically start the upload process
         handleUpload(selectedFile);
       }
-    }, []);
+    }, [onUpload]);
 
     const handleUpload = async (fileToUpload: File) => {
       if (!fileToUpload) return;
