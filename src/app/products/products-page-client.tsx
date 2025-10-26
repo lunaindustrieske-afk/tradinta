@@ -35,7 +35,6 @@ import {
   ListFilter,
   Search,
   Star,
-  Loader2,
   Factory,
   Building2,
   UtensilsCrossed,
@@ -55,15 +54,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { useFirestore } from '@/firebase';
-import { collectionGroup, getDocs, query, where } from 'firebase/firestore';
-import { type Product, type Manufacturer } from '@/lib/definitions';
-import { Skeleton } from '@/components/ui/skeleton';
-import { getAllProducts } from '@/app/lib/data';
+import { type Product } from '@/lib/definitions';
 import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
-
 
 type ProductWithShopId = Product & { shopId: string };
 
@@ -85,7 +78,7 @@ const categoryIcons: Record<string, React.ReactNode> = {
     "Services & Trade Support": <Handshake className="w-5 h-5" />,
 };
 
-const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWithShopId[] }) => {
+export function ProductsPageClient({ initialProducts }: { initialProducts: ProductWithShopId[] }) {
   const [filters, setFilters] = useState({
     category: 'all',
     priceRange: [0, 200000],
@@ -346,10 +339,4 @@ const ProductsPageContent = ({ initialProducts }: { initialProducts: ProductWith
       </div>
     </div>
   )
-}
-
-export default async function ProductsPage() {
-  const initialProducts = await getAllProducts();
-
-  return <ProductsPageContent initialProducts={initialProducts} />;
 }
