@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -59,6 +60,7 @@ import {
   limit,
   setDoc,
   serverTimestamp,
+  collectionGroup,
 } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Review } from '@/app/lib/definitions';
@@ -354,9 +356,8 @@ export default function SellerDashboardPage() {
   }
 
   const isManufacturer = role === 'manufacturer' || role === 'super-admin' || role === 'admin';
-  const canApply = !role || role === 'buyer' || role === 'partner' || role === 'influencer';
   
-  if (!isManufacturer && !canApply) {
+  if (!isManufacturer && user) {
       return <ApplyToBecomeManufacturer />;
   }
 
