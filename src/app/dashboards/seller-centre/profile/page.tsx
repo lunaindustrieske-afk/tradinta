@@ -221,14 +221,12 @@ export default function EditShopProfilePage() {
           Edit Shop Profile
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          {shopId && (
-            <Button variant="outline" size="sm" asChild>
-                <Link href={`/manufacturer/${shopId}`} target="_blank">
-                    <Eye className="mr-2 h-4 w-4" />
-                    View Public Shop
-                </Link>
-            </Button>
-          )}
+          <Button variant="outline" size="sm" asChild disabled={!shopId}>
+              <Link href={`/manufacturer/${shopId}`} target="_blank">
+                  <Eye className="mr-2 h-4 w-4" />
+                  View Public Shop
+              </Link>
+          </Button>
           <Button size="sm" onClick={handleSaveChanges} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
             {isLoading ? 'Saving...' : 'Save Changes'}
