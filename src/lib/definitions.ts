@@ -39,10 +39,12 @@ export type Campaign = {
 export type Manufacturer = {
   id: string; // Firebase UID
   shopId: string; // Short, unique, URL-friendly ID
+  shopName?: string;
+  tagline?: string;
   slug: string;
   name: string;
-  logoUrl: string;
-  coverImageUrl: string;
+  logoUrl?: string;
+  bannerUrl?: string; // Changed from coverImageUrl
   industry: string;
   location: string;
   memberSince: number;
@@ -67,4 +69,15 @@ export type Manufacturer = {
   }[];
 };
 
-    
+export type Review = {
+  id: string;
+  productId: string;
+  productName: string;
+  buyerId: string;
+  buyerName: string;
+  buyerAvatar?: string;
+  rating: number;
+  comment: string;
+  createdAt: any; // Firestore timestamp
+  status: 'pending' | 'approved' | 'rejected';
+};
