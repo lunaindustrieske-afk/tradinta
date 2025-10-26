@@ -1,6 +1,4 @@
 
-'use server';
-
 import { customInitApp } from '@/firebase/admin';
 import { getFirestore } from 'firebase-admin/firestore';
 

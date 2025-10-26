@@ -1,6 +1,6 @@
 
 'use server';
-import { getDb } from '@/app/lib/firebase-admin';
+import { getDb } from '@/lib/firebase-admin';
 import { type Product, type Manufacturer } from './definitions';
 
 const db = getDb();
