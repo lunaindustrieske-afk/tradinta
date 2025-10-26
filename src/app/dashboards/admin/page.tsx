@@ -6,9 +6,9 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2 } from "lucide-react";
-import { useCollection, useCollectionGroup, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
+import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2, BarChart2 } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
+import { collection, query, where, doc, collectionGroup } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -401,3 +401,5 @@ export default function AdminDashboard() {
         </Tabs>
     );
 }
+
+    
