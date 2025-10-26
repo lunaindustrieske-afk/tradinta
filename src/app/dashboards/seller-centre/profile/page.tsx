@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -32,9 +31,8 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { PhotoUpload } from '@/components/photo-upload';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { setDocumentNonBlocking } from '@/firebase';
 import { nanoid } from 'nanoid';
 
 type ManufacturerData = {
@@ -161,12 +159,11 @@ export default function EditShopProfilePage() {
     
     try {
       const manufRef = doc(firestore, 'manufacturers', user.uid);
-      // Using non-blocking update
-      setDocumentNonBlocking(manufRef, manufacturerData, { merge: true });
+      await setDoc(manufRef, manufacturerData, { merge: true });
       
       toast({
-        title: "Profile Saving...",
-        description: "Your changes are being saved in the background.",
+        title: "Profile Saved!",
+        description: "Your changes have been successfully saved.",
       });
 
       // Optimistically update local state if needed
