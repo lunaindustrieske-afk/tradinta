@@ -6,8 +6,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
+import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2 } from "lucide-react";
+import { useCollection, useCollectionGroup, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -15,7 +15,9 @@ import { useToast } from "@/hooks/use-toast";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { logActivity } from "@/lib/activity-log";
 import React from 'react';
-
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import Image from "next/image";
 
 type Manufacturer = {
     id: string;
@@ -27,17 +29,56 @@ type Manufacturer = {
     sales?: number; // This would need to be calculated/stored
 };
 
+type Product = {
+  id: string;
+  name: string;
+  manufacturerId: string;
+  shopName?: string; // Denormalized for display
+  imageUrl?: string;
+  status: 'draft' | 'published' | 'archived';
+  stock: number;
+  price: number;
+};
+
 export default function AdminDashboard() {
     const firestore = useFirestore();
     const auth = useAuth();
     const { toast } = useToast();
+    
+    const [productSearchQuery, setProductSearchQuery] = React.useState('');
+    const [productStatusFilter, setProductStatusFilter] = React.useState<'all' | 'published' | 'draft' | 'archived'>('all');
 
     const manufacturersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
         return collection(firestore, 'manufacturers');
     }, [firestore]);
 
+    const allProductsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collectionGroup(firestore, 'products');
+    }, [firestore]);
+
     const { data: allManufacturers, isLoading: isLoadingManufacturers } = useCollection<Manufacturer>(manufacturersQuery);
+    const { data: allProducts, isLoading: isLoadingProducts } = useCollection<Product>(allProductsQuery);
+    
+    const productsWithSeller = React.useMemo(() => {
+        if (!allProducts || !allManufacturers) return null;
+        const manufacturerMap = new Map(allManufacturers.map(m => [m.id, m.shopName]));
+        return allProducts.map(p => ({
+            ...p,
+            shopName: manufacturerMap.get(p.manufacturerId) || 'Unknown Seller'
+        }));
+    }, [allProducts, allManufacturers]);
+
+    const filteredProducts = React.useMemo(() => {
+        if (!productsWithSeller) return [];
+        return productsWithSeller.filter(product => {
+            const matchesSearch = product.name.toLowerCase().includes(productSearchQuery.toLowerCase()) || product.shopName?.toLowerCase().includes(productSearchQuery.toLowerCase());
+            const matchesStatus = productStatusFilter === 'all' || product.status === productStatusFilter;
+            return matchesSearch && matchesStatus;
+        });
+    }, [productsWithSeller, productSearchQuery, productStatusFilter]);
+
 
     const pendingVerifications = React.useMemo(() => {
         if (!allManufacturers) return null;
@@ -81,6 +122,15 @@ export default function AdminDashboard() {
             title: "Seller Unrestricted",
             description: `${sellerName}'s restrictions have been lifted.`,
         });
+    };
+
+    const getStatusVariant = (status: Product['status']) => {
+        switch (status) {
+            case 'published': return 'secondary';
+            case 'draft': return 'outline';
+            case 'archived': return 'destructive';
+            default: return 'default';
+        }
     };
 
 
@@ -151,13 +201,74 @@ export default function AdminDashboard() {
             </TableRow>
         ));
     }
+    
+    const renderProductCatalogRows = () => {
+        if (isLoadingProducts || isLoadingManufacturers) {
+            return Array.from({length: 5}).map((_, i) => (
+                <TableRow key={`skel-prod-${i}`}>
+                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-16 w-16 rounded-md" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
+                </TableRow>
+            ))
+        }
+        if (!filteredProducts || filteredProducts.length === 0) {
+            return <TableRow><TableCell colSpan={7} className="text-center h-24">No products found for the current filter.</TableCell></TableRow>
+        }
+        return filteredProducts.map((product) => (
+            <TableRow key={product.id}>
+                 <TableCell className="hidden sm:table-cell">
+                    <Image
+                        alt={product.name}
+                        className="aspect-square rounded-md object-cover"
+                        height="64"
+                        src={product.imageUrl || 'https://placehold.co/64x64'}
+                        width="64"
+                    />
+                </TableCell>
+                <TableCell className="font-medium">{product.name}</TableCell>
+                <TableCell>{product.shopName}</TableCell>
+                <TableCell><Badge variant={getStatusVariant(product.status)}>{product.status}</Badge></TableCell>
+                <TableCell>{product.price?.toLocaleString() || 'N/A'}</TableCell>
+                <TableCell>{product.stock > 0 ? product.stock : <Badge variant="destructive">Out of Stock</Badge>}</TableCell>
+                <TableCell>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Toggle menu</span>
+                        </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`}>
+                                <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/dashboards/seller-centre/products/edit/${product.id}`}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit Product
+                                </Link>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+            </TableRow>
+        ));
+    }
 
 
     return (
         <Tabs defaultValue="onboarding">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="onboarding">Onboarding & Verification</TabsTrigger>
                 <TabsTrigger value="performance">Seller Performance</TabsTrigger>
+                <TabsTrigger value="catalog">Product Catalog</TabsTrigger>
                 <TabsTrigger value="support">Support & Training</TabsTrigger>
             </TabsList>
 
@@ -204,6 +315,55 @@ export default function AdminDashboard() {
                             </TableHeader>
                             <TableBody>
                                 {renderPerformanceRows()}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+            
+            <TabsContent value="catalog">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Product Catalog</CardTitle>
+                        <CardDescription>View and manage all products across the Tradinta platform.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Search by product or seller..." className="pl-8" value={productSearchQuery} onChange={e => setProductSearchQuery(e.target.value)} />
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm" className="ml-4 gap-1">
+                                    <ListFilter className="h-3.5 w-3.5" />
+                                    <span>Filter</span>
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Filter by Status</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'all'} onCheckedChange={() => setProductStatusFilter('all')}>All</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'published'} onCheckedChange={() => setProductStatusFilter('published')}>Published</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'draft'} onCheckedChange={() => setProductStatusFilter('draft')}>Draft</DropdownMenuCheckboxItem>
+                                <DropdownMenuCheckboxItem checked={productStatusFilter === 'archived'} onCheckedChange={() => setProductStatusFilter('archived')}>Archived</DropdownMenuCheckboxItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
+                                    <TableHead>Product Name</TableHead>
+                                    <TableHead>Seller</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Price (KES)</TableHead>
+                                    <TableHead>Stock</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {renderProductCatalogRows()}
                             </TableBody>
                         </Table>
                     </CardContent>

@@ -9,6 +9,7 @@ import {
   FirestoreError,
   QuerySnapshot,
   CollectionReference,
+  collectionGroup,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -85,12 +86,10 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
-
         if (error.code === 'permission-denied') {
+            const path: string = memoizedTargetRefOrQuery.type === 'collection'
+                ? (memoizedTargetRefOrQuery as CollectionReference).path
+                : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
             const contextualError = new FirestorePermissionError({
               operation: 'list',
               path,
@@ -111,4 +110,32 @@ export function useCollection<T = any>(
   }, [memoizedTargetRefOrQuery]);
   
   return { data, isLoading, error };
+}
+
+
+/**
+ * React hook to subscribe to a Firestore collection group in real-time.
+ * This hook is a wrapper around `useCollection` that uses `collectionGroup`.
+ * 
+ * IMPORTANT! Memoize the dependencies (`firestore`, `collectionId`, `queryConstraints`)
+ * to prevent re-renders and infinite loops.
+ * 
+ * @template T Type of the document data.
+ * @param firestore The Firestore instance.
+ * @param collectionId The ID of the collection group to query.
+ * @param queryConstraints Optional query constraints (where, orderBy, limit).
+ * @returns {UseCollectionResult<T>} Object with data, isLoading, error.
+ */
+export function useCollectionGroup<T = any>(
+  firestore: import('firebase/firestore').Firestore | null | undefined,
+  collectionId: string,
+  ...queryConstraints: any[] // e.g., where(), orderBy()
+): UseCollectionResult<T> {
+  const memoizedQuery = useMemoFirebase(() => {
+    if (!firestore || !collectionId) return null;
+    const group = collectionGroup(firestore, collectionId);
+    return query(group, ...queryConstraints);
+  }, [firestore, collectionId, ...queryConstraints]);
+
+  return useCollection<T>(memoizedQuery);
 }
