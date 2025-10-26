@@ -5,6 +5,7 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 export const manufacturers: Manufacturer[] = [
     {
         id: 'mfg-1',
+        shopId: 'const-ltd',
         slug: 'constructa-ltd',
         name: 'Constructa Ltd',
         logoUrl: 'https://picsum.photos/seed/mfg1/128/128',
@@ -42,6 +43,7 @@ export const manufacturers: Manufacturer[] = [
     },
     {
         id: 'mfg-2',
+        shopId: 'super-bake',
         name: 'SuperBake Bakery',
         slug: 'superbake-bakery',
         logoUrl: 'https://picsum.photos/seed/mfg2/128/128',
@@ -73,6 +75,7 @@ export const manufacturers: Manufacturer[] = [
     },
     {
         id: 'mfg-3',
+        shopId: 'plastico-ke',
         name: 'PlastiCo Kenya',
         slug: 'plastico-kenya',
         logoUrl: 'https://picsum.photos/seed/mfg3/128/128',
@@ -101,6 +104,7 @@ export const products: Product[] = [
   {
     id: '1',
     name: 'Industrial Grade Cement',
+    slug: 'industrial-grade-cement',
     description: 'High-strength Portland cement suitable for all types of construction projects. Available in 50kg bags.',
     price: 650.00,
     stock: 1200,
@@ -114,6 +118,7 @@ export const products: Product[] = [
   {
     id: '2',
     name: 'Commercial Baking Flour',
+    slug: 'commercial-baking-flour',
     description: 'Premium quality, all-purpose wheat flour for bakeries and food manufacturers. Sold in 25kg sacks.',
     price: 2200.00,
     stock: 800,
@@ -127,6 +132,7 @@ export const products: Product[] = [
   {
     id: '3',
     name: 'HDPE Plastic Pellets',
+    slug: 'hdpe-plastic-pellets',
     description: 'High-density polyethylene pellets for injection molding and manufacturing plastic goods. 1-ton bulk bags.',
     price: 135000.00,
     stock: 50,
@@ -140,6 +146,7 @@ export const products: Product[] = [
   {
     id: '4',
     name: 'Recycled Kraft Paper Rolls',
+    slug: 'recycled-kraft-paper-rolls',
     description: 'Eco-friendly kraft paper rolls for packaging and printing. Various widths and gsm available.',
     price: 8500.00,
     stock: 300,
@@ -153,6 +160,7 @@ export const products: Product[] = [
   {
     id: '5',
     name: 'Bulk Cooking Oil',
+    slug: 'bulk-cooking-oil',
     description: 'Refined sunflower cooking oil supplied in 20-liter jerrycans. Ideal for restaurants and catering businesses.',
     price: 4500.00,
     stock: 500,
@@ -166,6 +174,7 @@ export const products: Product[] = [
    {
     id: '6',
     name: 'Steel Reinforcement Bars (Rebar)',
+    slug: 'steel-reinforcement-bars-rebar',
     description: 'High-tensile steel bars for concrete reinforcement, available in various diameters and lengths.',
     price: 75000.00,
     stock: 200,
@@ -192,5 +201,3 @@ export const campaigns: Campaign[] = [
     { id: 'CAMP-03', name: 'Back to School Special', status: 'Expired', startDate: '2023-08-01', endDate: '2023-08-31', budget: 30000, impressions: 85000, clicks: 4500 },
     { id: 'CAMP-04', name: 'Q1 2024 Planning', status: 'Draft', startDate: '2024-01-01', endDate: '2024-03-31', budget: 100000, impressions: 0, clicks: 0 },
 ];
-
-    

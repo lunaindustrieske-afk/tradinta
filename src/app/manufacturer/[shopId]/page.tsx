@@ -20,7 +20,10 @@ import {
   Truck,
   Banknote,
   Search,
-  ListFilter
+  ListFilter,
+  Eye,
+  Heart,
+  Share2,
 } from 'lucide-react';
 import {
   Card,
@@ -28,6 +31,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,9 +46,10 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
+import { RequestQuoteModal } from '@/components/request-quote-modal';
 
 export default function ManufacturerPage({ params }: { params: { shopId: string } }) {
-  const manufacturer = manufacturers.find((m) => m.shopId === params.shopId);
+  const manufacturer = manufacturers.find((m) => m.slug === params.shopId);
 
   if (!manufacturer) {
     notFound();
@@ -64,7 +69,7 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
           fill
           className="object-cover"
         />
-        <div className="absolute inset-0 bg-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
       </div>
       <div className="container -mt-16 md:-mt-24 pb-12">
         <div className="flex flex-col md:flex-row items-start gap-6">
@@ -81,8 +86,8 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                 <div>
                     <div className="flex items-center gap-2">
-                        <h1 className="text-3xl font-bold font-headline">{manufacturer.name}</h1>
-                        {manufacturer.isVerified && <ShieldCheck className="h-7 w-7 text-green-500" />}
+                        <h1 className="text-3xl font-bold font-headline text-background md:text-foreground">{manufacturer.name}</h1>
+                        {manufacturer.isVerified && <ShieldCheck className="h-7 w-7 text-green-400" />}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground mt-1">
                         <div className="flex items-center gap-1">
@@ -132,8 +137,9 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
                     <CardContent>
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                             {manufacturerProducts.map((product) => (
-                                <Card key={product.id} className="overflow-hidden group">
-                                    <Link href={`/products/${manufacturer.shopId}/${product.slug}`}>
+                                <Card key={product.id} className="overflow-hidden group flex flex-col">
+                                  <div className="flex-grow">
+                                    <Link href={`/products/${manufacturer.slug}/${product.slug}`}>
                                     <CardContent className="p-0">
                                     <div className="relative aspect-[4/3] overflow-hidden">
                                         <Image
@@ -155,9 +161,12 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
                                     </div>
                                     </CardContent>
                                     </Link>
-                                    <div className="p-4 pt-0">
-                                        <Button className="w-full">Request Quote</Button>
                                     </div>
+                                    <CardFooter className="p-4 pt-0">
+                                      <RequestQuoteModal product={product}>
+                                        <Button className="w-full">Request Quotation</Button>
+                                      </RequestQuoteModal>
+                                    </CardFooter>
                                 </Card>
                             ))}
                         </div>

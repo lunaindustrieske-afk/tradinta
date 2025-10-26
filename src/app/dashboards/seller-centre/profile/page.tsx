@@ -8,6 +8,7 @@ import {
   Globe,
   Link as LinkIcon,
   Loader2,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -220,9 +221,14 @@ export default function EditShopProfilePage() {
           Edit Shop Profile
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="outline" size="sm">
-            Cancel
-          </Button>
+          {shopId && (
+            <Button variant="outline" size="sm" asChild>
+                <Link href={`/manufacturer/${shopId}`} target="_blank">
+                    <Eye className="mr-2 h-4 w-4" />
+                    View Public Shop
+                </Link>
+            </Button>
+          )}
           <Button size="sm" onClick={handleSaveChanges} disabled={isLoading}>
             {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Save className="mr-2 h-4 w-4" />}
             {isLoading ? 'Saving...' : 'Save Changes'}

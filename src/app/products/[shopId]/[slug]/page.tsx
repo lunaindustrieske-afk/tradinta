@@ -39,7 +39,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { type Manufacturer, type Review } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { products as mockProducts } from '@/app/lib/mock-data';
+import { mockProducts } from '@/app/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -52,10 +52,14 @@ type Product = {
   stock: number;
   category: string;
   imageUrl: string;
+  bannerUrl?: string; // Main image for the product page
+  otherImageUrls?: string[];
   imageHint: string;
   rating: number;
   reviewCount: number;
   manufacturerId: string;
+  sku?: string;
+  moq?: number;
   weight?: string;
   dimensions?: string;
   material?: string;
@@ -112,11 +116,11 @@ export default function ProductDetailPage() {
         fetchData();
     }, [firestore, shopId, slug]);
     
-    const [mainImage, setMainImage] = React.useState<string | undefined>(product?.imageUrl);
+    const [mainImage, setMainImage] = React.useState<string | undefined>(product?.bannerUrl || product?.imageUrl);
 
     React.useEffect(() => {
         if(product && !mainImage) {
-            setMainImage(product.imageUrl);
+            setMainImage(product.bannerUrl || product.imageUrl);
         }
     }, [product, mainImage]);
 
@@ -160,10 +164,9 @@ export default function ProductDetailPage() {
     }
 
   const images = [
+    product.bannerUrl,
     product.imageUrl,
-    'https://picsum.photos/seed/product-gallery1/600/400',
-    'https://picsum.photos/seed/product-gallery2/600/400',
-    'https://picsum.photos/seed/product-gallery3/600/400',
+    ...(product.otherImageUrls || [])
   ].filter(Boolean) as string[];
 
   return (
@@ -395,7 +398,7 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
                     <Button asChild className="w-full">
-                        <Link href={`/manufacturer/${manufacturer.shopId}`}>View Shop</Link>
+                        <Link href={`/manufacturer/${manufacturer.slug}`}>View Shop</Link>
                     </Button>
                 </CardContent>
             </Card>
@@ -433,4 +436,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-

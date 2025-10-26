@@ -89,6 +89,7 @@ const featuredManufacturers = [
   {
     id: 'mfg-1',
     shopId: 'const-ltd',
+    slug: 'constructa-ltd',
     name: 'Constructa Ltd',
     industry: 'Building Materials',
     logo: 'https://picsum.photos/seed/mfg1/48/48',
@@ -96,6 +97,7 @@ const featuredManufacturers = [
   {
     id: 'mfg-2',
     shopId: 'super-bake',
+    slug: 'superbake-bakery',
     name: 'SuperBake Bakery',
     industry: 'Food & Beverage',
     logo: 'https://picsum.photos/seed/mfg2/48/48',
@@ -103,6 +105,7 @@ const featuredManufacturers = [
   {
     id: 'mfg-3',
     shopId: 'plastico-ke',
+    slug: 'plastico-kenya',
     name: 'PlastiCo Kenya',
     industry: 'Plastics & Polymers',
     logo: 'https://picsum.photos/seed/mfg3/48/48',
@@ -110,6 +113,7 @@ const featuredManufacturers = [
   {
     id: 'mfg-4',
     shopId: 'print-pack',
+    slug: 'printpack-solutions',
     name: 'PrintPack Solutions',
     industry: 'Packaging',
     logo: 'https://picsum.photos/seed/mfg4/48/48',
@@ -306,7 +310,7 @@ export default async function HomePage() {
                                 <h4 className="font-semibold">{mfg.name}</h4>
                                 <p className="text-sm text-muted-foreground">{mfg.industry}</p>
                             </div>
-                            <Button variant="outline" size="sm" asChild><Link href={`/manufacturer/${mfg.shopId}`}>View Shop</Link></Button>
+                            <Button variant="outline" size="sm" asChild><Link href={`/manufacturer/${mfg.slug}`}>View Shop</Link></Button>
                         </div>
                     ))}
                 </div>
