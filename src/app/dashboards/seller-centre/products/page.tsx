@@ -26,6 +26,9 @@ import {
   ListFilter,
   Search,
   Loader2,
+  BarChart2,
+  Edit,
+  Trash2,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -46,7 +49,7 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -83,10 +86,7 @@ export default function SellerProductsPage() {
     error,
   } = useCollection<Product>(productsQuery);
 
-  const handleUpdateStatus = (
-    productId: string,
-    status: 'draft' | 'archived'
-  ) => {
+  const handleArchive = (productId: string) => {
     if (!user) return;
     const productRef = doc(
       firestore,
@@ -95,12 +95,10 @@ export default function SellerProductsPage() {
       'products',
       productId
     );
-    updateDocumentNonBlocking(productRef, { status });
+    updateDocumentNonBlocking(productRef, { status: 'archived' });
     toast({
-      title: `Product ${status === 'draft' ? 'Unpublished' : 'Deleted'}`,
-      description: `The product has been moved to ${
-        status === 'draft' ? 'drafts' : 'archives'
-      }.`,
+      title: `Product Archived`,
+      description: `The product has been moved to the archive.`,
     });
   };
 
@@ -232,24 +230,21 @@ export default function SellerProductsPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
               <DropdownMenuItem asChild>
-                <Link
-                  href={`/dashboards/seller-centre/products/edit/${product.id}`}
-                >
-                  Edit
+                <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`}>
+                  <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
                 </Link>
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleUpdateStatus(product.id, 'draft')}
-                disabled={product.status === 'draft'}
-              >
-                Unpublish
+              <DropdownMenuItem asChild>
+                <Link href={`/dashboards/seller-centre/products/edit/${product.id}`}>
+                  <Edit className="mr-2 h-4 w-4" /> Edit
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 className="text-destructive"
-                onClick={() => handleUpdateStatus(product.id, 'archived')}
+                onClick={() => handleArchive(product.id)}
               >
-                Delete
+                <Trash2 className="mr-2 h-4 w-4" /> Archive
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
