@@ -64,7 +64,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Review } from '@/app/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
-import { PermissionDenied } from '@/components/ui/permission-denied';
 import { setUserRoleClaim } from '@/app/(auth)/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
@@ -298,16 +297,18 @@ export default function SellerDashboardPage() {
     );
   }
 
-  const isManufacturer = role === 'manufacturer' || role === 'super-admin';
-  const canApply = role === 'buyer' || role === 'partner';
-
+  // Allow access if the user is already a manufacturer/admin, OR if they have no prohibitive role.
+  const isManufacturer = role === 'manufacturer' || role === 'super-admin' || role === 'admin';
+  const canApply = !role || role === 'buyer' || role === 'partner';
+  
   if (!isManufacturer && !canApply) {
-    return <PermissionDenied />;
+    return <ApplyToBecomeManufacturer />;
   }
 
-  if (!isManufacturer && canApply) {
+  if (!isManufacturer) {
       return <ApplyToBecomeManufacturer />;
   }
+
 
   return (
     <div className="space-y-6">
