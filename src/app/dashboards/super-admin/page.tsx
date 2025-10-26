@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { cn } from '@/lib/utils';
 
 
 type UserProfile = {
@@ -456,18 +457,18 @@ export default function SuperAdminDashboardPage() {
                                         </div>
                                         <AlertDialogContent>
                                             <AlertDialogHeader>
-                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogTitle>Confirm Action: {platformSettings?.allowUnverifiedUploads ? "Disable" : "Enable"} Unverified Uploads?</AlertDialogTitle>
                                                 <AlertDialogDescription>
                                                     {platformSettings?.allowUnverifiedUploads 
-                                                        ? "You are about to DISABLE product uploads for unverified sellers. New sellers will need to be fully verified before they can add any products."
-                                                        : "You are about to ENABLE product uploads for unverified sellers. They will be able to add products, but the products will remain as drafts with limited visibility until verification is complete."
+                                                        ? "By disabling this, new sellers must be fully verified before they can upload any products. This enhances quality control but may slow down onboarding."
+                                                        : "By enabling this, new sellers can upload products immediately after signing up. These products will have limited visibility until the seller is verified."
                                                     }
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                                                 <AlertDialogAction onClick={() => handleSettingChange('allowUnverifiedUploads', !platformSettings?.allowUnverifiedUploads)}>
-                                                    Continue
+                                                    Confirm
                                                 </AlertDialogAction>
                                             </AlertDialogFooter>
                                         </AlertDialogContent>
