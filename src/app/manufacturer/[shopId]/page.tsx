@@ -77,11 +77,15 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
 
   if (isLoading) {
     return (
-        <div className="container mx-auto py-12">
-            <div className="relative h-64 w-full rounded-lg overflow-hidden bg-muted"></div>
+        <div className="bg-muted/20">
+            <div className="relative h-48 md:h-64 w-full bg-muted"></div>
             <div className="container -mt-24 pb-12">
                  <div className="flex flex-col md:flex-row items-start gap-6">
                      <Skeleton className="h-32 w-32 rounded-full border-4 border-background bg-muted" />
+                     <div className="pt-8 space-y-2">
+                        <Skeleton className="h-10 w-64" />
+                        <Skeleton className="h-6 w-80" />
+                     </div>
                  </div>
             </div>
         </div>
@@ -329,3 +333,5 @@ export default function ManufacturerPage({ params }: { params: { shopId: string 
     </div>
   );
 }
+
+    
