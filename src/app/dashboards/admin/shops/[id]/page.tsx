@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { SuspendShopModal } from '@/components/suspend-shop-modal';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 type Manufacturer = {
     id: string;
@@ -112,11 +113,27 @@ export default function ShopManagementPage() {
     
     return (
         <div className="space-y-6">
+             <Breadcrumb className="mb-2">
+                <BreadcrumbList>
+                    <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                            <Link href="/dashboards/admin">Admin Dashboard</Link>
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                         <BreadcrumbLink asChild>
+                           <Link href="/dashboards/admin?tab=shop-management">Shop Management</Link>
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                        <BreadcrumbPage>{manufacturer.shopName}</BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                        <Link href="/dashboards/admin?tab=shop-management"><ChevronLeft className="h-4 w-4" /></Link>
-                    </Button>
                      {manufacturer.logoUrl && (
                         <Image src={manufacturer.logoUrl} alt={manufacturer.shopName} width={40} height={40} className="rounded-full" />
                     )}
@@ -250,3 +267,5 @@ export default function ShopManagementPage() {
         </div>
     )
 }
+
+    

@@ -17,6 +17,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { logActivity } from '@/lib/activity-log';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 
 type Manufacturer = {
@@ -150,11 +151,21 @@ export default function VerificationDetailPage() {
 
     return (
         <div className="space-y-6">
+            <Breadcrumb>
+                <BreadcrumbList>
+                    <BreadcrumbItem>
+                        <BreadcrumbLink asChild>
+                            <Link href="/dashboards/admin">Admin Dashboard</Link>
+                        </BreadcrumbLink>
+                    </BreadcrumbItem>
+                    <BreadcrumbSeparator />
+                    <BreadcrumbItem>
+                        <BreadcrumbPage>Verification</BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" className="h-8 w-8" asChild>
-                        <Link href="/dashboards/admin"><ChevronLeft className="h-4 w-4" /></Link>
-                    </Button>
                     <div>
                         <h1 className="text-xl font-semibold">{manufacturer.shopName || 'Unnamed Shop'}</h1>
                         <div className="flex items-center gap-2">
