@@ -111,6 +111,7 @@ export async function getAllProducts(): Promise<any[]> {
     const manufMap = new Map<string, { slug: string, shopId: string }>();
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
+      // Ensure both slug and shopId exist before adding to map
       if (data.slug && data.shopId) {
         manufMap.set(doc.id, { slug: data.slug, shopId: data.shopId });
       }
@@ -135,12 +136,15 @@ export async function getAllProducts(): Promise<any[]> {
       }
 
       const manufInfo = manufMap.get(sanitizedData.manufacturerId);
+      
       return {
         ...sanitizedData,
         id: doc.id,
+        // Safely access slug and shopId from the map
         slug: manufInfo?.slug || '',
         shopId: manufInfo?.shopId || '',
       };
+      // Filter out products where we couldn't find the manufacturer info
     }).filter(p => p.slug && p.shopId); 
 
     return productsData;
@@ -149,5 +153,3 @@ export async function getAllProducts(): Promise<any[]> {
     return [];
   }
 }
-
-    
