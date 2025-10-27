@@ -39,7 +39,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { PhotoUpload } from '@/components/photo-upload';
+import { PhotoUpload } from '@/components/ui/photo-upload';
 import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';

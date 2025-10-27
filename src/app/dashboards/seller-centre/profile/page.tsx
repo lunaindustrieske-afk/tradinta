@@ -31,7 +31,6 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Switch } from '@/components/ui/switch';
-import { PhotoUpload } from '@/components/photo-upload';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc, setDoc, getDoc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
@@ -39,6 +38,7 @@ import { nanoid } from 'nanoid';
 import Image from 'next/image';
 import { cn } from '@/lib/utils';
 import { useDropzone } from 'react-dropzone';
+import { PhotoUpload } from '@/components/ui/photo-upload';
 
 type ManufacturerData = {
   shopId?: string;
@@ -47,7 +47,6 @@ type ManufacturerData = {
   description?: string;
   logoUrl?: string;
   logoHistory?: string[];
-  bannerUrl?: string;
   businessLicenseNumber?: string;
   kraPin?: string;
   address?: string;

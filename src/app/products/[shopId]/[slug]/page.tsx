@@ -388,9 +388,9 @@ export default function ProductDetailPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center gap-4 mb-4">
-                        <Image src={manufacturer.logoUrl} alt={manufacturer.name} width={64} height={64} className="rounded-full" />
+                        <Image src={manufacturer.logoUrl || 'https://placehold.co/64x64'} alt={manufacturer.shopName || ''} width={64} height={64} className="rounded-full" />
                         <div>
-                            <h4 className="font-bold">{manufacturer.name}</h4>
+                            <h4 className="font-bold">{manufacturer.shopName}</h4>
                             <p className="text-sm text-muted-foreground">{manufacturer.location}</p>
                              <div className="flex items-center gap-1 text-sm">
                                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400"/> {manufacturer.rating} Seller Rating
@@ -398,7 +398,7 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
                     <Button asChild className="w-full">
-                        <Link href={`/manufacturer/${manufacturer.slug}`}>View Shop</Link>
+                        <Link href={`/manufacturer/${manufacturer.shopId}`}>View Shop</Link>
                     </Button>
                 </CardContent>
             </Card>
