@@ -54,6 +54,8 @@ type Variant = {
     price: string;
     stock: string;
     sku: string;
+    weight: string;
+    dimensions: string;
     attributes: Record<string, string>;
 };
 
@@ -68,8 +70,6 @@ type ProductData = {
     subcategory: string;
     slug: string;
     status: 'draft' | 'published' | 'archived';
-    weight?: string;
-    dimensions?: string;
     material?: string;
     certifications?: string;
     packagingDetails?: string;
@@ -120,8 +120,6 @@ export default function EditProductPage() {
   const [variants, setVariants] = React.useState<Variant[]>([]);
 
   // New fields
-  const [weight, setWeight] = React.useState('');
-  const [dimensions, setDimensions] = React.useState('');
   const [material, setMaterial] = React.useState('');
   const [certifications, setCertifications] = React.useState('');
   const [packagingDetails, setPackagingDetails] = React.useState('');
@@ -134,8 +132,6 @@ export default function EditProductPage() {
         setBannerUrl(productData.bannerUrl || '');
         setTags(productData.tags || []);
         
-        setWeight(productData.weight || '');
-        setDimensions(productData.dimensions || '');
         setMaterial(productData.material || '');
         setCertifications(productData.certifications || '');
         setPackagingDetails(productData.packagingDetails || '');
@@ -171,6 +167,8 @@ export default function EditProductPage() {
         price: '',
         stock: '',
         sku: '',
+        weight: '',
+        dimensions: '',
         attributes: options.reduce((acc, option) => {
             if (option) acc[option] = '';
             return acc;
@@ -260,8 +258,6 @@ export default function EditProductPage() {
                 price: Number(v.price) || 0,
                 stock: Number(v.stock) || 0,
             })),
-            weight,
-            dimensions,
             material,
             certifications,
             packagingDetails,
@@ -481,9 +477,13 @@ export default function EditProductPage() {
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="grid sm:grid-cols-3 gap-4 mt-4">
+                                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                                         <div className="grid gap-2"><Label className="text-xs">Price (KES)</Label><Input type="number" placeholder="0.00" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} /></div>
                                         <div className="grid gap-2"><Label className="text-xs">Stock</Label><Input type="number" placeholder="0" value={variant.stock} onChange={e => handleVariantChange(variant.id, 'stock', e.target.value)} /></div>
+                                        <div className="grid gap-2"><Label className="text-xs">Weight</Label><Input placeholder="e.g. 50kg" value={variant.weight} onChange={e => handleVariantChange(variant.id, 'weight', e.target.value)} /></div>
+                                        <div className="grid gap-2"><Label className="text-xs">Dimensions</Label><Input placeholder="e.g. 80x50x15cm" value={variant.dimensions} onChange={e => handleVariantChange(variant.id, 'dimensions', e.target.value)} /></div>
+                                    </div>
+                                     <div className="grid grid-cols-1 gap-4 mt-4">
                                         <div className="grid gap-2"><Label className="text-xs">SKU</Label><Input placeholder="SKU-VAR-01" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} /></div>
                                     </div>
                                     <Button variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive" onClick={() => handleRemoveVariant(variant.id)}>Remove Variant</Button>
@@ -539,14 +539,6 @@ export default function EditProductPage() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 sm:grid-cols-2">
-                <div className="grid gap-3">
-                  <Label htmlFor="weight">Weight</Label>
-                  <Input id="weight" placeholder="e.g., 50kg" value={weight} onChange={(e) => setWeight(e.target.value)} />
-                </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="dimensions">Dimensions</Label>
-                  <Input id="dimensions" placeholder="e.g., 80cm x 50cm x 15cm" value={dimensions} onChange={(e) => setDimensions(e.target.value)} />
-                </div>
                 <div className="grid gap-3">
                   <Label htmlFor="material">Material</Label>
                   <Input id="material" placeholder="e.g., Portland Cement Type I" value={material} onChange={(e) => setMaterial(e.target.value)} />

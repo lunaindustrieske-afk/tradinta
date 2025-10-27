@@ -154,6 +154,15 @@
           "items": {
             "$ref": "#/backend/entities/ProductVariant"
           }
+        },
+        "material": {
+            "type": "string"
+        },
+        "certifications": {
+            "type": "string"
+        },
+        "packagingDetails": {
+            "type": "string"
         }
       },
       "required": [
@@ -192,6 +201,14 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "weight": {
+            "type": "string",
+            "description": "Weight of this specific variant (e.g., '50kg', '250ml')."
+        },
+        "dimensions": {
+            "type": "string",
+            "description": "Dimensions of this specific variant (e.g., '80cm x 50cm x 15cm')."
         }
       },
       "required": ["id", "price", "stock", "attributes"]
