@@ -12,6 +12,7 @@ import {
   Trash2,
   PlusCircle,
   RefreshCcw,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -77,6 +78,10 @@ type ProductFormState = {
     packagingDetails: string;
 };
 
+type ManufacturerData = {
+    shopId?: string;
+}
+
 const initialFormState: ProductFormState = {
   name: '',
   description: '',
@@ -100,7 +105,7 @@ export default function EditProductPage() {
   const firestore = useFirestore();
   const productId = params.id as string;
   
-  const draftKey = `edit-product-draft-${productId}`;
+  const draftKey = `product-draft-${productId}`;
   const [formState, setFormState, clearFormState] = useLocalStorageState<ProductFormState>(draftKey, initialFormState);
 
   const productDocRef = useMemoFirebase(() => {
@@ -110,26 +115,30 @@ export default function EditProductPage() {
 
   const { data: productData, isLoading: isProductLoading } = useDoc(productDocRef);
 
+  const manufacturerDocRef = useMemoFirebase(() => {
+    if (!user?.uid || !firestore) return null;
+    return doc(firestore, 'manufacturers', user.uid);
+  }, [firestore, user]);
+
+  const { data: manufacturerData, isLoading: isManufacturerLoading } = useDoc<ManufacturerData>(manufacturerDocRef);
+  
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
+  
+  // This state now controls the initial hydration from Firestore
+  const [isHydrated, setIsHydrated] = React.useState(false);
+
+  // AI State
   const [aiState, dispatch] = React.useActionState(
     getAITagsAndDescription,
     { message: '', output: null, errors: null }
   );
-  
   const [isGenerating, setIsGenerating] = React.useState(false);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [isUploading, setIsUploading] = React.useState(false);
-  const [hasLoaded, setHasLoaded] = React.useState(false);
 
-
-  // Reset hasLoaded when the productId changes
+  // Effect to hydrate the form from Firestore only ONCE.
   React.useEffect(() => {
-    setHasLoaded(false);
-  }, [productId]);
-  
-  // Effect to load initial data from Firestore into the form state.
-  // This now correctly populates the form on first load.
-  React.useEffect(() => {
-    if (productData && !hasLoaded) {
+    // Only run this if we have data and haven't hydrated yet.
+    if (productData && !isHydrated) {
         const dbState = {
             name: productData.name || '',
             description: productData.description || '',
@@ -159,9 +168,9 @@ export default function EditProductPage() {
             packagingDetails: productData.packagingDetails || '',
         };
         setFormState(dbState);
-        setHasLoaded(true); // Mark that we have loaded the initial data
+        setIsHydrated(true); // Mark as hydrated
     }
-  }, [productData, hasLoaded, setFormState]);
+  }, [productData, isHydrated, setFormState]);
 
 
   const handleFormChange = (field: keyof ProductFormState, value: any) => {
@@ -248,7 +257,7 @@ export default function EditProductPage() {
         });
       }
     }
-  }, [aiState, toast, isGenerating]);
+  }, [aiState, toast, isGenerating, handleFormChange]);
 
   const handleGenerate = (formData: FormData) => {
     setIsGenerating(true);
@@ -315,8 +324,10 @@ export default function EditProductPage() {
   }
 
   const isSaveDisabled = isSaving || isUploading;
+  const productUrl = manufacturerData?.shopId && formState.name ? `/products/${manufacturerData.shopId}/${generateSlug(formState.name)}` : '';
 
-  if (isProductLoading || !hasLoaded) {
+
+  if (isProductLoading || isManufacturerLoading) {
     return (
         <div className="space-y-6">
              <div className="flex items-center gap-4">
@@ -370,7 +381,20 @@ export default function EditProductPage() {
           <AlertDescription>
             Your changes are being automatically saved to this browser. You can leave and come back to resume editing.
           </AlertDescription>
-        </Alert>
+      </Alert>
+      {productUrl && (
+        <Card>
+            <CardContent className="p-3">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4"/>
+                    Your product will be available at: 
+                    <Link href={productUrl} target="_blank" className="font-mono text-primary hover:underline">
+                        {productUrl}
+                    </Link>
+                </p>
+            </CardContent>
+        </Card>
+      )}
       <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
         <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
           <Card>
@@ -392,6 +416,7 @@ export default function EditProductPage() {
                     value={formState.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
                   />
+                   <p className="text-xs text-muted-foreground">This is your product's title and will be important for SEO. Make it clear and descriptive.</p>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="description">Detailed Description</Label>
@@ -402,6 +427,7 @@ export default function EditProductPage() {
                     value={formState.description}
                     onChange={(e) => handleFormChange('description', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">A good description helps buyers make a decision and improves your product's ranking in search results.</p>
                 </div>
                 {formState.tags.length > 0 && (
                     <div className="grid gap-3">

@@ -13,6 +13,7 @@ import {
   Save,
   Book,
   RefreshCcw,
+  ExternalLink,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,8 +45,8 @@ import {
   AccordionTrigger,
 } from '@/components/ui/accordion';
 import { PhotoUpload } from '@/components/ui/photo-upload';
-import { useFirestore, useUser } from '@/firebase';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { addDoc, collection, serverTimestamp, doc } from 'firebase/firestore';
 import { generateSlug } from '@/lib/utils';
 import { nanoid } from 'nanoid';
 import { Separator } from '@/components/ui/separator';
@@ -77,6 +78,10 @@ type ProductFormState = {
   packagingDetails: string;
 };
 
+type ManufacturerData = {
+    shopId?: string;
+}
+
 const initialFormState: ProductFormState = {
   name: '',
   description: '',
@@ -107,6 +112,13 @@ export default function NewProductPage() {
     getAITagsAndDescription,
     { message: '', output: null, errors: null }
   );
+
+  const manufacturerDocRef = useMemoFirebase(() => {
+    if (!user?.uid || !firestore) return null;
+    return doc(firestore, 'manufacturers', user.uid);
+  }, [firestore, user]);
+
+  const { data: manufacturerData, isLoading: isManufacturerLoading } = useDoc<ManufacturerData>(manufacturerDocRef);
 
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -189,7 +201,7 @@ export default function NewProductPage() {
 
 
   React.useEffect(() => {
-    if (aiState.message) {
+    if (aiState.message && isGenerating) {
       setIsGenerating(false);
       if (aiState.output) {
         toast({
@@ -206,7 +218,7 @@ export default function NewProductPage() {
         });
       }
     }
-  }, [aiState, toast]);
+  }, [aiState, toast, isGenerating, handleFormChange]);
 
   const handleGenerate = (formData: FormData) => {
     setIsGenerating(true);
@@ -277,6 +289,8 @@ export default function NewProductPage() {
   }
   
   const isSaveDisabled = isSaving || isUploading;
+  const productUrl = manufacturerData?.shopId && formState.name ? `/products/${manufacturerData.shopId}/${generateSlug(formState.name)}` : '';
+
 
   return (
     <div className="space-y-6">
@@ -320,6 +334,20 @@ export default function NewProductPage() {
           </AlertDescription>
         </Alert>
 
+      {productUrl && (
+        <Card>
+            <CardContent className="p-3">
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                    <ExternalLink className="h-4 w-4"/>
+                    Your product will be available at: 
+                    <Link href={productUrl} target="_blank" className="font-mono text-primary hover:underline">
+                        {productUrl}
+                    </Link>
+                </p>
+            </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
         <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
           <Card>
@@ -341,6 +369,7 @@ export default function NewProductPage() {
                     value={formState.name}
                     onChange={(e) => handleFormChange('name', e.target.value)}
                   />
+                   <p className="text-xs text-muted-foreground">This is your product's title and will be important for SEO. Make it clear and descriptive.</p>
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="description">Detailed Description</Label>
@@ -351,6 +380,7 @@ export default function NewProductPage() {
                     value={formState.description}
                     onChange={(e) => handleFormChange('description', e.target.value)}
                   />
+                  <p className="text-xs text-muted-foreground">A good description helps buyers make a decision and improves your product's ranking in search results.</p>
                 </div>
                 {formState.tags.length > 0 && (
                     <div className="grid gap-3">
