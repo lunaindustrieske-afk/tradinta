@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState } from 'react';
@@ -18,6 +17,7 @@ import {
   Twitter,
   MessageCircle,
   Instagram,
+  Check,
 } from 'lucide-react';
 import {
   Card,
@@ -40,7 +40,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, limit, getDocs, doc } from 'firebase/firestore';
 import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -74,6 +74,7 @@ export default function ProductDetailPage() {
     const params = useParams();
     const shopId = params.shopId as string;
     const slug = params.slug as string;
+    const { user } = useUser();
     const firestore = useFirestore();
 
     const [product, setProduct] = React.useState<ProductWithVariants | null>(null);
@@ -81,6 +82,21 @@ export default function ProductDetailPage() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [isInWishlist, setIsInWishlist] = React.useState(false);
     const { toast } = useToast();
+    
+    // Check if a quotation has already been requested for this product by this user
+    const quotationQuery = useMemoFirebase(() => {
+        if (!firestore || !user || !product) return null;
+        return query(
+            collection(firestore, 'manufacturers', product.manufacturerId, 'quotations'),
+            where('buyerId', '==', user.uid),
+            where('productId', '==', product.id),
+            limit(1)
+        );
+    }, [firestore, user, product]);
+
+    const { data: existingQuotations } = useCollection(quotationQuery);
+    const hasRequestedQuote = existingQuotations && existingQuotations.length > 0;
+
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -306,9 +322,17 @@ export default function ProductDetailPage() {
                 </p>
                 
                 <div className="space-y-3">
-                    <RequestQuoteModal product={product}>
-                        <Button size="lg" className="w-full">Request Quotation</Button>
-                    </RequestQuoteModal>
+                    {hasRequestedQuote ? (
+                        <Button size="lg" className="w-full" disabled>
+                            <Check className="mr-2 h-5 w-5" />
+                            Quotation Requested
+                        </Button>
+                    ) : (
+                        <RequestQuoteModal product={product}>
+                            <Button size="lg" className="w-full">Request Quotation</Button>
+                        </RequestQuoteModal>
+                    )}
+
                     <ContactManufacturerModal product={product} manufacturer={manufacturer}>
                         <Button size="lg" variant="outline" className="w-full">
                             <MessageSquare className="mr-2 h-5 w-5"/>
