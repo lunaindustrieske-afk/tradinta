@@ -87,8 +87,8 @@ const categoryIcons: Record<string, React.ReactNode> = {
     "Services & Trade Support": <Handshake className="w-5 h-5" />,
 };
 
-export function ProductsPageClient({ initialProducts: serverProducts }: { initialProducts: ProductWithShopId[] }) {
-  const [allProducts, setAllProducts] = useState<ProductWithShopId[]>(serverProducts);
+export function ProductsPageClient({ initialProducts }: { initialProducts: ProductWithShopId[] }) {
+  const [allProducts, setAllProducts] = useState<ProductWithShopId[]>(initialProducts);
   const [isLoading, setIsLoading] = useState(false);
 
   const [filters, setFilters] = useState({
