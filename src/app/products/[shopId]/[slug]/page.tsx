@@ -13,6 +13,10 @@ import {
   Heart,
   Coins,
   Share2,
+  Facebook,
+  Twitter,
+  MessageCircle,
+  Instagram,
 } from 'lucide-react';
 import {
   Card,
@@ -39,9 +43,15 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, getDocs, doc } from 'firebase/firestore';
 import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { products as mockProducts } from '@/lib/mock-data';
+import { products } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type ProductWithVariants = Product & {
     variants: { price: number }[];
@@ -56,7 +66,7 @@ type ProductWithVariants = Product & {
 };
 
 
-const relatedProducts = mockProducts.slice(1, 5); // This should be replaced with real data logic
+const relatedProducts = products.slice(1, 5);
 
 export default function ProductDetailPage() {
     const params = useParams();
@@ -67,6 +77,8 @@ export default function ProductDetailPage() {
     const [product, setProduct] = React.useState<ProductWithVariants | null>(null);
     const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isInWishlist, setIsInWishlist] = React.useState(false);
+    const { toast } = useToast();
 
     React.useEffect(() => {
         const fetchData = async () => {
@@ -119,7 +131,6 @@ export default function ProductDetailPage() {
 
     const reviewsQuery = useMemoFirebase(() => {
         if (!firestore || !product) return null;
-        // Correctly query the top-level 'reviews' collection
         return query(
             collection(firestore, 'reviews'),
             where('productId', '==', product.id),
@@ -128,6 +139,17 @@ export default function ProductDetailPage() {
     }, [firestore, product]);
 
     const { data: reviews, isLoading: isLoadingReviews } = useCollection<Review>(reviewsQuery);
+    
+    const handleWishlistToggle = () => {
+        setIsInWishlist(!isInWishlist);
+        toast({
+            title: isInWishlist ? "Removed from Wishlist" : "Added to Wishlist",
+            description: `${product?.name} has been ${isInWishlist ? 'removed from' : 'added to'} your wishlist.`,
+        });
+    };
+    
+    const productUrl = typeof window !== 'undefined' ? window.location.href : '';
+    const shareText = `Check out this product on Tradinta: ${product?.name}`;
 
 
     if (isLoading) {
@@ -292,12 +314,32 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="flex items-center justify-center gap-4 mt-4 text-sm">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
-                        <Heart className="mr-2 h-4 w-4"/> Wishlist
+                    <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={handleWishlistToggle}>
+                        <Heart className={`mr-2 h-4 w-4 ${isInWishlist ? 'fill-red-500 text-red-500' : ''}`}/> Wishlist
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
-                        <Share2 className="mr-2 h-4 w-4"/> Share
-                    </Button>
+                     <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="sm" className="text-muted-foreground">
+                                <Share2 className="mr-2 h-4 w-4"/> Share
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto">
+                            <div className="flex gap-2">
+                                <Button size="icon" variant="outline" asChild>
+                                    <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(productUrl)}`} target="_blank" rel="noopener noreferrer"><Facebook className="h-5 w-5 text-[#1877F2]" /></a>
+                                </Button>
+                                <Button size="icon" variant="outline" asChild>
+                                    <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(productUrl)}&text=${encodeURIComponent(shareText)}`} target="_blank" rel="noopener noreferrer"><Twitter className="h-5 w-5 text-[#1DA1F2]" /></a>
+                                </Button>
+                                <Button size="icon" variant="outline" asChild>
+                                     <a href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + productUrl)}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-5 w-5 text-[#25D366]" /></a>
+                                </Button>
+                                <Button size="icon" variant="outline" asChild>
+                                     <a href={`https://www.instagram.com`} target="_blank" rel="noopener noreferrer"><Instagram className="h-5 w-5 text-[#E4405F]" /></a>
+                                </Button>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <Separator className="my-4"/>
 
