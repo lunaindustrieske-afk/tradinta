@@ -2,13 +2,13 @@
 'use client';
 
 import * as React from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { type Review } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { Star } from 'lucide-react';
+import { Star, CheckCircle } from 'lucide-react';
 import { LeaveReviewForm } from '@/components/leave-review-form';
 import { Separator } from './ui/separator';
 
@@ -18,6 +18,7 @@ interface ProductReviewsProps {
 
 export function ProductReviews({ productId }: ProductReviewsProps) {
     const firestore = useFirestore();
+    const { user } = useUser();
 
     const reviewsQuery = useMemoFirebase(() => {
         if (!firestore || !productId) return null;
@@ -31,16 +32,28 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
     const { data: reviews, isLoading, forceRefetch } = useCollection<Review>(reviewsQuery);
     
-    // We get the product from the review data itself to avoid an extra fetch, or use a fallback.
     const product = reviews && reviews.length > 0 && reviews[0] 
       ? { id: reviews[0].productId, name: (reviews[0] as any).productName, manufacturerId: (reviews[0] as any).manufacturerId } 
       : { id: productId, name: 'this product', manufacturerId: '' };
+
+    const userHasReviewed = React.useMemo(() => {
+        if (!user || !reviews) return false;
+        return reviews.some(review => review.buyerId === user.uid);
+    }, [user, reviews]);
 
     return (
         <div className="space-y-6">
             <div>
                 <h3 className="text-lg font-semibold mb-4">Leave a Review</h3>
-                <LeaveReviewForm product={product} onReviewSubmit={forceRefetch} />
+                {userHasReviewed ? (
+                    <div className="text-center p-4 border rounded-lg bg-muted/50">
+                        <CheckCircle className="mx-auto h-8 w-8 text-green-500 mb-2" />
+                        <p className="font-semibold">Thank you for your review!</p>
+                        <p className="text-sm text-muted-foreground">Your feedback has been recorded.</p>
+                    </div>
+                ) : (
+                    <LeaveReviewForm product={product} onReviewSubmit={forceRefetch} />
+                )}
             </div>
             <Separator />
             <div>
