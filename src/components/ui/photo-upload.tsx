@@ -105,7 +105,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           handleUpload(selectedFile);
         }
       },
-      [disabled, onUpload]
+      [disabled]
     );
 
 
@@ -120,15 +120,13 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
       accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif'] },
       multiple: false,
       disabled: disabled,
-      noClick: !!children, // Disable click if custom trigger is provided
-      noKeyboard: !!children,
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
 
     if (children) {
       return (
-        <div {...getRootProps()} className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+        <div {...getRootProps()} className="cursor-pointer">
           <input {...getInputProps()} />
           {children}
         </div>
