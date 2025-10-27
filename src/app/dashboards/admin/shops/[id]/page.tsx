@@ -223,7 +223,7 @@ export default function ShopManagementPage() {
                                                                     </Link>
                                                                 </DropdownMenuItem>
                                                                  <DropdownMenuItem asChild>
-                                                                    <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`} target="_blank">
+                                                                    <Link href={`/dashboards/admin/products/analytics/${product.id}?manufacturerId=${manufacturerId}`} target="_blank">
                                                                         <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
                                                                     </Link>
                                                                 </DropdownMenuItem>
