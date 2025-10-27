@@ -510,3 +510,101 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
         return { success: false, message: 'An error occurred while verifying your email.' };
     }
 }
+
+const InquirySchema = z.object({
+    buyerName: z.string(),
+    buyerEmail: z.string().email(),
+    manufacturerEmail: z.string().email(),
+    manufacturerName: z.string(),
+    productName: z.string(),
+    productImageUrl: z.string().url().optional(),
+    message: z.string().min(1, 'Message cannot be empty.'),
+});
+
+export async function sendNewInquiryEmail(
+  params: z.infer<typeof InquirySchema>
+): Promise<{ success: boolean; message: string }> {
+  const validatedFields = InquirySchema.safeParse(params);
+
+  if (!validatedFields.success) {
+    return { success: false, message: 'Invalid input for inquiry email.' };
+  }
+  
+  const { 
+    buyerName, 
+    manufacturerEmail, 
+    manufacturerName, 
+    productName,
+    productImageUrl,
+    message 
+} = validatedFields.data;
+
+  // TODO: Create a conversation document in Firestore here
+
+  const emailHtml = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>New Product Inquiry on Tradinta</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+          <table width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                  <td align="center" style="padding: 20px 0;">
+                      <table width="600" border="0" cellspacing="0" cellpadding="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                          <tr>
+                              <td align="center" style="padding: 40px 20px; border-bottom: 1px solid #eeeeee;">
+                                  <img src="https://i.postimg.cc/NGkTK7Jc/Gemini-Generated-Image-e6p14ne6p14ne6p1-removebg-preview.png" alt="Tradinta Logo" width="150">
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding: 40px 30px;">
+                                  <h1 style="color: #333333; font-size: 24px;">New Product Inquiry</h1>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">Hello ${manufacturerName},</p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">A buyer, <strong>${buyerName}</strong>, has sent you a new message regarding your product, <strong>${productName}</strong>.</p>
+                                  
+                                  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 5px;">
+                                    <tr>
+                                        <td style="padding: 20px;">
+                                            <p style="color: #555555; font-size: 16px; line-height: 1.5; margin: 0;"><em>"${message}"</em></p>
+                                        </td>
+                                    </tr>
+                                  </table>
+
+                                  <p style="text-align: center; margin: 30px 0;">
+                                      <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboards/seller-centre/messages" style="background-color: #1D4ED8; color: #ffffff; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">Reply Now in Your Inbox</a>
+                                  </p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5;">Responding quickly increases your chances of making a sale. Good luck!</p>
+                                  <p style="color: #555555; font-size: 16px; line-height: 1.5; margin-top: 30px;">Thanks,<br>The Tradinta Team</p>
+                              </td>
+                          </tr>
+                          <tr>
+                              <td style="padding: 20px 30px; font-size: 12px; color: #999999; text-align: center; border-top: 1px solid #eeeeee;">
+                                  <p>© ${new Date().getFullYear()} Tradinta. All rights reserved.</p>
+                              </td>
+                          </tr>
+                      </table>
+                  </td>
+              </tr>
+          </table>
+      </body>
+      </html>
+    `;
+
+  try {
+    await sendTransactionalEmail({
+      to: manufacturerEmail,
+      subject: `New Inquiry for ${productName} from a Buyer`,
+      htmlContent: emailHtml,
+    });
+    return { success: true, message: 'Inquiry email sent successfully.' };
+  } catch (error: any) {
+    console.error('Failed to send inquiry email:', error);
+    return {
+      success: false,
+      message: 'Could not send the inquiry at this time. Please try again later.',
+    };
+  }
+}
