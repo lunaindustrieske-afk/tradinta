@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState } from 'react';
@@ -307,9 +308,11 @@ export default function ProductDetailPage() {
                     <RequestQuoteModal product={product}>
                         <Button size="lg" className="w-full">Request Quotation</Button>
                     </RequestQuoteModal>
-                    <Button size="lg" variant="outline" className="w-full">
-                        <MessageSquare className="mr-2 h-5 w-5"/>
-                        Contact Manufacturer
+                    <Button asChild size="lg" variant="outline" className="w-full">
+                        <Link href={`/dashboards/buyer/messages?productId=${product.id}&manufacturerId=${manufacturer.id}`}>
+                            <MessageSquare className="mr-2 h-5 w-5"/>
+                            Contact Manufacturer
+                        </Link>
                     </Button>
                 </div>
 
