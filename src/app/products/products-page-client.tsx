@@ -101,15 +101,8 @@ export function ProductsPageClient({ initialProducts: serverProducts }: { initia
   };
 
   const filteredProducts = useMemo(() => {
-    return allProducts.filter((product) => {
-      return (
-        (filters.category === 'all' || product.category === filters.category) &&
-        product.price >= filters.priceRange[0] &&
-        product.price <= filters.priceRange[1] &&
-        product.rating >= filters.rating &&
-        product.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    });
+    // temporarily disabling filters for debugging
+    return allProducts;
   }, [allProducts, filters, searchQuery]);
 
   const FilterSidebar = () => (
