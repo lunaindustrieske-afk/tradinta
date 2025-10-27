@@ -15,6 +15,7 @@ import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SuspendShopModal } from '@/components/suspend-shop-modal';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Separator } from '@/components/ui/separator';
 
 type Manufacturer = {
     id: string;
@@ -249,5 +250,3 @@ export default function ShopManagementPage() {
         </div>
     )
 }
-
-    
