@@ -56,6 +56,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ContactManufacturerModal } from '@/components/contact-manufacturer-modal';
+import { LeaveReviewForm } from '@/components/leave-review-form';
 
 type ProductWithVariants = Product & {
     variants: { price: number }[];
@@ -165,7 +166,7 @@ export default function ProductDetailPage() {
         );
     }, [firestore, product]);
 
-    const { data: reviews, isLoading: isLoadingReviews } = useCollection<Review>(reviewsQuery);
+    const { data: reviews, isLoading: isLoadingReviews, forceRefetch } = useCollection<Review>(reviewsQuery);
     
     const handleWishlistToggle = () => {
         setIsInWishlist(!isInWishlist);
@@ -286,7 +287,7 @@ export default function ProductDetailPage() {
              <div className="flex items-center gap-1">
               <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
               <span className="font-bold">{product.rating}</span>
-              <span className="text-sm text-muted-foreground">({product.reviewCount} reviews)</span>
+              <span className="text-sm text-muted-foreground">({product.reviewCount || 0} reviews)</span>
             </div>
             <Separator orientation="vertical" className="h-5" />
              <Badge variant="secondary" className="flex items-center gap-1">
@@ -428,8 +429,15 @@ export default function ProductDetailPage() {
                  <TabsContent value="packaging" className="mt-4 text-sm text-muted-foreground">
                     <p>{product.packagingDetails || 'Standard packaging information not available.'}</p>
                 </TabsContent>
-                <TabsContent value="reviews" className="mt-4">
-                     <CardContent className="space-y-4">
+                <TabsContent value="reviews" className="mt-4 space-y-6">
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">Leave a Review</h3>
+                        <LeaveReviewForm product={product} onReviewSubmit={forceRefetch} />
+                    </div>
+                    <Separator />
+                    <div>
+                        <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
+                        <div className="space-y-4">
                             {isLoadingReviews ? (
                                 <div className="space-y-4">
                                     <Skeleton className="h-20 w-full" />
@@ -465,7 +473,8 @@ export default function ProductDetailPage() {
                                     <p>No reviews for this product yet.</p>
                                 </div>
                             )}
-                        </CardContent>
+                        </div>
+                    </div>
                 </TabsContent>
             </Tabs>
         </div>
@@ -525,3 +534,5 @@ export default function ProductDetailPage() {
     </div>
   );
 }
+
+    

@@ -60,6 +60,9 @@
               "description": "If true, a disclaimer is shown on the public profile."
             }
           }
+        },
+        "rating": {
+          "type": "number"
         }
       },
       "required": [
@@ -164,6 +167,12 @@
         },
         "packagingDetails": {
             "type": "string"
+        },
+        "rating": {
+            "type": "number"
+        },
+        "reviewCount": {
+            "type": "number"
         }
       },
       "required": [
@@ -579,6 +588,25 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": [ "id", "buyerId", "sellerId", "productId", "productName", "quantity", "status", "createdAt" ]
+    },
+    "Review": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Review",
+      "type": "object",
+      "description": "Represents a product review submitted by a buyer.",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "manufacturerId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "buyerAvatar": { "type": "string", "format": "uri" },
+        "rating": { "type": "number", "minimum": 1, "maximum": 5 },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+      },
+      "required": [ "id", "productId", "manufacturerId", "buyerId", "buyerName", "rating", "comment", "createdAt", "status" ]
     }
   },
   "auth": {
@@ -707,6 +735,16 @@
                 "$ref": "#/backend/entities/Quotation"
             },
             "description": "Stores RFQs for each manufacturer."
+        }
+      },
+      {
+        "path": "/reviews/{reviewId}",
+        "definition": {
+          "entityName": "Review",
+          "schema": {
+            "$ref": "#/backend/entities/Review"
+          },
+          "description": "Stores all product reviews. A collection group query on this will be needed."
         }
       }
     ]
