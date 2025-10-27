@@ -61,7 +61,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type ProductWithShopId = Product & { shopId: string; slug: string; };
+type ProductWithShopId = Product & { shopId: string; slug: string; variants: { price: number }[] };
 
 const categoryIcons: Record<string, React.ReactNode> = {
     "Industrial & Manufacturing Supplies": <Factory className="w-5 h-5" />,
@@ -101,7 +101,6 @@ export function ProductsPageClient({ initialProducts: serverProducts }: { initia
   };
 
   const filteredProducts = useMemo(() => {
-    // temporarily disabling filters for debugging
     return allProducts;
   }, [allProducts, filters, searchQuery]);
 
@@ -207,54 +206,57 @@ export function ProductsPageClient({ initialProducts: serverProducts }: { initia
     
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-        {filteredProducts.map((product) => (
-          <Card key={product.id} className="overflow-hidden group flex flex-col">
-            <div className="flex-grow">
-              <Link href={`/products/${product.shopId}/${product.slug}`}>
-                <CardContent className="p-0">
-                  <div className="relative aspect-[4/3] overflow-hidden">
-                    <Image
-                      src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
-                      alt={product.name}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform"
-                      data-ai-hint={product.imageHint}
-                    />
-                    <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
-                      Verified Factory
-                    </Badge>
-                  </div>
-                  <div className="p-4 space-y-2">
-                    <CardTitle className="text-lg leading-tight h-10">
-                      {product.name}
-                    </CardTitle>
-                    <CardDescription className="text-sm">
-                      From a trusted supplier in{' '}
-                      <span className="font-semibold text-primary">
-                        {product.category}
-                      </span>
-                    </CardDescription>
-                    <div className="flex items-baseline justify-between">
-                      <p className="text-xl font-bold text-foreground">
-                        KES {product.price.toLocaleString()}
-                      </p>
-                      <div className="flex items-center gap-1">
-                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                        <span className="text-sm font-medium">{product.rating}</span>
-                        <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+        {filteredProducts.map((product) => {
+            const price = product.variants?.[0]?.price;
+            return (
+              <Card key={product.id} className="overflow-hidden group flex flex-col">
+                <div className="flex-grow">
+                  <Link href={`/products/${product.shopId}/${product.slug}`}>
+                    <CardContent className="p-0">
+                      <div className="relative aspect-[4/3] overflow-hidden">
+                        <Image
+                          src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
+                          alt={product.name}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform"
+                          data-ai-hint={product.imageHint}
+                        />
+                        <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
+                          Verified Factory
+                        </Badge>
                       </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Link>
-            </div>
-            <div className="p-4 pt-0">
-              <RequestQuoteModal product={product}>
-                <Button className="w-full mt-2">Request Quotation</Button>
-              </RequestQuoteModal>
-            </div>
-          </Card>
-        ))}
+                      <div className="p-4 space-y-2">
+                        <CardTitle className="text-lg leading-tight h-10">
+                          {product.name}
+                        </CardTitle>
+                        <CardDescription className="text-sm">
+                          From a trusted supplier in{' '}
+                          <span className="font-semibold text-primary">
+                            {product.category}
+                          </span>
+                        </CardDescription>
+                        <div className="flex items-baseline justify-between">
+                          <p className="text-xl font-bold text-foreground">
+                            {price !== undefined ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
+                          </p>
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                            <span className="text-sm font-medium">{product.rating}</span>
+                            <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Link>
+                </div>
+                <div className="p-4 pt-0">
+                  <RequestQuoteModal product={product}>
+                    <Button className="w-full mt-2">Request Quotation</Button>
+                  </RequestQuoteModal>
+                </div>
+              </Card>
+            )
+        })}
       </div>
     );
   };

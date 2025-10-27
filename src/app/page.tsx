@@ -29,7 +29,6 @@ import {
 } from '@/components/ui/carousel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getHomepageBanners, getAllBlogPosts, getAllProducts } from '@/app/lib/data';
-import { manufacturers } from '@/app/lib/mock-data';
 import type { Product } from '@/lib/definitions';
 
 
@@ -47,7 +46,7 @@ type BlogPost = {
   slug: string;
 };
 
-type ProductWithShopId = Product & { shopId: string; slug: string; };
+type ProductWithShopId = Product & { shopId: string; slug: string; variants: { price: number }[] };
 
 const categories = [
   'Packaging',
@@ -273,32 +272,35 @@ export default async function HomePage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {featuredProducts.map((product) => (
-                <Card key={product.id} className="overflow-hidden group">
-                   <Link href={`/products/${product.shopId}/${product.slug}`}>
-                    <CardContent className="p-0">
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <Image
-                          src={product.imageUrl}
-                          alt={product.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform"
-                          data-ai-hint={product.imageHint}
-                        />
-                        <Badge variant="secondary" className="absolute top-2 left-2">Verified Factory</Badge>
-                      </div>
-                      <div className="p-4">
-                        <CardTitle className="text-lg mb-1 truncate">
-                          {product.name}
-                        </CardTitle>
-                        <CardDescription className="text-base font-bold text-primary">
-                          KES {product.price.toLocaleString()}
-                        </CardDescription>
-                      </div>
-                    </CardContent>
-                  </Link>
-                </Card>
-              ))}
+              {featuredProducts.map((product) => {
+                const price = product.variants?.[0]?.price;
+                return (
+                  <Card key={product.id} className="overflow-hidden group">
+                     <Link href={`/products/${product.shopId}/${product.slug}`}>
+                      <CardContent className="p-0">
+                        <div className="relative aspect-[4/3] overflow-hidden">
+                          <Image
+                            src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
+                            alt={product.name}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform"
+                            data-ai-hint={product.imageHint}
+                          />
+                          <Badge variant="secondary" className="absolute top-2 left-2">Verified Factory</Badge>
+                        </div>
+                        <div className="p-4">
+                          <CardTitle className="text-lg mb-1 truncate">
+                            {product.name}
+                          </CardTitle>
+                          <CardDescription className="text-base font-bold text-primary">
+                            {price !== undefined && price !== null ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
+                          </CardDescription>
+                        </div>
+                      </CardContent>
+                    </Link>
+                  </Card>
+                )
+              })}
             </div>
           </section>
 
