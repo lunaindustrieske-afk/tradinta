@@ -48,6 +48,7 @@ import { sendTransactionalEmail } from '@/lib/email';
 import { logActivity } from '@/lib/activity-log';
 import { Combobox } from '@/components/ui/combobox';
 import { RestrictPermissionsModal } from '@/components/restrict-permissions-modal';
+import { ROLES } from '@/lib/roles';
 
 
 type UserProfile = {
@@ -68,26 +69,6 @@ const DetailItem = ({ label, value }: { label: string; value?: string | null }) 
   </div>
 );
 
-const roles = [
-  { value: 'admin', label: 'Admin' },
-  { value: 'analytics', label: 'Analytics' },
-  { value: 'buyer', label: 'Buyer' },
-  { value: 'content-management', label: 'Content Management' },
-  { value: 'distributor', label: 'Distributor' },
-  { value: 'finance', label: 'Finance' },
-  { value: 'partner', label: 'Growth Partner' },
-  { value: 'investor-partner', label: 'Investor Partner' },
-  { value: 'legal-compliance', label: 'Legal & Compliance' },
-  { value: 'logistics', label: 'Logistics' },
-  { value: 'manufacturer', label: 'Seller / Manufacturer' },
-  { value: 'marketing-manager', label: 'Marketing Manager' },
-  { value: 'operations-manager', label: 'Operations Manager' },
-  { value: 'support', label: 'Support' },
-  { value: 'super-admin', label: 'Super Admin' },
-  { value: 'tradcoin-airdrop', label: 'TradCoin Airdrop' },
-  { value: 'tradpay-admin', label: 'TradPay Admin' },
-  { value: 'user-management', label: 'User Management' },
-];
 
 export default function UserDetailPage() {
   const params = useParams();
@@ -112,6 +93,11 @@ export default function UserDetailPage() {
       setSelectedRole(user.role);
     }
   }, [user]);
+
+  const roleOptions = Object.keys(ROLES).map(key => ({
+    value: key,
+    label: ROLES[key].name,
+  }));
 
   const handlePasswordReset = async () => {
     if (!user?.email) {
@@ -324,7 +310,7 @@ export default function UserDetailPage() {
               <div className="grid gap-3 max-w-sm">
                 <Label htmlFor="role">User Role</Label>
                 <Combobox
-                    options={roles}
+                    options={roleOptions}
                     value={selectedRole}
                     onValueChange={setSelectedRole}
                     placeholder="Select a role..."
