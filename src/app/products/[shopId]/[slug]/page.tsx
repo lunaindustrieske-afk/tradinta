@@ -39,7 +39,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { type Manufacturer, type Review } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { products as mockProducts } from '@/app/lib/mock-data';
+import { products as mockProducts } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -71,7 +71,6 @@ const relatedProducts = mockProducts.slice(1, 5); // This should be replaced wit
 
 export default function ProductDetailPage() {
     const params = useParams();
-    const shopId = params.shopId as string;
     const slug = params.slug as string;
     const firestore = useFirestore();
 
@@ -81,40 +80,45 @@ export default function ProductDetailPage() {
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!firestore || !shopId || !slug) return;
+            if (!firestore || !slug) return;
             setIsLoading(true);
 
-            // 1. Find the manufacturer UID using the shopId
-            const manufQuery = query(collection(firestore, 'manufacturers'), where('shopId', '==', shopId), limit(1));
-            const manufSnapshot = await getDocs(manufQuery);
-
-            if (manufSnapshot.empty) {
-                setIsLoading(false);
-                return;
-            }
-
-            const manufacturerDoc = manufSnapshot.docs[0];
-            const manufacturerData = { ...manufacturerDoc.data(), id: manufacturerDoc.id } as Manufacturer;
-            setManufacturer(manufacturerData);
-
-            // 2. Find the product using the manufacturer UID and slug
+            // 1. Find the product directly using a collectionGroup query on the unique slug.
             const productQuery = query(
-                collection(firestore, 'manufacturers', manufacturerDoc.id, 'products'),
+                collectionGroup(firestore, 'products'),
                 where('slug', '==', slug),
                 limit(1)
             );
             const productSnapshot = await getDocs(productQuery);
 
-            if (!productSnapshot.empty) {
-                const productDoc = productSnapshot.docs[0];
-                setProduct({ ...productDoc.data(), id: productDoc.id } as Product);
+            if (productSnapshot.empty) {
+                setProduct(null);
+                setManufacturer(null);
+                setIsLoading(false);
+                return;
+            }
+
+            const productDoc = productSnapshot.docs[0];
+            const productData = { ...productDoc.data(), id: productDoc.id } as Product;
+            setProduct(productData);
+
+            // 2. Once product is found, fetch its manufacturer using the manufacturerId.
+            if (productData.manufacturerId) {
+                const manufRef = doc(firestore, 'manufacturers', productData.manufacturerId);
+                const manufSnapshot = await getDocs(query(collection(firestore, 'manufacturers'), where('__name__', '==', productData.manufacturerId)));
+                if (!manufSnapshot.empty) {
+                    const manufacturerDoc = manufSnapshot.docs[0];
+                     setManufacturer({ ...manufacturerDoc.data(), id: manufacturerDoc.id } as Manufacturer);
+                } else {
+                    setManufacturer(null); // Manufacturer not found
+                }
             }
             
             setIsLoading(false);
         };
 
         fetchData();
-    }, [firestore, shopId, slug]);
+    }, [firestore, slug]);
     
     const [mainImage, setMainImage] = React.useState<string | undefined>(product?.bannerUrl || product?.imageUrl);
 
@@ -435,4 +439,5 @@ export default function ProductDetailPage() {
 
     </div>
   );
-}
+
+    
