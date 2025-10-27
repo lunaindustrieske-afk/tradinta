@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -119,9 +118,9 @@ const statusInfo: Record<
 > = {
   Unsubmitted: {
     icon: <Info className="h-8 w-8 text-muted-foreground" />,
-    title: 'Profile Incomplete',
+    title: 'Documents Required',
     description:
-      'Complete your shop profile and submit verification documents to start selling.',
+      'Submit your business documents to get a "Verified" badge and build trust with buyers.',
     badgeVariant: 'outline',
   },
   'Pending Legal': {
@@ -196,8 +195,8 @@ const VerificationStatusCard = ({
         <Button asChild variant="secondary" className="w-full">
           <Link href="/dashboards/seller-centre/profile">
             {status === 'Verified'
-              ? 'View Profile'
-              : 'Update Profile & Documents'}
+              ? 'View Documents'
+              : 'Submit Verification Documents'}
           </Link>
         </Button>
       </CardFooter>
@@ -293,8 +292,8 @@ const ApplyToBecomeManufacturer = () => {
 const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => {
     if (!manufacturer) return 0;
     const fields = [
-        'shopName', 'tagline', 'description', 'logoUrl', 'bannerUrl', 
-        'businessLicenseNumber', 'kraPin', 'address', 'phone', 
+        'shopName', 'tagline', 'description', 'logoUrl',
+        'address', 'phone', 
         'paymentPolicy', 'shippingPolicy', 'returnPolicy'
     ];
     const totalFields = fields.length;
@@ -595,6 +594,37 @@ export default function SellerDashboardPage() {
 
         {/* Right column */}
         <div className="space-y-6">
+          {/* Shop Profile Card */}
+          <Card>
+            <CardHeader className="flex flex-row items-center">
+              <Image
+                src={manufacturer?.logoUrl || "https://i.postimg.cc/j283ydft/image.png"}
+                alt={shopName || 'Shop Logo'}
+                width={56}
+                height={56}
+                className="rounded-lg mr-4"
+              />
+              <div>
+                <CardTitle>Your Shop Profile</CardTitle>
+                <CardDescription>Public view</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-4">
+                Complete your profile to attract more buyers. Your current
+                completion rate is {profileCompleteness}%.
+              </p>
+              <Progress value={profileCompleteness} className="mb-4 h-2" />
+            </CardContent>
+            <CardFooter>
+              <Button asChild variant="secondary" className="w-full">
+                <Link href="/dashboards/seller-centre/profile">
+                  Edit Profile <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </CardFooter>
+          </Card>
+
           {/* Verification Status Card */}
           {user && <VerificationStatusCard manufacturerId={user.uid} />}
 
@@ -628,37 +658,6 @@ export default function SellerDashboardPage() {
                 <Banknote className="mr-2 h-4 w-4" /> Request Payout
               </Button>
               <Button variant="outline">View Statement</Button>
-            </CardFooter>
-          </Card>
-
-          {/* Shop Profile Card */}
-          <Card>
-            <CardHeader className="flex flex-row items-center">
-              <Image
-                src={manufacturer?.logoUrl || "https://picsum.photos/seed/mfg1/64/64"}
-                alt={shopName || 'Shop Logo'}
-                width={56}
-                height={56}
-                className="rounded-lg mr-4"
-              />
-              <div>
-                <CardTitle>Your Shop Profile</CardTitle>
-                <CardDescription>Public view</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Complete your profile to attract more buyers. Your current
-                completion rate is {profileCompleteness}%.
-              </p>
-              <Progress value={profileCompleteness} className="mb-4 h-2" />
-            </CardContent>
-            <CardFooter>
-              <Button asChild variant="secondary" className="w-full">
-                <Link href="/dashboards/seller-centre/profile">
-                  Edit Profile <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
             </CardFooter>
           </Card>
 
