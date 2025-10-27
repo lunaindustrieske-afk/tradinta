@@ -100,9 +100,14 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
         if (disabled) return;
         if (acceptedFiles.length > 0) {
           const selectedFile = acceptedFiles[0];
-          const previewUrl = URL.createObjectURL(selectedFile);
-          setPreview(previewUrl);
-          handleUpload(selectedFile);
+          
+          const reader = new FileReader();
+          reader.onload = (e) => {
+              const base64String = e.target?.result as string;
+              setPreview(base64String); // Set preview for immediate feedback
+              handleUpload(selectedFile); // Proceed with upload to Cloudinary
+          };
+          reader.readAsDataURL(selectedFile);
         }
       },
       [disabled]
