@@ -517,7 +517,7 @@ const InquirySchema = z.object({
     manufacturerEmail: z.string().email(),
     manufacturerName: z.string(),
     productName: z.string(),
-    productImageUrl: z.string().url().optional(),
+    productImageUrl: z.string().url().optional().nullable(),
     message: z.string().min(1, 'Message cannot be empty.'),
 });
 
@@ -568,6 +568,7 @@ export async function sendNewInquiryEmail(
                                   <table width="100%" border="0" cellspacing="0" cellpadding="0" style="margin: 20px 0; background-color: #f9f9f9; border: 1px solid #eeeeee; border-radius: 5px;">
                                     <tr>
                                         <td style="padding: 20px;">
+                                            ${productImageUrl ? `<img src="${productImageUrl}" alt="${productName}" style="max-width: 150px; margin-bottom: 15px; border-radius: 4px;" />` : ''}
                                             <p style="color: #555555; font-size: 16px; line-height: 1.5; margin: 0;"><em>"${message}"</em></p>
                                         </td>
                                     </tr>

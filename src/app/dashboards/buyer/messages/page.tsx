@@ -22,6 +22,7 @@ import {
   Loader2,
   Archive,
   Edit,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -32,11 +33,13 @@ import {
 } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import Image from 'next/image';
 
 type Message = {
   id: string;
   from: 'user' | 'contact';
-  text: string;
+  text?: string;
+  imageUrl?: string;
   timestamp?: any;
 };
 
@@ -239,8 +242,18 @@ export default function MessagesPage() {
                                             <AvatarFallback>{selectedConversation.contactName.charAt(0)}</AvatarFallback>
                                         </Avatar>
                                     )}
-                                    <div className={`max-w-md p-3 rounded-lg ${msg.from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                        <p className="text-sm">{msg.text}</p>
+                                    <div className={`max-w-md p-2 rounded-lg ${msg.from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                        {msg.imageUrl && (
+                                          <div className="relative group w-48 h-48 mb-2">
+                                            <Image src={msg.imageUrl} alt="Uploaded content" layout="fill" className="object-cover rounded-md" />
+                                            {msg.from === 'contact' && (
+                                              <a href={msg.imageUrl} download target="_blank" rel="noopener noreferrer" className="absolute bottom-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Download className="h-4 w-4" />
+                                              </a>
+                                            )}
+                                          </div>
+                                        )}
+                                        {msg.text && <p className="text-sm px-1">{msg.text}</p>}
                                     </div>
                                     {msg.from === 'user' && (
                                         <Avatar className="h-8 w-8">

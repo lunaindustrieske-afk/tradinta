@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -7,7 +6,7 @@ import { useDropzone, type DropzoneOptions } from 'react-dropzone';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { Button } from './button';
+import { Button } from './ui/button';
 import { Label } from '@/components/ui/label';
 
 interface PhotoUploadProps extends React.HTMLAttributes<HTMLDivElement> {
@@ -16,10 +15,11 @@ interface PhotoUploadProps extends React.HTMLAttributes<HTMLDivElement> {
   initialUrl?: string | null;
   label: string;
   disabled?: boolean;
+  children?: React.ReactNode;
 }
 
 const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
-  ({ onUpload, onLoadingChange, initialUrl, label, disabled = false, className, ...props }, ref) => {
+  ({ onUpload, onLoadingChange, initialUrl, label, disabled = false, children, className, ...props }, ref) => {
     const [preview, setPreview] = React.useState<string | null>(initialUrl || null);
     const [isLoading, setIsLoading] = React.useState(false);
     const { toast } = useToast();
@@ -74,7 +74,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           const errorMessage = data?.error?.message || 'Upload failed due to an unknown error.';
           throw new Error(errorMessage);
         }
-
+        
         onUpload(data.secure_url);
 
         toast({
@@ -119,10 +119,21 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
       accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif'] },
       multiple: false,
       disabled: disabled,
+      noClick: !!children, // Disable click if custom trigger is provided
+      noKeyboard: !!children,
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
 
+    if (children) {
+      return (
+        <div {...getRootProps()} className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+          <input {...getInputProps()} />
+          {children}
+        </div>
+      );
+    }
+    
     return (
       <div ref={ref} className={cn('space-y-2', className)} {...props}>
          <Label className={cn(disabled && "text-muted-foreground")}>{label}</Label>

@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -16,11 +15,13 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { Product } from '@/lib/definitions';
-import { Send, Loader2, Info } from 'lucide-react';
+import { Send, Loader2, Info, Paperclip, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase';
 import { sendNewInquiryEmail } from '@/app/(auth)/actions';
 import { Alert, AlertDescription } from './ui/alert';
+import { PhotoUpload } from './ui/photo-upload';
+import Image from 'next/image';
 
 // Add email to the Manufacturer type
 type Manufacturer = {
@@ -45,15 +46,19 @@ export function ContactManufacturerModal({
   const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
   const [message, setMessage] = React.useState('');
+  const [imageUrl, setImageUrl] = React.useState<string | null>(null);
   const [isSending, setIsSending] = React.useState(false);
-  const [sentMessage, setSentMessage] = React.useState<string | null>(null);
+  const [sentMessage, setSentMessage] = React.useState<{ text: string, imageUrl?: string | null } | null>(null);
+  const [isUploading, setIsUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!message.trim() || !user) {
+    if ((!message.trim() && !imageUrl) || !user) {
       toast({
         title: 'Error',
-        description: 'You must be logged in and type a message.',
+        description: 'You must be logged in and type a message or upload an image.',
         variant: 'destructive',
       });
       return;
@@ -61,7 +66,6 @@ export function ContactManufacturerModal({
     setIsSending(true);
 
     try {
-      // Conditionally send the email
       if (manufacturer.email) {
         const result = await sendNewInquiryEmail({
             buyerName: user.displayName || 'A Tradinta Buyer',
@@ -69,22 +73,20 @@ export function ContactManufacturerModal({
             manufacturerEmail: manufacturer.email,
             manufacturerName: manufacturer.shopName || manufacturer.name,
             productName: product.name,
-            productImageUrl: product.imageUrl,
+            productImageUrl: imageUrl || product.imageUrl,
             message: message,
         });
 
         if (!result.success) {
-            // Log the error but don't block the user
             console.error("Failed to send inquiry email:", result.message);
         }
       } else {
         console.warn(`Manufacturer ${manufacturer.id} has no email. Message sent to dashboard only.`);
       }
 
-      // TODO: Here you would also write the message to a 'conversations' collection in Firestore.
-      
-      setSentMessage(message);
-      setMessage(''); // Clear the input
+      setSentMessage({ text: message, imageUrl });
+      setMessage('');
+      setImageUrl(null);
       toast({
         title: 'Message Sent!',
         description: `Your message has been sent to ${
@@ -102,15 +104,20 @@ export function ContactManufacturerModal({
     }
   };
 
-  // Reset state when modal is closed
   React.useEffect(() => {
     if (!open) {
       setTimeout(() => {
         setSentMessage(null);
         setMessage('');
-      }, 300); // Delay to allow fade-out animation
+        setImageUrl(null);
+      }, 300);
     }
   }, [open]);
+  
+  const handleImageUpload = (url: string) => {
+    setImageUrl(url);
+  };
+
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -128,8 +135,11 @@ export function ContactManufacturerModal({
           <div className="h-64 flex flex-col justify-end p-4 bg-muted/50 rounded-md">
             {sentMessage ? (
               <div className="flex justify-end">
-                <div className="bg-primary text-primary-foreground p-3 rounded-lg max-w-sm">
-                  <p className="text-sm">{sentMessage}</p>
+                <div className="bg-primary text-primary-foreground p-2 rounded-lg max-w-sm">
+                    {sentMessage.imageUrl && (
+                        <Image src={sentMessage.imageUrl} alt="Uploaded image" width={200} height={200} className="rounded-md mb-2" />
+                    )}
+                    {sentMessage.text && <p className="text-sm">{sentMessage.text}</p>}
                 </div>
               </div>
             ) : (
@@ -141,6 +151,15 @@ export function ContactManufacturerModal({
         </div>
 
         <form onSubmit={handleSubmit}>
+          {imageUrl && !sentMessage && (
+            <div className="relative w-24 h-24 mb-2 p-2 border rounded-md">
+                <Image src={imageUrl} alt="preview" fill className="object-cover rounded-sm" />
+                <Button variant="ghost" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground" onClick={() => setImageUrl(null)}>
+                    <span className="sr-only">Remove Image</span>
+                    &times;
+                </Button>
+            </div>
+          )}
           <div className="grid gap-2">
             <Textarea
               id="message"
@@ -148,17 +167,30 @@ export function ContactManufacturerModal({
               className="min-h-24"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              required
-              disabled={!!sentMessage} // Disable after sending the first message
+              disabled={!!sentMessage}
             />
-            <Button type="submit" disabled={isSending || !!sentMessage}>
-              {isSending ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              Send Initial Message
-            </Button>
+            <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                    <PhotoUpload
+                        label=""
+                        onUpload={handleImageUpload}
+                        onLoadingChange={setIsUploading}
+                        disabled={isSending || !!sentMessage || isUploading}
+                    >
+                        <Button type="button" variant="ghost" size="icon" disabled={isSending || !!sentMessage || isUploading}>
+                           {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                        </Button>
+                    </PhotoUpload>
+                </div>
+                <Button type="submit" disabled={isSending || !!sentMessage || isUploading}>
+                {isSending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                    <Send className="mr-2 h-4 w-4" />
+                )}
+                Send Initial Message
+                </Button>
+            </div>
           </div>
         </form>
 
