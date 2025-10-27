@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { ChevronDown, Search, UserPlus } from 'lucide-react';
+import { ChevronDown, Heart, Mail, UserPlus } from 'lucide-react';
 import { Logo } from './logo';
 import { Button } from './ui/button';
 import {
@@ -17,13 +17,12 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal
 } from './ui/dropdown-menu';
-import { Input } from './ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { ScrollArea } from './ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 import { useUser, useAuth } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
+import { ModeToggle } from './mode-toggle';
 
 function UserMenu() {
     const { user, isUserLoading } = useUser();
@@ -42,26 +41,57 @@ function UserMenu() {
 
     if (user) {
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="secondary" size="icon" className="rounded-full">
-                <Avatar>
-                  <AvatarImage src={user.photoURL || "https://picsum.photos/seed/user-avatar/32/32"} />
-                  <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                </Avatar>
-                <span className="sr-only">Toggle user menu</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-               <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">My Tradinta</Link></DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
-              <DropdownMenuItem>Support</DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-2">
+              <TooltipProvider>
+                  <Tooltip>
+                      <TooltipTrigger asChild>
+                           <Button asChild variant="ghost" size="icon">
+                              <Link href="/buyer/wishlist">
+                                <Heart className="h-5 w-5" />
+                                <span className="sr-only">Wishlist</span>
+                              </Link>
+                          </Button>
+                      </TooltipTrigger>
+                       <TooltipContent><p>My Wishlist</p></TooltipContent>
+                  </Tooltip>
+                   <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button asChild variant="ghost" size="icon" className="relative">
+                              <Link href="/dashboards/buyer/messages">
+                                <Mail className="h-5 w-5" />
+                                <span className="sr-only">Messages</span>
+                                {/* Pulsating badge - to be driven by state */}
+                                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                </span>
+                              </Link>
+                          </Button>
+                      </TooltipTrigger>
+                       <TooltipContent><p>Messages</p></TooltipContent>
+                  </Tooltip>
+              </TooltipProvider>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" className="rounded-full">
+                  <Avatar>
+                    <AvatarImage src={user.photoURL || "https://picsum.photos/seed/user-avatar/32/32"} />
+                    <AvatarFallback>{user.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <span className="sr-only">Toggle user menu</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild><Link href="/dashboards/seller-centre">My Tradinta</Link></DropdownMenuItem>
+                <DropdownMenuItem>Settings</DropdownMenuItem>
+                <DropdownMenuItem>Support</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
     }
 
@@ -73,10 +103,10 @@ function UserMenu() {
             </Button>
             <Tooltip>
               <TooltipTrigger asChild>
-                 <Button asChild variant="outline" size="icon">
+                 <Button asChild>
                     <Link href="/signup">
-                      <UserPlus />
-                      <span className="sr-only">Sign Up</span>
+                      <UserPlus className="mr-2" />
+                      Sign Up
                     </Link>
                 </Button>
               </TooltipTrigger>
@@ -150,6 +180,7 @@ export function TopNav() {
         
         <div className="flex items-center justify-end space-x-2">
             <UserMenu />
+            <ModeToggle />
         </div>
       </div>
     </header>
