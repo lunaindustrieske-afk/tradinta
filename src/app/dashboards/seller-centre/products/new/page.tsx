@@ -8,6 +8,8 @@ import {
   ChevronLeft,
   Sparkles,
   Loader2,
+  Trash2,
+  PlusCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,11 +40,19 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { PhotoUpload } from '@/components/photo-upload';
+import { PhotoUpload } from '@/components/ui/photo-upload';
 import { useFirestore, useUser } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { generateSlug } from '@/lib/utils';
+import { nanoid } from 'nanoid';
 
+type Variant = {
+    id: string;
+    price: string;
+    stock: string;
+    sku: string;
+    attributes: Record<string, string>;
+};
 
 export default function NewProductPage() {
   const { toast } = useToast();
@@ -64,15 +74,15 @@ export default function NewProductPage() {
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
-  const [price, setPrice] = React.useState('');
-  const [moq, setMoq] = React.useState('');
-  const [sku, setSku] = React.useState('');
-  const [stock, setStock] = React.useState('');
   const [tags, setTags] = React.useState<string[]>([]);
   
   const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
   const [subcategories, setSubcategories] = React.useState<string[]>([]);
   const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
+
+  // Variant State
+  const [options, setOptions] = React.useState<string[]>(['']);
+  const [variants, setVariants] = React.useState<Variant[]>([]);
 
   // New fields
   const [weight, setWeight] = React.useState('');
@@ -80,6 +90,41 @@ export default function NewProductPage() {
   const [material, setMaterial] = React.useState('');
   const [certifications, setCertifications] = React.useState('');
   const [packagingDetails, setPackagingDetails] = React.useState('');
+  
+  const handleAddOption = () => setOptions([...options, '']);
+  const handleOptionChange = (index: number, value: string) => {
+    const newOptions = [...options];
+    newOptions[index] = value;
+    setOptions(newOptions);
+  };
+  const handleRemoveOption = (index: number) => {
+    const newOptions = options.filter((_, i) => i !== index);
+    setOptions(newOptions);
+  };
+  
+  const handleAddVariant = () => {
+    const newVariant: Variant = {
+        id: nanoid(),
+        price: '',
+        stock: '',
+        sku: '',
+        attributes: options.reduce((acc, option) => {
+            if (option) acc[option] = '';
+            return acc;
+        }, {} as Record<string, string>),
+    };
+    setVariants([...variants, newVariant]);
+  };
+  const handleVariantChange = (variantId: string, field: keyof Omit<Variant, 'id'|'attributes'>, value: string) => {
+    setVariants(variants.map(v => v.id === variantId ? { ...v, [field]: value } : v));
+  };
+  const handleAttributeChange = (variantId: string, attribute: string, value: string) => {
+    setVariants(variants.map(v => v.id === variantId ? { ...v, attributes: { ...v.attributes, [attribute]: value } } : v));
+  };
+   const handleRemoveVariant = (variantId: string) => {
+    setVariants(variants.filter(v => v.id !== variantId));
+  };
+
 
   const handleCategoryChange = (value: string) => {
     const category = categories.find((c) => c.name === value);
@@ -144,14 +189,16 @@ export default function NewProductPage() {
             name,
             slug: generateSlug(name),
             description,
-            price: Number(price) || 0,
-            moq: Number(moq) || 0,
-            sku,
-            stock: Number(stock) || 0,
             category: selectedCategory?.name || '',
             subcategory: selectedSubCategory || '',
             imageUrl,
             tags,
+            options: options.filter(Boolean),
+            variants: variants.map(v => ({
+                ...v,
+                price: Number(v.price) || 0,
+                stock: Number(v.stock) || 0,
+            })),
             status,
             weight,
             dimensions,
@@ -312,6 +359,63 @@ export default function NewProductPage() {
               </Accordion>
             </CardFooter>
           </Card>
+          
+           <Card>
+            <CardHeader>
+                <CardTitle>Product Variants</CardTitle>
+                <CardDescription>Add options like size or color to create different versions of this product.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <div>
+                    <Label>Variant Options</Label>
+                    <div className="space-y-2 mt-2">
+                        {options.map((option, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <Input 
+                                    placeholder={`Option ${index + 1} (e.g., Size)`}
+                                    value={option}
+                                    onChange={(e) => handleOptionChange(index, e.target.value)}
+                                />
+                                {options.length > 1 && <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(index)}><Trash2 className="w-4 h-4 text-destructive"/></Button>}
+                            </div>
+                        ))}
+                    </div>
+                    <Button variant="outline" size="sm" className="mt-2" onClick={handleAddOption}>
+                        <PlusCircle className="mr-2 h-4 w-4" /> Add another option
+                    </Button>
+                </div>
+                
+                {options.filter(Boolean).length > 0 && (
+                    <div>
+                         <Label>Variants List</Label>
+                         <div className="space-y-4 mt-2">
+                            {variants.map(variant => (
+                                <Card key={variant.id} className="p-4 bg-muted/50">
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        {Object.keys(variant.attributes).map(attr => (
+                                            <div key={attr} className="grid gap-2">
+                                                <Label className="text-xs">{attr}</Label>
+                                                <Input placeholder={attr} value={variant.attributes[attr]} onChange={e => handleAttributeChange(variant.id, attr, e.target.value)} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="grid sm:grid-cols-3 gap-4 mt-4">
+                                        <div className="grid gap-2"><Label className="text-xs">Price (KES)</Label><Input type="number" placeholder="0.00" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} /></div>
+                                        <div className="grid gap-2"><Label className="text-xs">Stock</Label><Input type="number" placeholder="0" value={variant.stock} onChange={e => handleVariantChange(variant.id, 'stock', e.target.value)} /></div>
+                                        <div className="grid gap-2"><Label className="text-xs">SKU</Label><Input placeholder="SKU-VAR-01" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} /></div>
+                                    </div>
+                                    <Button variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive" onClick={() => handleRemoveVariant(variant.id)}>Remove Variant</Button>
+                                </Card>
+                            ))}
+                         </div>
+                         <Button variant="secondary" className="mt-4" onClick={handleAddVariant}>
+                             <PlusCircle className="mr-2 h-4 w-4" /> Add Variant
+                         </Button>
+                    </div>
+                )}
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader>
               <CardTitle>Specifications & Packaging</CardTitle>
@@ -358,40 +462,6 @@ export default function NewProductPage() {
           </Card>
         </div>
         <div className="grid auto-rows-max items-start gap-4 lg:gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Pricing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                <div className="grid gap-3">
-                  <Label htmlFor="price">Base Price (KES)</Label>
-                  <Input id="price" type="number" placeholder="0.00" value={price} onChange={(e) => setPrice(e.target.value)} />
-                </div>
-                 <div className="grid gap-3">
-                  <Label htmlFor="moq">Minimum Order Quantity (MOQ)</Label>
-                  <Input id="moq" type="number" placeholder="1" value={moq} onChange={(e) => setMoq(e.target.value)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Inventory</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-6">
-                 <div className="grid gap-3">
-                  <Label htmlFor="sku">SKU (Stock Keeping Unit)</Label>
-                  <Input id="sku" type="text" placeholder="SKU-123" value={sku} onChange={(e) => setSku(e.target.value)} />
-                </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="stock">Stock</Label>
-                  <Input id="stock" type="number" placeholder="0" value={stock} onChange={(e) => setStock(e.target.value)} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Category</CardTitle>

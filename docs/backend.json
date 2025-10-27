@@ -129,10 +129,6 @@
           "type": "string",
           "description": "Description of the product."
         },
-        "price": {
-          "type": "number",
-          "description": "Price of the product."
-        },
         "imageUrl": {
           "type": "string",
           "description": "URL of the product image.",
@@ -144,6 +140,20 @@
           "items": {
             "type": "string"
           }
+        },
+        "options": {
+          "type": "array",
+          "description": "Defines the types of variants, e.g., ['Size', 'Color']",
+          "items": {
+            "type": "string"
+          }
+        },
+        "variants": {
+          "type": "array",
+          "description": "List of all product variants.",
+          "items": {
+            "$ref": "#/backend/entities/ProductVariant"
+          }
         }
       },
       "required": [
@@ -151,9 +161,40 @@
         "shopId",
         "name",
         "description",
-        "price",
         "imageUrl"
       ]
+    },
+    "ProductVariant": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProductVariant",
+      "type": "object",
+      "description": "Represents a specific version of a product (e.g., size, color).",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the variant."
+        },
+        "price": {
+          "type": "number",
+          "description": "Price of this specific variant."
+        },
+        "stock": {
+          "type": "number",
+          "description": "Inventory count for this specific variant."
+        },
+        "sku": {
+          "type": "string",
+          "description": "Stock Keeping Unit for this variant."
+        },
+        "attributes": {
+          "type": "object",
+          "description": "Key-value pairs for the variant options, e.g., {'Size': 'Large', 'Color': 'Red'}.",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      },
+      "required": ["id", "price", "stock", "attributes"]
     },
     "Order": {
       "$schema": "http://json-schema.org/draft-07/schema#",
