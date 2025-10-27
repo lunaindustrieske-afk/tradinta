@@ -18,6 +18,7 @@ import {
   MessageCircle,
   Instagram,
   Check,
+  FileText,
 } from 'lucide-react';
 import {
   Card,
@@ -86,6 +87,7 @@ export default function ProductDetailPage() {
     // Check if a quotation has already been requested for this product by this user
     const quotationQuery = useMemoFirebase(() => {
         if (!firestore || !user || !product) return null;
+        // We query the manufacturer's subcollection for a quote from the current buyer for this product
         return query(
             collection(firestore, 'manufacturers', product.manufacturerId, 'quotations'),
             where('buyerId', '==', user.uid),
@@ -95,7 +97,13 @@ export default function ProductDetailPage() {
     }, [firestore, user, product]);
 
     const { data: existingQuotations } = useCollection(quotationQuery);
-    const hasRequestedQuote = existingQuotations && existingQuotations.length > 0;
+    
+    const existingQuote = useMemo(() => {
+        if (existingQuotations && existingQuotations.length > 0) {
+            return existingQuotations[0];
+        }
+        return null;
+    }, [existingQuotations]);
 
 
     React.useEffect(() => {
@@ -322,10 +330,12 @@ export default function ProductDetailPage() {
                 </p>
                 
                 <div className="space-y-3">
-                    {hasRequestedQuote ? (
-                        <Button size="lg" className="w-full" disabled>
-                            <Check className="mr-2 h-5 w-5" />
-                            Quotation Requested
+                    {existingQuote ? (
+                        <Button size="lg" className="w-full" asChild>
+                            <Link href={`/dashboards/buyer/quotations/${existingQuote.id}`}>
+                                <FileText className="mr-2 h-5 w-5" />
+                                View My Quotation
+                            </Link>
                         </Button>
                     ) : (
                         <RequestQuoteModal product={product}>
