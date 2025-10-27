@@ -39,7 +39,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, getDocs, collectionGroup, doc } from 'firebase/firestore';
 import { type Manufacturer, type Review } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { mockProducts } from '@/app/lib/mock-data';
+import { products as mockProducts } from '@/app/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 
