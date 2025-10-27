@@ -25,6 +25,7 @@ export const PERMISSIONS = {
     CREATE: 'products:create',       // Create a new product listing
     UPDATE: 'products:update',       // Update an existing product
     DELETE: 'products:delete',       // Delete a product (archive/soft delete)
+    VIEW_ANALYTICS: 'products:view:analytics', // View performance analytics for a product
     GENERATE_AI_METADATA: 'products:generate_ai_metadata', // Use the AI tagging feature
   },
 
@@ -33,6 +34,8 @@ export const PERMISSIONS = {
     UPDATE_PROFILE: 'shop:update:profile',  // Update the seller's public shop profile (branding, info)
     UPDATE_POLICIES: 'shop:update:policies',// Update shop policies (payment, shipping, return)
     UPDATE_SETTINGS: 'shop:update:settings',// Update shop settings (TradPay, TradPoints)
+    UPDATE_KRA_PIN: 'shop:update:kra_pin', // Update the KRA PIN before verification
+    UPDATE_LOGO: 'shop:update:logo', // Update the shop logo
     VIEW_DASHBOARD: 'shop:view:dashboard', // Access the Seller Centre dashboard
   },
 
