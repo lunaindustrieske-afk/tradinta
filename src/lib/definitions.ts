@@ -13,7 +13,7 @@ export type Product = {
   rating: number;
   reviewCount: number;
   manufacturerId: string; // Firebase UID of the manufacturer
-  isVerified?: boolean; // Added this to carry verification status
+  isVerified?: boolean;
 };
 
 export type Order = {
