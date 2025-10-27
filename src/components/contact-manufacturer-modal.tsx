@@ -14,12 +14,20 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import type { Product, Manufacturer } from '@/lib/definitions';
+import type { Product } from '@/lib/definitions';
 import { Send, Loader2, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useUser } from '@/firebase';
 import { sendNewInquiryEmail } from '@/app/(auth)/actions';
 import { Alert, AlertDescription } from './ui/alert';
+
+// Add email to the Manufacturer type
+type Manufacturer = {
+  id: string;
+  shopName?: string;
+  name: string;
+  email?: string;
+};
 
 interface ContactManufacturerModalProps {
   product: Product;
@@ -71,7 +79,9 @@ export function ContactManufacturerModal({
       setMessage(''); // Clear the input
       toast({
         title: 'Message Sent!',
-        description: `Your message has been sent to ${manufacturer.shopName}.`,
+        description: `Your message has been sent to ${
+          manufacturer.shopName || manufacturer.name
+        }.`,
       });
     } catch (error: any) {
       toast({
@@ -83,14 +93,14 @@ export function ContactManufacturerModal({
       setIsSending(false);
     }
   };
-  
+
   // Reset state when modal is closed
   React.useEffect(() => {
     if (!open) {
-        setTimeout(() => {
-            setSentMessage(null);
-            setMessage('');
-        }, 300); // Delay to allow fade-out animation
+      setTimeout(() => {
+        setSentMessage(null);
+        setMessage('');
+      }, 300); // Delay to allow fade-out animation
     }
   }, [open]);
 
@@ -99,26 +109,27 @@ export function ContactManufacturerModal({
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Chat with {manufacturer.shopName}</DialogTitle>
+          <DialogTitle>Chat with {manufacturer.shopName || manufacturer.name}</DialogTitle>
           <DialogDescription>
-            Regarding product: <span className="font-semibold text-primary">{product.name}</span>
+            Regarding product:{' '}
+            <span className="font-semibold text-primary">{product.name}</span>
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="pr-2">
-            <div className="h-64 flex flex-col justify-end p-4 bg-muted/50 rounded-md">
-                {sentMessage ? (
-                    <div className="flex justify-end">
-                        <div className="bg-primary text-primary-foreground p-3 rounded-lg max-w-sm">
-                            <p className="text-sm">{sentMessage}</p>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="text-center text-muted-foreground text-sm">
-                        <p>Your conversation will appear here.</p>
-                    </div>
-                )}
-            </div>
+          <div className="h-64 flex flex-col justify-end p-4 bg-muted/50 rounded-md">
+            {sentMessage ? (
+              <div className="flex justify-end">
+                <div className="bg-primary text-primary-foreground p-3 rounded-lg max-w-sm">
+                  <p className="text-sm">{sentMessage}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground text-sm">
+                <p>Your conversation will appear here.</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -132,7 +143,7 @@ export function ContactManufacturerModal({
               required
               disabled={!!sentMessage} // Disable after sending the first message
             />
-             <Button type="submit" disabled={isSending || !!sentMessage}>
+            <Button type="submit" disabled={isSending || !!sentMessage}>
               {isSending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
@@ -144,16 +155,20 @@ export function ContactManufacturerModal({
         </form>
 
         <Alert className="mt-4">
-            <Info className="h-4 w-4"/>
-            <AlertDescription className="text-xs">
-                You will be notified via email when the manufacturer responds. You can view and continue all conversations in your <strong>Tradinta Inbox</strong>.
-            </AlertDescription>
+          <Info className="h-4 w-4" />
+          <AlertDescription className="text-xs">
+            You will be notified via email when the manufacturer responds. You
+            can view and continue all conversations in your{' '}
+            <strong>Tradinta Inbox</strong>.
+          </AlertDescription>
         </Alert>
-        
+
         <DialogFooter>
-            <DialogClose asChild>
-                <Button type="button" variant="outline">Close</Button>
-            </DialogClose>
+          <DialogClose asChild>
+            <Button type="button" variant="outline">
+              Close
+            </Button>
+          </DialogClose>
         </DialogFooter>
       </DialogContent>
     </Dialog>
