@@ -67,6 +67,12 @@ export type Manufacturer = {
     rating: number;
     comment: string;
   }[];
+  suspensionDetails?: {
+    isSuspended: boolean;
+    reason: string;
+    prohibitions: string[];
+    publicDisclaimer: boolean;
+  };
 };
 
 export type Review = {

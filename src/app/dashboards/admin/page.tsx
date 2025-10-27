@@ -18,6 +18,7 @@ import React from 'react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
+import { SuspendShopModal } from "@/components/suspend-shop-modal";
 
 type Manufacturer = {
     id: string;
@@ -25,6 +26,12 @@ type Manufacturer = {
     industry?: string;
     registrationDate: any; // Firestore timestamp
     verificationStatus: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified' | 'Restricted';
+    suspensionDetails?: {
+        isSuspended: boolean;
+        reason: string;
+        prohibitions: string[];
+        publicDisclaimer: boolean;
+      };
     rating?: number;
     sales?: number; // This would need to be calculated/stored
 };
@@ -85,7 +92,7 @@ export default function AdminDashboard() {
 
     const allSellers = React.useMemo(() => {
         if (!allManufacturers) return null;
-        return allManufacturers.filter(m => ['Verified', 'Restricted'].includes(m.verificationStatus));
+        return allManufacturers.filter(m => ['Verified', 'Restricted', 'Suspended'].includes(m.verificationStatus) || m.suspensionDetails?.isSuspended);
     }, [allManufacturers]);
 
 
@@ -177,6 +184,13 @@ export default function AdminDashboard() {
         ));
     }
     
+    const getSellerStatus = (seller: Manufacturer) => {
+        if (seller.suspensionDetails?.isSuspended) {
+            return <Badge variant="destructive">Suspended</Badge>;
+        }
+        return <Badge variant={seller.verificationStatus === 'Verified' ? 'secondary' : 'destructive'}>{seller.verificationStatus}</Badge>;
+    }
+    
     const renderPerformanceRows = () => {
         if (isLoadingManufacturers) {
             return Array.from({length: 3}).map((_, i) => (
@@ -198,18 +212,14 @@ export default function AdminDashboard() {
                 <TableCell className="font-medium">{seller.shopName}</TableCell>
                 <TableCell><Star className="inline mr-1 h-4 w-4 text-yellow-400"/>{seller.rating || 'N/A'}</TableCell>
                 <TableCell>{seller.sales || 0}</TableCell>
-                <TableCell><Badge variant={seller.verificationStatus === 'Verified' ? 'secondary' : 'destructive'}>{seller.verificationStatus}</Badge></TableCell>
+                <TableCell>{getSellerStatus(seller)}</TableCell>
                 <TableCell className="space-x-2">
                     <Button variant="outline" size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
-                    {seller.verificationStatus === 'Verified' ? (
-                        <Button variant="destructive" size="sm" onClick={() => handleRestrictSeller(seller.id, seller.shopName)}>
-                            <AlertTriangle className="mr-1 h-4 w-4" /> Restrict
+                    <SuspendShopModal seller={seller}>
+                         <Button variant="destructive" size="sm">
+                            <AlertTriangle className="mr-1 h-4 w-4" /> Manage
                         </Button>
-                    ) : (
-                         <Button variant="secondary" size="sm" onClick={() => handleUnrestrictSeller(seller.id, seller.shopName)}>
-                           Lift Restriction
-                        </Button>
-                    )}
+                    </SuspendShopModal>
                 </TableCell>
             </TableRow>
         ));

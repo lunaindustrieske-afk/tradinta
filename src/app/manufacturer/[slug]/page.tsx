@@ -13,6 +13,7 @@ import {
   Globe,
   Banknote,
   FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import {
   Card,
@@ -37,6 +38,7 @@ import { type Product, type Manufacturer } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function ManufacturerPage() {
   const slug = useParams().slug as string;
@@ -100,6 +102,10 @@ export default function ManufacturerPage() {
   if (!manufacturer) {
     notFound();
   }
+  
+  const isSuspended = manufacturer.suspensionDetails?.isSuspended;
+  const suspensionReason = manufacturer.suspensionDetails?.reason;
+  const showDisclaimer = manufacturer.suspensionDetails?.publicDisclaimer;
 
   return (
     <div className="bg-background">
@@ -117,6 +123,16 @@ export default function ManufacturerPage() {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+        
+        {isSuspended && showDisclaimer && (
+          <Alert variant="destructive" className="mb-8">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Shop Suspended</AlertTitle>
+            <AlertDescription>
+              This shop is currently suspended. Reason: {suspensionReason || 'Violation of platform policies.'}
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* --- Header Section --- */}
         <header className="grid md:grid-cols-3 gap-8 items-center mb-12">
@@ -292,5 +308,3 @@ export default function ManufacturerPage() {
     </div>
   );
 }
-
-    

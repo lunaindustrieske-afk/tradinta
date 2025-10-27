@@ -34,6 +34,31 @@
         "shopId": {
           "type": "string",
           "description": "Reference to Shop. (Relationship: Manufacturer 1:1 Shop)"
+        },
+        "suspensionDetails": {
+          "type": "object",
+          "description": "Details regarding the suspension of a shop.",
+          "properties": {
+            "isSuspended": {
+              "type": "boolean",
+              "description": "Whether the shop is currently suspended."
+            },
+            "reason": {
+              "type": "string",
+              "description": "The reason for the suspension."
+            },
+            "prohibitions": {
+              "type": "array",
+              "description": "Specific actions the seller is prohibited from doing.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "publicDisclaimer": {
+              "type": "boolean",
+              "description": "If true, a disclaimer is shown on the public profile."
+            }
+          }
         }
       },
       "required": [
