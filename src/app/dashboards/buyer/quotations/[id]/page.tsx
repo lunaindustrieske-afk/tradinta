@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo, useState } from 'react';
@@ -25,8 +24,9 @@ import {
   useFirestore,
   useDoc,
   useMemoFirebase,
+  useCollection
 } from '@/firebase';
-import { doc, updateDoc, serverTimestamp, addDoc, collection } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, addDoc, collection, query, where, getDocs, limit } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -43,6 +43,8 @@ import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { nanoid } from 'nanoid';
+import { ContactManufacturerModal } from '@/components/contact-manufacturer-modal';
+import type { Product, Manufacturer } from '@/lib/definitions';
 
 
 type Quotation = {
@@ -89,6 +91,30 @@ export default function BuyerQuotationDetailPage() {
   }, [user, firestore, quotationId]);
 
   const { data: quotation, isLoading } = useDoc<Quotation>(quotationDocRef);
+
+  const [product, setProduct] = React.useState<Product | null>(null);
+  const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
+
+  React.useEffect(() => {
+    if (quotation && firestore) {
+      const fetchRelatedData = async () => {
+        // Fetch Manufacturer
+        const manufRef = doc(firestore, 'manufacturers', quotation.sellerId);
+        const manufSnap = await getDoc(manufRef);
+        if (manufSnap.exists()) {
+          setManufacturer({ id: manufSnap.id, ...manufSnap.data() } as Manufacturer);
+        }
+
+        // Fetch Product
+        const productRef = doc(firestore, 'manufacturers', quotation.sellerId, 'products', quotation.productId);
+        const productSnap = await getDoc(productRef);
+        if (productSnap.exists()) {
+          setProduct({ id: productSnap.id, ...productSnap.data() } as Product);
+        }
+      }
+      fetchRelatedData();
+    }
+  }, [quotation, firestore]);
   
 
   const handleAcceptQuote = async () => {
@@ -137,7 +163,7 @@ export default function BuyerQuotationDetailPage() {
   }
 
 
-  if (isLoading) {
+  if (isLoading || !manufacturer || !product) {
     return <Skeleton className="h-96 w-full" />;
   }
 
@@ -230,7 +256,9 @@ export default function BuyerQuotationDetailPage() {
                   </div>
               </CardContent>
                <CardFooter className="flex-col md:flex-row gap-2 justify-end">
-                    <Button variant="outline"><MessageSquare className="mr-2 h-4 w-4"/> Negotiate Further</Button>
+                    <ContactManufacturerModal product={product} manufacturer={manufacturer}>
+                      <Button variant="outline"><MessageSquare className="mr-2 h-4 w-4"/> Negotiate Further</Button>
+                    </ContactManufacturerModal>
                     <Button onClick={handleAcceptQuote} disabled={isProcessing}>
                         {isProcessing ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <CheckCircle className="mr-2 h-4 w-4" />}
                         Accept Quote & Create Order

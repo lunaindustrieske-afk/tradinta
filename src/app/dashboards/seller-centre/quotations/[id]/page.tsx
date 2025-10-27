@@ -34,6 +34,7 @@ import {
   DollarSign,
   Send,
   Loader2,
+  CheckCircle,
 } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
@@ -148,6 +149,8 @@ export default function QuotationDetailPage() {
     return <div>Quotation not found.</div>;
   }
 
+  const hasResponded = quotation.status === 'Responded' || quotation.status === 'Accepted';
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -215,15 +218,17 @@ export default function QuotationDetailPage() {
                 </CardContent>
             </Card>
 
-            {quotation.status === 'Responded' && quotation.response && (
+            {hasResponded && quotation.response && (
                  <Card className="bg-green-50 dark:bg-green-900/20">
                     <CardHeader>
-                        <CardTitle>Your Response</CardTitle>
+                        <CardTitle className="flex items-center gap-2"><CheckCircle className="text-green-600"/>Your Response</CardTitle>
                          <CardDescription>Sent on {format(quotation.response.respondedAt.toDate(), 'PPP')}</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <DetailItem label="Quoted Unit Price" value={`KES ${quotation.response.unitPrice.toLocaleString()}`} />
-                        <DetailItem label="Total Price" value={`KES ${quotation.response.totalPrice.toLocaleString()}`} />
+                         <div className="grid grid-cols-2 gap-4">
+                            <DetailItem label="Quoted Unit Price" value={`KES ${quotation.response.unitPrice.toLocaleString()}`} />
+                            <DetailItem label="Total Price" value={`KES ${quotation.response.totalPrice.toLocaleString()}`} />
+                        </div>
                         <div>
                              <p className="text-sm font-medium text-muted-foreground">Your Message</p>
                              <blockquote className="mt-2 border-l-2 pl-6 italic text-sm">
@@ -231,6 +236,11 @@ export default function QuotationDetailPage() {
                              </blockquote>
                         </div>
                     </CardContent>
+                    {quotation.status === 'Accepted' && (
+                        <CardFooter>
+                            <p className="text-sm font-semibold text-green-700">The buyer has accepted this quote and an order has been created.</p>
+                        </CardFooter>
+                    )}
                  </Card>
             )}
             
@@ -248,7 +258,7 @@ export default function QuotationDetailPage() {
                 <CardContent className="space-y-4">
                     <div className="grid gap-2">
                         <Label htmlFor="unit-price">Unit Price (KES)</Label>
-                        <Input id="unit-price" type="number" placeholder="e.g. 5000" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} disabled={quotation.status !== 'New'} />
+                        <Input id="unit-price" type="number" placeholder="e.g. 5000" value={unitPrice} onChange={e => setUnitPrice(e.target.value)} disabled={hasResponded} />
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="total-price">Total Price (KES)</Label>
@@ -256,13 +266,13 @@ export default function QuotationDetailPage() {
                     </div>
                     <div className="grid gap-2">
                          <Label htmlFor="response-message">Your Message</Label>
-                         <Textarea id="response-message" placeholder="Include payment terms, delivery details, and validity of this quote." value={responseMessage} onChange={e => setResponseMessage(e.target.value)} disabled={quotation.status !== 'New'} />
+                         <Textarea id="response-message" placeholder="Include payment terms, delivery details, and validity of this quote." value={responseMessage} onChange={e => setResponseMessage(e.target.value)} disabled={hasResponded} />
                     </div>
                 </CardContent>
                 <CardFooter>
-                    <Button className="w-full" onClick={handleSubmitResponse} disabled={isSubmitting || quotation.status !== 'New'}>
+                    <Button className="w-full" onClick={handleSubmitResponse} disabled={isSubmitting || hasResponded}>
                         {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="mr-2 h-4 w-4" />}
-                        {quotation.status === 'New' ? 'Send Quotation' : 'Response Sent'}
+                        {hasResponded ? 'Response Sent' : 'Send Quotation'}
                     </Button>
                 </CardFooter>
              </Card>
