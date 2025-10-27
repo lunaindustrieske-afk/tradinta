@@ -19,6 +19,7 @@ import {
   Instagram,
   Check,
   FileText,
+  Eye,
 } from 'lucide-react';
 import {
   Card,
@@ -98,7 +99,7 @@ export default function ProductDetailPage() {
 
     const { data: existingQuotations } = useCollection(quotationQuery);
     
-    const existingQuote = useMemo(() => {
+    const existingQuote = React.useMemo(() => {
         if (existingQuotations && existingQuotations.length > 0) {
             return existingQuotations[0];
         }
@@ -330,17 +331,18 @@ export default function ProductDetailPage() {
                 </p>
                 
                 <div className="space-y-3">
-                    {existingQuote ? (
-                        <Button size="lg" className="w-full" asChild>
-                            <Link href={`/dashboards/buyer/quotations/${existingQuote.id}`}>
-                                <FileText className="mr-2 h-5 w-5" />
-                                View My Quotation
-                            </Link>
+                    <RequestQuoteModal product={product}>
+                        <Button size="lg" className="w-full" disabled={!!existingQuote}>
+                            Request Quotation
                         </Button>
-                    ) : (
-                        <RequestQuoteModal product={product}>
-                            <Button size="lg" className="w-full">Request Quotation</Button>
-                        </RequestQuoteModal>
+                    </RequestQuoteModal>
+                    {existingQuote && (
+                        <p className="text-xs text-center text-muted-foreground">
+                            You have an existing quotation for this product.{' '}
+                            <Link href={`/dashboards/buyer/quotations/${existingQuote.id}`} className="font-semibold text-primary hover:underline flex items-center justify-center gap-1">
+                                <Eye className="h-4 w-4" /> View Quotation
+                            </Link>
+                        </p>
                     )}
 
                     <ContactManufacturerModal product={product} manufacturer={manufacturer}>
