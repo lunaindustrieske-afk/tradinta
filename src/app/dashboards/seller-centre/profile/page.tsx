@@ -33,7 +33,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Switch } from '@/components/ui/switch';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, getDoc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, arrayUnion, collection, query, where, getDocs } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { nanoid } from 'nanoid';
 import Image from 'next/image';
@@ -62,6 +62,7 @@ type ManufacturerData = {
   issuesTradPoints?: boolean;
   certifications?: string[];
   verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
+  overview?: string;
 };
 
 const LogoManager = ({
@@ -212,7 +213,7 @@ export default function EditShopProfilePage() {
           setSlug(data.slug || '');
           setShopName(data.shopName || '');
           setShopTagline(data.tagline || '');
-          setShopDescription(data.description || '');
+          setShopDescription(data.overview || ''); // Corrected from description
           setLogoUrl(data.logoUrl || '');
           setLogoHistory(data.logoHistory || []);
           setBizRegNo(data.businessLicenseNumber || '');
@@ -238,7 +239,7 @@ export default function EditShopProfilePage() {
   }, [user, firestore]);
 
   const handleSaveChanges = async () => {
-    if (!user) {
+    if (!user || !firestore) {
       toast({ title: "Not authenticated", description: "You must be logged in to save changes.", variant: "destructive" });
       return;
     }
@@ -246,14 +247,38 @@ export default function EditShopProfilePage() {
     setIsLoading(true);
 
     const finalShopId = shopId || nanoid(6);
-    const finalSlug = slug || generateSlug(shopName);
+    let finalSlug = generateSlug(shopName);
+
+    // Check if the generated slug is unique
+    const slugQuery = query(
+      collection(firestore, "manufacturers"),
+      where("slug", "==", finalSlug)
+    );
+    const querySnapshot = await getDocs(slugQuery);
+    
+    let isSlugTaken = false;
+    querySnapshot.forEach((doc) => {
+        if (doc.id !== user.uid) {
+            isSlugTaken = true;
+        }
+    });
+
+    if (isSlugTaken) {
+        finalSlug = `${finalSlug}-${user.uid.substring(0, 6)}`;
+        toast({
+            title: "Shop Name Taken",
+            description: `Another shop has a similar name. A unique ID has been added to your shop URL: ${finalSlug}`,
+            variant: "default",
+        });
+    }
+
 
     const manufacturerData: Omit<ManufacturerData, 'logoHistory'> & { logoHistory?: any } = {
       shopId: finalShopId,
       slug: finalSlug,
       shopName,
       tagline: shopTagline,
-      description: shopDescription,
+      overview: shopDescription,
       logoUrl,
       businessLicenseNumber: bizRegNo,
       kraPin,
@@ -511,5 +536,3 @@ export default function EditShopProfilePage() {
     </div>
   );
 }
-
-    
