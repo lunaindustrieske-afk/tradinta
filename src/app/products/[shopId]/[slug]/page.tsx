@@ -44,7 +44,7 @@ import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, limit, getDocs, doc, collectionGroup } from 'firebase/firestore';
-import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
+import { type Manufacturer, type Review, type Product } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
