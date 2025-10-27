@@ -506,32 +506,25 @@ export default function SellerDashboardPage() {
         <div className="space-y-6">
           {/* Shop Profile Card */}
           <Card>
-            <CardHeader className="flex flex-row items-center">
-              <Image
-                src={manufacturer?.logoUrl || "https://i.postimg.cc/j283ydft/image.png"}
-                alt={shopName || 'Shop Logo'}
-                width={56}
-                height={56}
-                className="rounded-lg mr-4"
-              />
-              <div>
-                <CardTitle>Your Shop Profile</CardTitle>
-                <CardDescription>Public view</CardDescription>
-              </div>
+            <CardHeader>
+                <CardTitle>Shop Profile</CardTitle>
+                <CardDescription>
+                    Complete your profile to attract more buyers.
+                </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                Complete your profile to attract more buyers. Your current
-                completion rate is {profileCompleteness}%.
-              </p>
-              <Progress value={profileCompleteness} className="mb-4 h-2" />
+                <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm text-muted-foreground">Profile Completeness</p>
+                    <p className="text-sm font-bold">{profileCompleteness}%</p>
+                </div>
+                <Progress value={profileCompleteness} className="h-2" />
             </CardContent>
             <CardFooter>
-              <Button asChild variant="secondary" className="w-full">
-                <Link href="/dashboards/seller-centre/profile">
-                  Edit Profile <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+                <Button asChild variant="secondary" className="w-full">
+                    <Link href="/dashboards/seller-centre/profile">
+                        Edit Shop Profile <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                </Button>
             </CardFooter>
           </Card>
 

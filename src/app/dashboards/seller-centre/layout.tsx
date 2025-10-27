@@ -6,6 +6,7 @@ import { doc } from 'firebase/firestore';
 import { SuspendedShopOverlay } from '@/components/suspended-shop-overlay';
 import { Loader2 } from 'lucide-react';
 import { ApplyToBecomeManufacturer } from '@/components/apply-to-become-manufacturer';
+import { PermissionDenied } from '@/components/ui/permission-denied';
 
 type ManufacturerData = {
   suspensionDetails?: {
@@ -38,9 +39,17 @@ export default function SellerCentreLayout({
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Verifying shop status...</p>
+        <p className="ml-4 text-muted-foreground">Verifying account status...</p>
       </div>
     );
+  }
+
+  // This check happens after loading is complete.
+  // We need to ensure a user is logged in before checking their role.
+  if (!user) {
+    // If not logged in, they shouldn't even be here. Redirecting or showing an error is better.
+    // For now, PermissionDenied will suffice.
+     return <PermissionDenied />;
   }
 
   const isManufacturer = role === 'manufacturer' || role === 'admin' || role === 'super-admin';
@@ -60,5 +69,6 @@ export default function SellerCentreLayout({
     return <SuspendedShopOverlay reason={suspensionReason} />;
   }
 
+  // If all checks pass, render the child page.
   return <>{children}</>;
 }

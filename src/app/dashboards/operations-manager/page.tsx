@@ -39,7 +39,6 @@ type Dispute = {
 type ActivityLog = {
     id: string;
     timestamp: any;
-    userId: string;
     userEmail: string;
     action: string;
     details: string;
@@ -254,5 +253,3 @@ export default function OperationsManagerDashboard() {
         </Tabs>
     );
 }
-
-    

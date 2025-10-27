@@ -31,8 +31,8 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Link from 'next/link';
 import {
@@ -47,7 +47,6 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { PermissionDenied } from '@/components/ui/permission-denied';
 
 type UserProfile = {
   id: string;
@@ -86,7 +85,6 @@ const SummaryCard = ({
 );
 
 export default function UserManagementPage() {
-    const { isUserLoading, role } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [searchQuery, setSearchQuery] = React.useState('');
@@ -304,20 +302,6 @@ export default function UserManagementPage() {
         </TableRow>
         ));
     };
-
-    if (isUserLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="ml-4 text-muted-foreground">Verifying permissions...</p>
-            </div>
-        );
-    }
-
-    const hasAccess = role === 'user-management' || role === 'admin' || role === 'super-admin';
-    if (!hasAccess) {
-        return <PermissionDenied />;
-    }
 
     return (
         <div className="space-y-6">
