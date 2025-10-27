@@ -40,7 +40,6 @@ import { nanoid } from 'nanoid';
 import Image from 'next/image';
 import { cn, generateSlug } from '@/lib/utils';
 import { useDropzone } from 'react-dropzone';
-import { PhotoUpload } from '@/components/ui/photo-upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
@@ -192,22 +191,15 @@ export default function EditShopProfilePage() {
   const [dbData, setDbData] = useState<ManufacturerData | null>(null);
 
   // Form state
-  const [shopId, setShopId] = useState('');
   const [slug, setSlug] = useState('');
   const [shopName, setShopName] = useState('');
   const [shopTagline, setShopTagline] = useState('');
   const [shopDescription, setShopDescription] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [logoHistory, setLogoHistory] = useState<string[]>([]);
-  const [bizRegNo, setBizRegNo] = useState('');
-  const [kraPin, setKraPin] = useState('');
-  const [bizAddress, setBizAddress] = useState('');
-  const [bizPhone, setBizPhone] = useState('');
   const [paymentPolicy, setPaymentPolicy] = useState('');
   const [shippingPolicy, setShippingPolicy] = useState('');
   const [returnPolicy, setReturnPolicy] = useState('');
-  const [certUrl, setCertUrl] = useState('');
-  const [kraPinUrl, setKraPinUrl] = useState('');
   const [website, setWebsite] = useState('');
   const [linkedin, setLinkedin] = useState('');
   const [issuesTradPoints, setIssuesTradPoints] = useState(false);
@@ -225,17 +217,12 @@ export default function EditShopProfilePage() {
         if (docSnap.exists()) {
           const data = docSnap.data() as ManufacturerData;
           setDbData(data);
-          setShopId(data.shopId || '');
           setSlug(data.slug || '');
           setShopName(data.shopName || '');
           setShopTagline(data.tagline || '');
           setShopDescription(data.overview || '');
           setLogoUrl(data.logoUrl || '');
           setLogoHistory(data.logoHistory || []);
-          setBizRegNo(data.businessLicenseNumber || '');
-          setKraPin(data.kraPin || '');
-          setBizAddress(data.address || '');
-          setBizPhone(data.phone || '');
           setPaymentPolicy(data.paymentPolicy || '');
           setShippingPolicy(data.shippingPolicy || '');
           setReturnPolicy(data.returnPolicy || '');
@@ -243,11 +230,6 @@ export default function EditShopProfilePage() {
           setLinkedin(data.linkedin || '');
           setIssuesTradPoints(data.issuesTradPoints === true);
           setVerificationStatus(data.verificationStatus || 'Unsubmitted');
-          
-          if(data.certifications && data.certifications.length > 0) {
-             setCertUrl(data.certifications.find((c: string) => c.includes('cert')) || '');
-             setKraPinUrl(data.certifications.find((c: string) => c.includes('pin')) || '');
-          }
         }
       };
       fetchManufacturerData();
@@ -264,7 +246,7 @@ export default function EditShopProfilePage() {
     
     setIsLoading(true);
 
-    const manufacturerData: Omit<ManufacturerData, 'logoHistory'> & { logoHistory?: any; shopNameHistory?: any } = {
+    const manufacturerData: Partial<ManufacturerData> & { logoHistory?: any; shopNameHistory?: any } = {
         tagline: shopTagline,
         overview: shopDescription,
         logoUrl,
@@ -272,7 +254,6 @@ export default function EditShopProfilePage() {
         linkedin,
         acceptsTradPay: false, // Hardcoded as per original
         issuesTradPoints,
-        certifications: [certUrl, kraPinUrl].filter(Boolean),
     };
 
     // --- Conditional Logic for Verified Users ---
@@ -295,10 +276,6 @@ export default function EditShopProfilePage() {
     } else {
         // --- Logic for Unverified Users ---
         manufacturerData.shopName = shopName;
-        manufacturerData.businessLicenseNumber = bizRegNo;
-        manufacturerData.kraPin = kraPin;
-        manufacturerData.address = bizAddress;
-        manufacturerData.phone = bizPhone;
         manufacturerData.paymentPolicy = paymentPolicy;
         manufacturerData.shippingPolicy = shippingPolicy;
         manufacturerData.returnPolicy = returnPolicy;
@@ -308,26 +285,20 @@ export default function EditShopProfilePage() {
             manufacturerData.shopNameHistory = arrayUnion(dbData.shopName);
         }
 
-        // Handle slug generation and uniqueness check
-        const finalShopId = shopId || nanoid(6);
-        let finalSlug = generateSlug(shopName);
-        const slugQuery = query(collection(firestore, "manufacturers"), where("slug", "==", finalSlug));
-        const querySnapshot = await getDocs(slugQuery);
-        let isSlugTaken = false;
-        querySnapshot.forEach((doc) => { if (doc.id !== user.uid) { isSlugTaken = true; } });
-        if (isSlugTaken) {
-            finalSlug = `${finalSlug}-${user.uid.substring(0, 6)}`;
-            toast({ title: "Shop Name Taken", description: `A unique ID has been added to your shop URL: ${finalSlug}` });
+        let finalSlug = slug;
+        if (!slug || (dbData?.shopName !== shopName)) {
+            finalSlug = generateSlug(shopName);
+            const slugQuery = query(collection(firestore, "manufacturers"), where("slug", "==", finalSlug));
+            const querySnapshot = await getDocs(slugQuery);
+            let isSlugTaken = false;
+            querySnapshot.forEach((doc) => { if (doc.id !== user.uid) { isSlugTaken = true; } });
+            if (isSlugTaken) {
+                finalSlug = `${finalSlug}-${user.uid.substring(0, 4)}`;
+                toast({ title: "Shop Name Taken", description: `A unique ID has been added to your shop URL: ${finalSlug}` });
+            }
         }
-        manufacturerData.shopId = finalShopId;
         manufacturerData.slug = finalSlug;
-        setShopId(finalShopId);
         setSlug(finalSlug);
-
-        // Update verification status if documents are added
-        if (verificationStatus === 'Unsubmitted' && (bizRegNo || certUrl || kraPinUrl)) {
-            manufacturerData.verificationStatus = 'Pending Legal';
-        }
     }
     
     // Handle logo history
@@ -342,9 +313,6 @@ export default function EditShopProfilePage() {
       
       toast({ title: "Profile Saved!", description: "Your changes have been successfully saved." });
 
-      if (manufacturerData.verificationStatus) {
-        setVerificationStatus(manufacturerData.verificationStatus);
-      }
       if (manufacturerData.policyChangesStatus === 'pending') {
         toast({ title: "Policies Awaiting Approval", description: "Your policy changes have been submitted for review." });
       }
@@ -437,31 +405,6 @@ export default function EditShopProfilePage() {
                 </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader>
-                <CardTitle>Business Information</CardTitle>
-                <CardDescription>Provide your official business details.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-6">
-                <div className="grid gap-3">
-                    <Label htmlFor="biz-reg-no">Business Registration No.</Label>
-                    <Input id="biz-reg-no" value={bizRegNo} onChange={(e) => setBizRegNo(e.target.value)} disabled={isVerified} />
-                </div>
-                <div className="grid gap-3">
-                    <Label htmlFor="kra-pin">KRA PIN</Label>
-                    <Input id="kra-pin" value={kraPin} onChange={(e) => setKraPin(e.target.value)} disabled={isVerified} />
-                </div>
-                <div className="grid gap-3">
-                    <Label htmlFor="biz-address">Physical Address</Label>
-                    <Input id="biz-address" value={bizAddress} onChange={(e) => setBizAddress(e.target.value)} disabled={isVerified} />
-                </div>
-                 <div className="grid gap-3">
-                    <Label htmlFor="biz-phone">Business Phone</Label>
-                    <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} disabled={isVerified} />
-                </div>
-                 {isVerified && <p className="text-xs text-muted-foreground md:col-span-2">Core business information cannot be changed after verification. Please contact support for assistance.</p>}
-            </CardContent>
-          </Card>
            <Card>
             <CardHeader>
                 <CardTitle>Policies</CardTitle>
@@ -497,28 +440,6 @@ export default function EditShopProfilePage() {
                             }
                         }}
                     />
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Verification Documents</CardTitle>
-                    <CardDescription>Upload required documents to get the "Verified" badge.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <PhotoUpload
-                      label="Certificate of Incorporation"
-                      onUpload={setCertUrl}
-                      initialUrl={certUrl}
-                      disabled={isVerified}
-                    />
-                    <PhotoUpload
-                      label="KRA PIN Certificate"
-                      onUpload={setKraPinUrl}
-                      initialUrl={kraPinUrl}
-                      disabled={isVerified}
-                    />
-                     {isVerified && <p className="text-xs text-muted-foreground">Verification documents cannot be changed. Please contact support for assistance.</p>}
                 </CardContent>
             </Card>
 
@@ -579,3 +500,5 @@ export default function EditShopProfilePage() {
     </div>
   );
 }
+
+    

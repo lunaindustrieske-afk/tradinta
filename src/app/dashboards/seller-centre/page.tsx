@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -193,9 +194,9 @@ const VerificationStatusCard = ({
       </CardContent>
       <CardFooter>
         <Button asChild variant="secondary" className="w-full">
-          <Link href="/dashboards/seller-centre/profile">
+          <Link href="/dashboards/seller-centre/verification">
             {status === 'Verified'
-              ? 'View Documents'
+              ? 'View Verification Documents'
               : 'Submit Verification Documents'}
           </Link>
         </Button>
@@ -717,3 +718,5 @@ export default function SellerDashboardPage() {
     </div>
   );
 }
+
+    
