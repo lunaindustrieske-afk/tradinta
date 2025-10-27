@@ -46,7 +46,6 @@ import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebas
 import { collection, query, where, limit, getDocs, doc } from 'firebase/firestore';
 import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { products } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -69,10 +68,8 @@ type ProductWithVariants = Product & {
     packagingDetails?: string;
     certifications?: string;
     sku?: string;
+    shopId?: string;
 };
-
-
-const relatedProducts = products.slice(1, 5);
 
 export default function ProductDetailPage() {
     const params = useParams();
@@ -83,14 +80,13 @@ export default function ProductDetailPage() {
 
     const [product, setProduct] = React.useState<ProductWithVariants | null>(null);
     const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
+    const [relatedProducts, setRelatedProducts] = React.useState<ProductWithVariants[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [isInWishlist, setIsInWishlist] = React.useState(false);
     const { toast } = useToast();
     
-    // Check if a quotation has already been requested for this product by this user
     const quotationQuery = useMemoFirebase(() => {
         if (!firestore || !user || !product) return null;
-        // We query the manufacturer's subcollection for a quote from the current buyer for this product
         return query(
             collection(firestore, 'manufacturers', product.manufacturerId, 'quotations'),
             where('buyerId', '==', user.uid),
@@ -141,7 +137,27 @@ export default function ProductDetailPage() {
                 setProduct(null);
             } else {
                 const productDoc = productSnapshot.docs[0];
-                setProduct({ ...productDoc.data(), id: productDoc.id } as ProductWithVariants);
+                const productData = { ...productDoc.data(), id: productDoc.id } as ProductWithVariants;
+                setProduct(productData);
+
+                 // 3. Fetch related products from the same category
+                const relatedQuery = query(
+                  collectionGroup(firestore, 'products'),
+                  where('category', '==', productData.category),
+                  where('status', '==', 'published'),
+                  limit(5) // Fetch 5, one might be the current product
+                );
+                const relatedSnapshot = await getDocs(relatedQuery);
+                const related: ProductWithVariants[] = [];
+                 relatedSnapshot.forEach(doc => {
+                    if (doc.id !== productData.id) { // Exclude current product
+                         const data = doc.data();
+                         // The shopId is part of the document's path
+                         const shopId = doc.ref.parent.parent?.id;
+                         related.push({ ...data, id: doc.id, shopId: shopId } as ProductWithVariants);
+                    }
+                });
+                setRelatedProducts(related.slice(0, 4)); // Ensure we only have 4
             }
             
             setIsLoading(false);
@@ -510,11 +526,11 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
           {relatedProducts.map((p) => (
             <Card key={p.id} className="overflow-hidden group">
-              <Link href={`/products/${p.manufacturerId}/${p.slug}`}>
+              <Link href={`/products/${p.shopId}/${p.slug}`}>
                 <CardContent className="p-0">
                   <div className="relative aspect-[4/3]">
                     <Image
-                      src={p.imageUrl}
+                      src={p.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
                       alt={p.name}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform"
@@ -523,7 +539,12 @@ export default function ProductDetailPage() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold truncate">{p.name}</h3>
-                    <p className="text-primary font-bold">KES {p.price.toLocaleString()}</p>
+                    <p className="text-primary font-bold">KES {p.price?.toLocaleString() || 'N/A'}</p>
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span>{p.rating || 'N/A'}</span>
+                        <span>({p.reviewCount || 0})</span>
+                    </div>
                   </div>
                 </CardContent>
               </Link>
