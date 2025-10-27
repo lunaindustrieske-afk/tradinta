@@ -6,154 +6,90 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2, BarChart2 } from "lucide-react";
-import { useCollection, useFirestore, useMemoFirebase, useAuth, useDoc } from "@/firebase";
-import { collection, query, where, doc, collectionGroup } from "firebase/firestore";
+import { UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2, BarChart2, BookUser } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from "@/firebase";
+import { collection, query, where, doc, collectionGroup, orderBy, limit } from "firebase/firestore";
 import Link from "next/link";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { logActivity } from "@/lib/activity-log";
 import React from 'react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import Image from "next/image";
-import { SuspendShopModal } from "@/components/suspend-shop-modal";
 
 type Manufacturer = {
     id: string;
     shopName: string;
+    email: string;
     industry?: string;
     registrationDate: any; // Firestore timestamp
-    verificationStatus: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified' | 'Restricted';
+    verificationStatus: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified' | 'Restricted' | 'Suspended';
     suspensionDetails?: {
         isSuspended: boolean;
-        reason: string;
-        prohibitions: string[];
-        publicDisclaimer: boolean;
-      };
+    };
     rating?: number;
     sales?: number; // This would need to be calculated/stored
 };
 
-type Product = {
-  id: string;
-  name: string;
-  imageUrl?: string;
-  status: 'draft' | 'published' | 'archived';
-  stock: number;
-  price: number;
-};
 
 export default function AdminDashboard() {
     const firestore = useFirestore();
     const auth = useAuth();
-    const { toast } = useToast();
     
-    // --- State for Product Catalog ---
-    const [shopIdQuery, setShopIdQuery] = React.useState('');
-    const [searchedShopId, setSearchedShopId] = React.useState<string | null>(null);
-    const [productSearchQuery, setProductSearchQuery] = React.useState('');
-
-    // --- Data Fetching ---
+    // --- State for Shop Management ---
+    const [searchTerm, setSearchTerm] = React.useState('');
+    const [statusFilter, setStatusFilter] = React.useState<string[]>([]);
+    
     const manufacturersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return collection(firestore, 'manufacturers');
+        let q = query(collection(firestore, 'manufacturers'));
+
+        // Note: Firestore does not support inequality checks on different fields.
+        // This means we can't easily filter by search term AND a status array here.
+        // Filtering will be done client-side. A more scalable solution might use a search service like Algolia.
+        return q;
     }, [firestore]);
 
     const { data: allManufacturers, isLoading: isLoadingManufacturers } = useCollection<Manufacturer>(manufacturersQuery);
-    
-    // Fetch products ONLY for the searched shop
-    const shopProductsQuery = useMemoFirebase(() => {
-        if (!firestore || !searchedShopId) return null;
-        return collection(firestore, `manufacturers/${searchedShopId}/products`);
-    }, [firestore, searchedShopId]);
 
-    const { data: shopProducts, isLoading: isLoadingShopProducts } = useCollection<Product>(shopProductsQuery);
+    const filteredManufacturers = React.useMemo(() => {
+        if (!allManufacturers) return [];
+        return allManufacturers.filter(m => {
+            const matchesSearch = searchTerm ? 
+                m.shopName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                m.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                m.email?.toLowerCase().includes(searchTerm.toLowerCase())
+                : true;
+            
+            const matchesStatus = statusFilter.length > 0 ? 
+                statusFilter.includes(m.verificationStatus) || (m.suspensionDetails?.isSuspended && statusFilter.includes('Suspended'))
+                : true;
 
-    const searchedManufacturer = useMemoFirebase(() => {
-      if(!allManufacturers || !searchedShopId) return null;
-      return allManufacturers.find(m => m.id === searchedShopId);
-    }, [allManufacturers, searchedShopId]);
-
-
-    const filteredShopProducts = React.useMemo(() => {
-        if (!shopProducts) return [];
-        return shopProducts.filter(product => 
-            product.name.toLowerCase().includes(productSearchQuery.toLowerCase())
-        );
-    }, [shopProducts, productSearchQuery]);
-    
+            return matchesSearch && matchesStatus;
+        });
+    }, [allManufacturers, searchTerm, statusFilter]);
 
     const pendingVerifications = React.useMemo(() => {
         if (!allManufacturers) return null;
         return allManufacturers.filter(m => ['Pending Legal', 'Pending Admin'].includes(m.verificationStatus));
     }, [allManufacturers]);
 
-    const allSellers = React.useMemo(() => {
-        if (!allManufacturers) return null;
-        return allManufacturers.filter(m => ['Verified', 'Restricted', 'Suspended'].includes(m.verificationStatus) || m.suspensionDetails?.isSuspended);
-    }, [allManufacturers]);
-
-
-    const handleRestrictSeller = (sellerId: string, sellerName: string) => {
-        if (!firestore || !auth) return;
-        const sellerRef = doc(firestore, 'manufacturers', sellerId);
-        updateDocumentNonBlocking(sellerRef, { verificationStatus: 'Restricted' });
-        logActivity(
-            firestore,
-            auth,
-            'SELLER_RESTRICTED',
-            `Restricted seller: ${sellerName} (ID: ${sellerId})`
-        );
-        toast({
-            title: "Seller Restricted",
-            description: `${sellerName} has been restricted.`,
-            variant: "destructive",
-        });
-    };
-
-     const handleUnrestrictSeller = (sellerId: string, sellerName: string) => {
-        if (!firestore || !auth) return;
-        const sellerRef = doc(firestore, 'manufacturers', sellerId);
-        updateDocumentNonBlocking(sellerRef, { verificationStatus: 'Verified' });
-         logActivity(
-            firestore,
-            auth,
-            'SELLER_UNRESTRICTED',
-            `Lifted restrictions for seller: ${sellerName} (ID: ${sellerId})`
-        );
-        toast({
-            title: "Seller Unrestricted",
-            description: `${sellerName}'s restrictions have been lifted.`,
-        });
-    };
-
-    const getStatusVariant = (status: Product['status']) => {
+    const getStatusVariant = (status: Manufacturer['verificationStatus']) => {
         switch (status) {
-            case 'published': return 'secondary';
-            case 'draft': return 'outline';
-            case 'archived': return 'destructive';
-            default: return 'default';
+            case 'Verified': return 'secondary';
+            case 'Pending Admin':
+            case 'Pending Legal': return 'default';
+            case 'Suspended':
+            case 'Restricted':
+            case 'Action Required': return 'destructive';
+            default: return 'outline';
         }
     };
     
-    const handleShopSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        const manuf = allManufacturers?.find(m => m.id === shopIdQuery);
-        if (manuf) {
-            setSearchedShopId(shopIdQuery);
-        } else {
-            toast({
-                title: "Shop Not Found",
-                description: "No manufacturer found with that Shop ID.",
-                variant: "destructive"
-            });
-            setSearchedShopId(null);
-        }
+    const toggleStatusFilter = (status: string) => {
+        setStatusFilter(prev => 
+            prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+        );
     }
-
-
+    
     const renderVerificationRows = () => {
         if (isLoadingManufacturers) {
             return Array.from({length: 2}).map((_, i) => (
@@ -184,113 +120,48 @@ export default function AdminDashboard() {
         ));
     }
     
-    const getSellerStatus = (seller: Manufacturer) => {
-        if (seller.suspensionDetails?.isSuspended) {
-            return <Badge variant="destructive">Suspended</Badge>;
-        }
-        return <Badge variant={seller.verificationStatus === 'Verified' ? 'secondary' : 'destructive'}>{seller.verificationStatus}</Badge>;
-    }
-    
-    const renderPerformanceRows = () => {
+    const renderShopManagementRows = () => {
         if (isLoadingManufacturers) {
-            return Array.from({length: 3}).map((_, i) => (
-                <TableRow key={`skel-perf-${i}`}>
+            return Array.from({length: 5}).map((_, i) => (
+                 <TableRow key={`skel-shop-${i}`}>
                     <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-16" /></TableCell>
                     <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-9 w-48" /></TableCell>
+                    <TableCell><Skeleton className="h-9 w-24" /></TableCell>
                 </TableRow>
             ))
         }
-         if (!allSellers || allSellers.length === 0) {
-            return <TableRow><TableCell colSpan={5} className="text-center h-24">No verified sellers yet.</TableCell></TableRow>
+        if (!filteredManufacturers || filteredManufacturers.length === 0) {
+            return <TableRow><TableCell colSpan={5} className="text-center h-24">No shops found with the current filters.</TableCell></TableRow>
         }
-        // Using mock data for sales for now as it's not in the DB
-        return allSellers.map((seller) => (
+        return filteredManufacturers.map((seller) => (
             <TableRow key={seller.id}>
                 <TableCell className="font-medium">{seller.shopName}</TableCell>
-                <TableCell><Star className="inline mr-1 h-4 w-4 text-yellow-400"/>{seller.rating || 'N/A'}</TableCell>
-                <TableCell>{seller.sales || 0}</TableCell>
-                <TableCell>{getSellerStatus(seller)}</TableCell>
-                <TableCell className="space-x-2">
-                    <Button variant="outline" size="sm"><BarChart className="mr-1 h-4 w-4"/> View Analytics</Button>
-                    <SuspendShopModal seller={seller}>
-                         <Button variant="destructive" size="sm">
-                            <AlertTriangle className="mr-1 h-4 w-4" /> Manage
-                        </Button>
-                    </SuspendShopModal>
-                </TableCell>
-            </TableRow>
-        ));
-    }
-    
-    const renderProductCatalogRows = () => {
-        if (isLoadingShopProducts) {
-            return Array.from({length: 5}).map((_, i) => (
-                <TableRow key={`skel-prod-${i}`}>
-                    <TableCell className="hidden sm:table-cell"><Skeleton className="h-16 w-16 rounded-md" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-40" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-20" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-5 w-16" /></TableCell>
-                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
-                </TableRow>
-            ))
-        }
-        if (!filteredShopProducts || filteredShopProducts.length === 0) {
-            return <TableRow><TableCell colSpan={6} className="text-center h-24">No products found for this shop.</TableCell></TableRow>
-        }
-        return filteredShopProducts.map((product) => (
-            <TableRow key={product.id}>
-                 <TableCell className="hidden sm:table-cell">
-                    <Image
-                        alt={product.name}
-                        className="aspect-square rounded-md object-cover"
-                        height="64"
-                        src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
-                        width="64"
-                    />
-                </TableCell>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell><Badge variant={getStatusVariant(product.status)}>{product.status}</Badge></TableCell>
-                <TableCell>{product.price?.toLocaleString() || 'N/A'}</TableCell>
-                <TableCell>{product.stock > 0 ? product.stock : <Badge variant="destructive">Out of Stock</Badge>}</TableCell>
+                <TableCell>{seller.email}</TableCell>
                 <TableCell>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                        <Button aria-haspopup="true" size="icon" variant="ghost">
-                            <MoreHorizontal className="h-4 w-4" />
-                            <span className="sr-only">Toggle menu</span>
-                        </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`}>
-                                <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
-                                </Link>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/dashboards/seller-centre/products/edit/${product.id}`}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit Product
-                                </Link>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Badge variant={getStatusVariant(seller.suspensionDetails?.isSuspended ? 'Suspended' : seller.verificationStatus)}>
+                        {seller.suspensionDetails?.isSuspended ? 'Suspended' : seller.verificationStatus}
+                    </Badge>
+                </TableCell>
+                <TableCell>{new Date(seller.registrationDate?.seconds * 1000).toLocaleDateString()}</TableCell>
+                <TableCell>
+                     <Button size="sm" asChild>
+                        <Link href={`/dashboards/admin/shops/${seller.id}`}>
+                            <BookUser className="mr-2 h-4 w-4"/> Manage Shop
+                        </Link>
+                    </Button>
                 </TableCell>
             </TableRow>
-        ));
+        ))
     }
-
 
     return (
         <Tabs defaultValue="onboarding">
-            <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="onboarding">Onboarding & Verification</TabsTrigger>
-                <TabsTrigger value="performance">Seller Performance</TabsTrigger>
-                <TabsTrigger value="catalog">Product Catalog</TabsTrigger>
-                <TabsTrigger value="support">Support & Training</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="onboarding">Onboarding Queue</TabsTrigger>
+                <TabsTrigger value="shop-management">Shop Management</TabsTrigger>
+                <TabsTrigger value="support-resources">Support Resources</TabsTrigger>
             </TabsList>
 
             <TabsContent value="onboarding">
@@ -317,88 +188,64 @@ export default function AdminDashboard() {
                 </Card>
             </TabsContent>
             
-            <TabsContent value="performance">
-                <Card>
+            <TabsContent value="shop-management">
+                 <Card>
                     <CardHeader>
-                        <CardTitle>Seller Performance</CardTitle>
-                        <CardDescription>Track seller ratings, sales performance, and account status.</CardDescription>
+                        <CardTitle>Shop Management</CardTitle>
+                        <CardDescription>Search, filter, and manage all seller shops on the platform.</CardDescription>
                     </CardHeader>
                     <CardContent>
-                         <Table>
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input 
+                                    placeholder="Search by Shop Name, Email, or ID..." 
+                                    className="pl-8"
+                                    value={searchTerm}
+                                    onChange={e => setSearchTerm(e.target.value)}
+                                />
+                            </div>
+                             <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="gap-1">
+                                    <ListFilter className="h-3.5 w-3.5" />
+                                    <span>Filter Status</span>
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    {['Verified', 'Suspended', 'Restricted', 'Pending Admin', 'Unsubmitted'].map(status => (
+                                        <DropdownMenuCheckboxItem
+                                            key={status}
+                                            checked={statusFilter.includes(status)}
+                                            onCheckedChange={() => toggleStatusFilter(status)}
+                                        >
+                                            {status}
+                                        </DropdownMenuCheckboxItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                        <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Seller</TableHead>
-                                    <TableHead>Rating</TableHead>
-                                    <TableHead>Total Sales (Last 30d)</TableHead>
+                                    <TableHead>Shop Name</TableHead>
+                                    <TableHead>Contact Email</TableHead>
                                     <TableHead>Status</TableHead>
+                                    <TableHead>Registration Date</TableHead>
                                     <TableHead>Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
-                            <TableBody>
-                                {renderPerformanceRows()}
+                             <TableBody>
+                                {renderShopManagementRows()}
                             </TableBody>
                         </Table>
                     </CardContent>
                 </Card>
             </TabsContent>
-            
-            <TabsContent value="catalog">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Product Catalog Explorer</CardTitle>
-                        <CardDescription>Search for a specific shop by its ID to view and manage its products.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <form onSubmit={handleShopSearch} className="flex items-center gap-2 mb-6 p-4 border rounded-lg bg-muted/50">
-                            <Search className="h-5 w-5 text-muted-foreground" />
-                            <Input 
-                                placeholder="Enter Manufacturer/Shop ID..." 
-                                className="flex-grow bg-background" 
-                                value={shopIdQuery}
-                                onChange={e => setShopIdQuery(e.target.value)}
-                            />
-                            <Button type="submit">Find Shop</Button>
-                        </form>
 
-                        {searchedShopId && (
-                            <div>
-                                <div className="flex items-center justify-between mb-4">
-                                  <div>
-                                    <h3 className="font-semibold">Showing products for: <span className="text-primary">{searchedManufacturer?.shopName}</span></h3>
-                                    <p className="text-sm text-muted-foreground">Shop ID: {searchedShopId}</p>
-                                  </div>
-                                  <div className="relative flex-1 max-w-xs">
-                                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                      <Input placeholder="Search within this shop..." className="pl-8" value={productSearchQuery} onChange={e => setProductSearchQuery(e.target.value)} />
-                                  </div>
-                                </div>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead className="w-[80px] hidden sm:table-cell"></TableHead>
-                                            <TableHead>Product Name</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>Price (KES)</TableHead>
-                                            <TableHead>Stock</TableHead>
-                                            <TableHead>Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {renderProductCatalogRows()}
-                                    </TableBody>
-                                </Table>
-                            </div>
-                        )}
-                        {!searchedShopId && (
-                             <div className="text-center py-12 text-muted-foreground">
-                                <p>Enter a shop ID above to begin browsing products.</p>
-                            </div>
-                        )}
-                    </CardContent>
-                </Card>
-            </TabsContent>
-
-            <TabsContent value="support">
+            <TabsContent value="support-resources">
                 <Card>
                     <CardHeader>
                         <CardTitle>Support Resources & Training</CardTitle>
