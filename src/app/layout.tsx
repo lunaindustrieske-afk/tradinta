@@ -11,6 +11,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ThemeProvider } from '@/components/theme-provider';
+import { SupportWidget } from '@/components/support-widget';
 
 
 export default function RootLayout({
@@ -95,6 +96,7 @@ export default function RootLayout({
                 </div>
               </footer>
             )}
+             <SupportWidget />
           </FirebaseClientProvider>
         </ThemeProvider>
       </body>
