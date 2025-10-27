@@ -34,8 +34,8 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
       onLoadingChange?.(loading);
     }
 
-    const handleUpload = async (fileToUpload: File) => {
-      if (!fileToUpload) return;
+    const handleUpload = async (base64Data: string, file: File) => {
+      if (!base64Data) return;
       setLoading(true);
 
       try {
@@ -56,10 +56,11 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
         }
 
         const formData = new FormData();
-        formData.append('file', fileToUpload);
+        formData.append('file', base64Data); // Send the base64 data URI
         formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY!);
         formData.append('signature', signature);
         formData.append('timestamp', paramsToSign.timestamp.toString());
+        formData.append('upload_preset', 'tradinta-unsigned'); // Using an unsigned preset for simplicity if needed
 
         const response = await fetch(
           `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
@@ -77,10 +78,11 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
         }
         
         onUpload(data.secure_url);
+        setPreview(data.secure_url);
 
         toast({
           title: 'Upload Successful',
-          description: `${fileToUpload.name} has been uploaded.`,
+          description: `${file.name} has been uploaded.`,
         });
 
       } catch (error: any) {
@@ -104,8 +106,8 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           const reader = new FileReader();
           reader.onload = (e) => {
               const base64String = e.target?.result as string;
-              setPreview(base64String); // Set preview for immediate feedback
-              handleUpload(selectedFile); // Proceed with upload to Cloudinary
+              setPreview(base64String); // Show local preview immediately
+              handleUpload(base64String, selectedFile); // Upload to Cloudinary
           };
           reader.readAsDataURL(selectedFile);
         }
