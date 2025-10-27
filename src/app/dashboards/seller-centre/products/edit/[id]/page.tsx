@@ -121,6 +121,11 @@ export default function EditProductPage() {
   const [hasLoaded, setHasLoaded] = React.useState(false);
 
 
+  // Reset hasLoaded when the productId changes
+  React.useEffect(() => {
+    setHasLoaded(false);
+  }, [productId]);
+  
   // Effect to load initial data from Firestore into the local storage draft
   React.useEffect(() => {
     if (productData && !hasLoaded) {
@@ -679,5 +684,3 @@ export default function EditProductPage() {
     </div>
   );
 }
-
-    
