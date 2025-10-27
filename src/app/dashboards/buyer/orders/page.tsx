@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -9,52 +8,32 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { FileText, Truck, CheckCircle, Clock, Eye, FileSignature } from "lucide-react";
 import Link from 'next/link';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const orders = [
-    {
-        id: "ORD-002",
-        products: "50 sacks of Baking Flour",
-        seller: "SuperBake Bakery",
-        total: "KES 110,000",
-        status: "Shipped",
-    },
-    {
-        id: "ORD-001",
-        products: "200 bags of Cement",
-        seller: "Constructa Ltd",
-        total: "KES 130,000",
-        status: "Delivered",
-    },
-];
+type Order = {
+    id: string;
+    productName: string;
+    sellerName: string;
+    totalAmount: number;
+    status: string;
+}
 
-const quotations = [
-    {
-        id: "RFQ-001",
-        product: "Industrial Grade Cement",
-        seller: "Constructa Ltd",
-        status: "Responded",
-        date: "2023-11-14",
-    },
-    {
-        id: "RFQ-004",
-        product: "Steel Beams (Custom)",
-        seller: "Regional Distributors",
-        status: "New",
-        date: "2023-11-16",
-    },
-     {
-        id: "RFQ-003",
-        product: "HDPE Plastic Pellets",
-        seller: "PlastiCo Kenya",
-        status: "Accepted",
-        date: "2023-11-12",
-    },
-];
+type Quotation = {
+    id: string;
+    productName: string;
+    sellerName: string;
+    status: 'New' | 'Responded' | 'Accepted' | 'Archived';
+    createdAt: any;
+}
+
 
 const getStatusBadge = (status: string) => {
     switch (status) {
         case 'Delivered':
-            return <Badge variant="secondary"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>;
+        case 'Accepted':
+            return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'Shipped':
             return <Badge><Truck className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'New':
@@ -62,8 +41,6 @@ const getStatusBadge = (status: string) => {
             return <Badge variant="outline"><Clock className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'Responded':
             return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><FileSignature className="mr-1 h-3 w-3"/>{status}</Badge>;
-        case 'Accepted':
-             return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>;
         default:
             return <Badge variant="outline">{status}</Badge>;
     }
@@ -71,6 +48,32 @@ const getStatusBadge = (status: string) => {
 
 
 export default function OrdersPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const ordersQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, 'orders'),
+      where('buyerId', '==', user.uid),
+      orderBy('orderDate', 'desc')
+    );
+  }, [user, firestore]);
+
+  const quotationsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    // Note: This requires a composite index on buyerId and createdAt
+    return query(
+        collection(firestore, 'quotations'),
+        where('buyerId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+    );
+  }, [user, firestore]);
+
+  const { data: orders, isLoading: isLoadingOrders } = useCollection<Order>(ordersQuery);
+  const { data: quotations, isLoading: isLoadingQuotations } = useCollection<Quotation>(quotationsQuery);
+
+
   return (
     <div className="space-y-6">
       <Card>
@@ -108,19 +111,36 @@ export default function OrdersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {orders.map(order => (
-                                <TableRow key={order.id}>
-                                    <TableCell className="font-medium">{order.id}</TableCell>
-                                    <TableCell>{order.products}</TableCell>
-                                    <TableCell>{order.seller}</TableCell>
-                                    <TableCell>{order.total}</TableCell>
-                                    <TableCell>{getStatusBadge(order.status)}</TableCell>
-                                    <TableCell className="space-x-2">
-                                        <Button variant="outline" size="sm"><Truck className="mr-2 h-4 w-4"/>Track Order</Button>
-                                        <Button variant="ghost" size="sm">View Invoice</Button>
-                                    </TableCell>
+                            {isLoadingOrders ? (
+                                Array.from({length: 2}).map((_, i) => (
+                                    <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-48" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-9 w-28" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : orders && orders.length > 0 ? (
+                                orders.map(order => (
+                                    <TableRow key={order.id}>
+                                        <TableCell className="font-medium">{order.id.substring(0, 8)}...</TableCell>
+                                        <TableCell>{order.productName}</TableCell>
+                                        <TableCell>{order.sellerName}</TableCell>
+                                        <TableCell>KES {order.totalAmount.toLocaleString()}</TableCell>
+                                        <TableCell>{getStatusBadge(order.status)}</TableCell>
+                                        <TableCell className="space-x-2">
+                                            <Button variant="outline" size="sm"><Truck className="mr-2 h-4 w-4"/>Track Order</Button>
+                                            <Button variant="ghost" size="sm">View Invoice</Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={6} className="h-24 text-center">You haven't placed any orders yet.</TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -145,7 +165,6 @@ export default function OrdersPage() {
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>RFQ ID</TableHead>
                                 <TableHead>Product</TableHead>
                                 <TableHead>Seller</TableHead>
                                 <TableHead>Status</TableHead>
@@ -154,18 +173,37 @@ export default function OrdersPage() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {quotations.map(quote => (
-                                <TableRow key={quote.id}>
-                                    <TableCell className="font-medium">{quote.id}</TableCell>
-                                    <TableCell>{quote.product}</TableCell>
-                                    <TableCell>{quote.seller}</TableCell>
-                                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
-                                    <TableCell>{quote.date}</TableCell>
-                                    <TableCell>
-                                        <Button variant="outline" size="sm"><Eye className="mr-2 h-4 w-4"/> View Details</Button>
-                                    </TableCell>
+                            {isLoadingQuotations ? (
+                                Array.from({length: 3}).map((_, i) => (
+                                     <TableRow key={i}>
+                                        <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                                        <TableCell><Skeleton className="h-6 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                                        <TableCell><Skeleton className="h-9 w-32" /></TableCell>
+                                    </TableRow>
+                                ))
+                            ) : quotations && quotations.length > 0 ? (
+                                quotations.map(quote => (
+                                    <TableRow key={quote.id}>
+                                        <TableCell className="font-medium">{quote.productName}</TableCell>
+                                        <TableCell>{quote.sellerName}</TableCell>
+                                        <TableCell>{getStatusBadge(quote.status)}</TableCell>
+                                        <TableCell>{quote.createdAt ? new Date(quote.createdAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
+                                        <TableCell>
+                                            <Button variant="outline" size="sm" asChild>
+                                                <Link href={`/dashboards/buyer/quotations/${quote.id}`}>
+                                                    <Eye className="mr-2 h-4 w-4"/> View Details
+                                                </Link>
+                                            </Button>
+                                        </TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow>
+                                    <TableCell colSpan={5} className="h-24 text-center">You haven't requested any quotations yet.</TableCell>
                                 </TableRow>
-                            ))}
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
@@ -175,5 +213,3 @@ export default function OrdersPage() {
     </div>
   );
 }
-
-    

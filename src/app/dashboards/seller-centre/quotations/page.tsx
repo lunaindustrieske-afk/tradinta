@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useMemo } from 'react';
@@ -41,7 +40,7 @@ type Quotation = {
     productName: string;
     quantity: number;
     createdAt: any;
-    status: 'New' | 'Responded' | 'Archived';
+    status: 'New' | 'Responded' | 'Accepted' | 'Archived';
 }
 
 const getStatusBadge = (status: Quotation['status']) => {
@@ -50,6 +49,8 @@ const getStatusBadge = (status: Quotation['status']) => {
       return <Badge variant="default">{status}</Badge>;
     case 'Responded':
       return <Badge variant="secondary">{status}</Badge>;
+    case 'Accepted':
+      return <Badge className="bg-green-100 text-green-800 hover:bg-green-100/80">{status}</Badge>;
     case 'Archived':
       return <Badge variant="outline">{status}</Badge>;
     default:
@@ -58,10 +59,10 @@ const getStatusBadge = (status: Quotation['status']) => {
 };
 
 const QuotationTable = ({ filterStatus, quotations, isLoading, onUpdate }: { 
-    filterStatus: 'all' | 'New' | 'Responded' | 'Archived', 
+    filterStatus: 'all' | 'New' | 'Responded' | 'Accepted' | 'Archived', 
     quotations: Quotation[] | null,
     isLoading: boolean,
-    onUpdate: (id: string, status: 'Archived' | 'Responded') => void
+    onUpdate: (id: string, status: 'Archived') => void
 }) => {
   const filteredQuotes =
     filterStatus === 'all'
@@ -121,8 +122,10 @@ const QuotationTable = ({ filterStatus, quotations, isLoading, onUpdate }: {
               <TableCell>{quote.createdAt ? new Date(quote.createdAt?.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
               <TableCell>{getStatusBadge(quote.status)}</TableCell>
               <TableCell className="space-x-2">
-                <Button variant="outline" size="sm" onClick={() => onUpdate(quote.id, 'Responded')}>
-                  <Eye className="mr-2 h-4 w-4" /> View & Respond
+                 <Button variant="outline" size="sm" asChild>
+                    <Link href={`/dashboards/seller-centre/quotations/${quote.id}`}>
+                        <Eye className="mr-2 h-4 w-4" /> View Details
+                    </Link>
                 </Button>
                 {quote.status !== 'Archived' && (
                     <Button variant="ghost" size="sm" onClick={() => onUpdate(quote.id, 'Archived')}>
@@ -156,7 +159,7 @@ export default function SellerQuotationsPage() {
 
     const { data: quotations, isLoading } = useCollection<Quotation>(quotationsQuery);
 
-    const handleUpdateStatus = async (id: string, status: 'Archived' | 'Responded') => {
+    const handleUpdateStatus = async (id: string, status: 'Archived') => {
         if (!user || !firestore) return;
         const quoteRef = doc(firestore, 'manufacturers', user.uid, 'quotations', id);
         try {
