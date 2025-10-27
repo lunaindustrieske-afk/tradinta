@@ -55,7 +55,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { ContactManufacturerModal } from '@/components/contact-manufacturer-modal';
-import { LeaveReviewForm } from '@/components/leave-review-form';
+import { ProductReviews } from '@/components/product-reviews';
 
 type ProductWithVariants = Product & {
     variants: { price: number }[];
@@ -173,17 +173,6 @@ export default function ProductDetailPage() {
             setMainImage(product.bannerUrl || product.imageUrl);
         }
     }, [product, mainImage]);
-
-    const reviewsQuery = useMemoFirebase(() => {
-        if (!firestore || !product) return null;
-        return query(
-            collection(firestore, 'reviews'),
-            where('productId', '==', product.id),
-            where('status', '==', 'approved')
-        );
-    }, [firestore, product]);
-
-    const { data: reviews, isLoading: isLoadingReviews, forceRefetch } = useCollection<Review>(reviewsQuery);
     
     const handleWishlistToggle = () => {
         setIsInWishlist(!isInWishlist);
@@ -428,7 +417,7 @@ export default function ProductDetailPage() {
                     <TabsTrigger value="description">Description</TabsTrigger>
                     <TabsTrigger value="specs">Specifications</TabsTrigger>
                     <TabsTrigger value="packaging">Packaging</TabsTrigger>
-                    <TabsTrigger value="reviews">Reviews ({reviews?.length || 0})</TabsTrigger>
+                    <TabsTrigger value="reviews">Reviews</TabsTrigger>
                 </TabsList>
                 <TabsContent value="description" className="prose prose-sm max-w-none text-muted-foreground mt-4">
                     <p>{product.description}</p>
@@ -447,51 +436,7 @@ export default function ProductDetailPage() {
                     <p>{product.packagingDetails || 'Standard packaging information not available.'}</p>
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4 space-y-6">
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Leave a Review</h3>
-                        <LeaveReviewForm product={product} onReviewSubmit={forceRefetch} />
-                    </div>
-                    <Separator />
-                    <div>
-                        <h3 className="text-lg font-semibold mb-4">Customer Reviews</h3>
-                        <div className="space-y-4">
-                            {isLoadingReviews ? (
-                                <div className="space-y-4">
-                                    <Skeleton className="h-20 w-full" />
-                                    <Skeleton className="h-20 w-full" />
-                                </div>
-                            ) : reviews && reviews.length > 0 ? (
-                                reviews.map(review => (
-                                    <div key={review.id} className="p-4 border rounded-lg space-y-2">
-                                        <div className="flex justify-between items-start">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar>
-                                                    <AvatarImage src={review.buyerAvatar} />
-                                                    <AvatarFallback>{review.buyerName?.charAt(0) || 'U'}</AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-semibold">{review.buyerName}</p>
-                                                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                                        <p>{review.createdAt ? formatDistanceToNow(review.createdAt.toDate()) : ''} ago</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center">
-                                                {[...Array(5)].map((_, i) => (
-                                                    <Star key={i} className={`h-4 w-4 ${i < review.rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
-                                    </div>
-                                ))
-                            ) : (
-                                <div className="text-center py-10 text-muted-foreground">
-                                    <p>No reviews for this product yet.</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+                    <ProductReviews productId={product.id} />
                 </TabsContent>
             </Tabs>
         </div>
@@ -556,5 +501,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-
-    
