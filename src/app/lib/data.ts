@@ -110,44 +110,47 @@ type ManufacturerInfo = {
 
 /**
  * Fetches all published products from all non-suspended manufacturers.
- * This function uses a collection group query and requires a composite index in Firestore.
+ * This function avoids a collection group query by fetching manufacturers first.
  */
 export async function getAllProducts(): Promise<any[]> {
-  console.log("--- Starting getAllProducts (with collectionGroup) ---");
   try {
-    // 1. Fetch all manufacturers to create a map of their status and details.
-    const manufSnapshot = await db.collection('manufacturers').get();
+    // 1. Fetch all manufacturers and create a map of their status.
+    const manufCollection = db.collection('manufacturers');
+    const manufSnapshot = await manufCollection.get();
+    
     const manufMap = new Map<string, ManufacturerInfo>();
+    const nonSuspendedManufIds: string[] = [];
+
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
+      // Skip if the manufacturer is suspended
+      if (data.suspensionDetails?.isSuspended) {
+        return;
+      }
       manufMap.set(doc.id, { 
         slug: data.slug,
         shopId: data.shopId,
         isVerified: data.verificationStatus === 'Verified',
         suspensionDetails: data.suspensionDetails 
       });
+      nonSuspendedManufIds.push(doc.id);
     });
-    console.log(`Loaded ${manufMap.size} manufacturers into map.`);
 
-    // 2. Fetch all published products using a collection group query.
-    // This requires a composite index: `products (status ASC, createdAt DESC)`
-    const productsQuery = db.collectionGroup('products')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc');
-    const productSnapshot = await productsQuery.get();
-    console.log(`Found ${productSnapshot.size} total published products.`);
+    if (nonSuspendedManufIds.length === 0) {
+        return [];
+    }
 
-    // 3. Filter products in-memory to exclude those from suspended manufacturers.
-    const products = productSnapshot.docs
-      .map(doc => {
-        const manufInfo = manufMap.get(doc.data().manufacturerId);
-        // Exclude product if manufacturer not found or is suspended
-        if (!manufInfo || manufInfo.suspensionDetails?.isSuspended) {
-          return null;
-        }
+    // 2. Fetch products for each non-suspended manufacturer concurrently
+    const allProductsPromises = nonSuspendedManufIds.map(async (manufId) => {
+      const productsQuery = db.collection('manufacturers').doc(manufId).collection('products').where('status', '==', 'published');
+      const productSnapshot = await productsQuery.get();
+      
+      const manufInfo = manufMap.get(manufId);
+      if (!manufInfo) return [];
 
+      return productSnapshot.docs.map(doc => {
         const productData = doc.data();
-        // Sanitize Timestamps to ISO strings to make them serializable for the client
+        // Sanitize Timestamps to ISO strings
         const sanitizedData: { [key: string]: any } = {};
         for (const key in productData) {
           const value = productData[key];
@@ -157,7 +160,6 @@ export async function getAllProducts(): Promise<any[]> {
             sanitizedData[key] = value;
           }
         }
-        
         return {
           ...sanitizedData,
           id: doc.id,
@@ -165,23 +167,24 @@ export async function getAllProducts(): Promise<any[]> {
           shopId: manufInfo.shopId,
           isVerified: manufInfo.isVerified,
         };
-      })
-      .filter(product => product !== null); // Remove null entries for suspended products
+      });
+    });
 
-    console.log(`Returning ${products.length} products after filtering.`);
-    return products;
+    const productsByManufacturer = await Promise.all(allProductsPromises);
+    const combinedProducts = productsByManufacturer.flat();
 
-  } catch (error: any) {
-    console.error("Error fetching all products with collectionGroup:", error.message);
-    if (error.message.includes('requires an index')) {
-        console.error("***********************************************************************************");
-        console.error("This query requires a Firestore index. Please create the following index:");
-        console.error("Collection ID: products (as a collection group)");
-        console.error("Fields to index: status (Ascending), createdAt (Descending)");
-        console.error("You can create this in the Firebase Console under Firestore Database -> Indexes.");
-        console.error("***********************************************************************************");
-    }
-    // Re-throw the error to be caught by Next.js error boundaries, which helps surface the link to create the index.
-    throw error;
+    // 3. Sort products in application code by creation date
+    combinedProducts.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Sort descending (newest first)
+    });
+
+    return combinedProducts;
+
+  } catch (error) {
+    console.error("Error fetching all products:", error);
+    // Return empty array on error to prevent page crashes
+    return [];
   }
 }
