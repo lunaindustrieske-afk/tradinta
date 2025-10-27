@@ -29,6 +29,7 @@ import {
   BarChart2,
   Edit,
   Trash2,
+  AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -48,11 +49,13 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
+  useDoc,
 } from '@/firebase';
 import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type Product = {
   id: string;
@@ -63,6 +66,17 @@ type Product = {
   price: number;
 };
 
+type ManufacturerData = {
+    verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
+    suspensionDetails?: {
+        isSuspended: boolean;
+    }
+}
+
+type PlatformSettings = {
+    allowUnverifiedUploads?: boolean;
+}
+
 export default function SellerProductsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -71,6 +85,20 @@ export default function SellerProductsPage() {
   const [activeTab, setActiveTab] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock' | 'outOfStock'>('all');
+
+  // --- Data Fetching ---
+  const manufacturerDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'manufacturers', user.uid);
+  }, [user, firestore]);
+  
+  const platformSettingsRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'platformSettings', 'config');
+  }, [firestore]);
+
+  const { data: manufacturerData, isLoading: isLoadingManufacturer } = useDoc<ManufacturerData>(manufacturerDocRef);
+  const { data: platformSettings, isLoading: isLoadingSettings } = useDoc<PlatformSettings>(platformSettingsRef);
 
   const productsQuery = useMemoFirebase(() => {
     if (!user?.uid) return null;
@@ -82,10 +110,13 @@ export default function SellerProductsPage() {
 
   const {
     data: products,
-    isLoading,
+    isLoading: isLoadingProducts,
     error,
   } = useCollection<Product>(productsQuery);
+  
+  const isLoading = isLoadingProducts || isLoadingManufacturer || isLoadingSettings;
 
+  // --- Handlers ---
   const handleArchive = (productId: string) => {
     if (!user) return;
     const productRef = doc(
@@ -112,53 +143,64 @@ export default function SellerProductsPage() {
         return 'destructive';
     }
   };
-
+  
+  // --- Memoized Filtering ---
   const filteredProducts = React.useMemo(() => {
     if (!products) return null;
 
     return products
       .filter((product) => {
-        // Tab filter
         if (activeTab === 'all') return true;
         return product.status === activeTab;
       })
       .filter((product) => {
-        // Search filter
         return product.name.toLowerCase().includes(searchQuery.toLowerCase());
       })
       .filter((product) => {
-        // Stock filter
         if (stockFilter === 'all') return true;
         if (stockFilter === 'inStock') return product.stock > 0;
         if (stockFilter === 'outOfStock') return product.stock === 0;
         return true;
       });
   }, [products, activeTab, searchQuery, stockFilter]);
+  
+  // --- Render Logic ---
+  const renderAlerts = () => {
+    if (isLoading) return <Skeleton className="h-16 w-full" />;
 
-  const exportToCsv = () => {
-    if (!filteredProducts || filteredProducts.length === 0) {
-      toast({
-        title: "No products to export",
-        description: "There are no products in the current view to export.",
-        variant: "destructive"
-      });
-      return;
+    const isSuspended = manufacturerData?.suspensionDetails?.isSuspended;
+    if (isSuspended) {
+      return (
+        <Alert variant="destructive" className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Your Shop is Suspended</AlertTitle>
+          <AlertDescription>
+            While your shop is suspended, all of your products are hidden from the public. Please contact support to resolve this issue.
+          </AlertDescription>
+        </Alert>
+      );
     }
-    const headers = ['ID', 'Name', 'Status', 'Stock', 'Price (KES)'];
-    const rows = filteredProducts.map(p => 
-      [p.id, `"${p.name.replace(/"/g, '""')}"`, p.status, p.stock, p.price].join(',')
-    );
 
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "products.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast({ title: "Export successful", description: "Your products have been downloaded as products.csv."});
-  };
+    const isVerified = manufacturerData?.verificationStatus === 'Verified';
+    const allowUnverifiedUploads = platformSettings?.allowUnverifiedUploads === true;
+    if (!isVerified && !allowUnverifiedUploads) {
+       return (
+        <Alert className="mb-4">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Your Shop is Not Verified</AlertTitle>
+          <AlertDescription>
+            Your products will not be visible to the public until your shop is verified. 
+            <Button asChild variant="link" className="p-0 h-auto ml-1">
+                <Link href="/dashboards/seller-centre/verification">Complete your verification</Link>
+            </Button> 
+            to publish your products.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    
+    return null;
+  }
 
   const renderProductRows = (productData: Product[] | null) => {
     if (isLoading) {
@@ -190,7 +232,7 @@ export default function SellerProductsPage() {
       return (
         <TableRow>
           <TableCell colSpan={6} className="h-24 text-center">
-            No products found. Try adjusting your filters.
+            No products found. Check your filters or see alerts at the top of the page.
           </TableCell>
         </TableRow>
       );
@@ -272,85 +314,92 @@ export default function SellerProductsPage() {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <CardTitle>My Products</CardTitle>
-            <CardDescription>
-              Manage your product catalog, inventory, and pricing.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={exportToCsv}>
-              <File className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button asChild>
-              <Link href="/dashboards/seller-centre/products/new">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Product
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="all" onValueChange={setActiveTab}>
-          <div className="flex items-center justify-between">
-            <TabsList>
-              <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="published">Published</TabsTrigger>
-              <TabsTrigger value="draft">Drafts</TabsTrigger>
-            </TabsList>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <CardTitle>My Products</CardTitle>
+              <CardDescription>
+                Manage your product catalog, inventory, and pricing.
+              </CardDescription>
+            </div>
             <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Search products..." className="pl-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-1">
-                    <ListFilter className="h-3.5 w-3.5" />
-                    <span>Filter</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>Filter by Stock</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuCheckboxItem
-                    checked={stockFilter === 'all'}
-                    onCheckedChange={() => setStockFilter('all')}
-                  >
-                    All
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={stockFilter === 'inStock'}
-                    onCheckedChange={() => setStockFilter('inStock')}
-                  >
-                    In Stock
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={stockFilter === 'outOfStock'}
-                    onCheckedChange={() => setStockFilter('outOfStock')}
-                  >
-                    Out of Stock
-                  </DropdownMenuCheckboxItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button variant="outline" size="sm">
+                <File className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+              <Button asChild>
+                <Link href="/dashboards/seller-centre/products/new">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Product
+                </Link>
+              </Button>
             </div>
           </div>
-          <TabsContent value="all">
-            {productTable}
-          </TabsContent>
-          <TabsContent value="published">
-             {productTable}
-          </TabsContent>
-          <TabsContent value="draft">
-             {productTable}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+        </CardHeader>
+      </Card>
+      
+      {renderAlerts()}
+
+      <Card>
+        <CardContent className="pt-6">
+          <Tabs defaultValue="all" onValueChange={setActiveTab}>
+            <div className="flex items-center justify-between">
+              <TabsList>
+                <TabsTrigger value="all">All</TabsTrigger>
+                <TabsTrigger value="published">Published</TabsTrigger>
+                <TabsTrigger value="draft">Drafts</TabsTrigger>
+              </TabsList>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search products..." className="pl-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-1">
+                      <ListFilter className="h-3.5 w-3.5" />
+                      <span>Filter</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Filter by Stock</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={stockFilter === 'all'}
+                      onCheckedChange={() => setStockFilter('all')}
+                    >
+                      All
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={stockFilter === 'inStock'}
+                      onCheckedChange={() => setStockFilter('inStock')}
+                    >
+                      In Stock
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={stockFilter === 'outOfStock'}
+                      onCheckedChange={() => setStockFilter('outOfStock')}
+                    >
+                      Out of Stock
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            <TabsContent value="all" className="mt-4">
+              {productTable}
+            </TabsContent>
+            <TabsContent value="published" className="mt-4">
+              {productTable}
+            </TabsContent>
+            <TabsContent value="draft" className="mt-4">
+              {productTable}
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
