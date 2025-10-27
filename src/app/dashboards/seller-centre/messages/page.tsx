@@ -1,177 +1,299 @@
-
 'use client';
 
-import React from 'react';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, FileText, CheckCircle, Clock, Search, MessageSquare } from "lucide-react";
+import React, { useState, useMemo } from 'react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Send,
+  FileText,
+  Search,
+  MessageSquare,
+  Loader2,
+} from 'lucide-react';
 import Link from 'next/link';
-import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
+type Message = {
+  id: string;
+  from: 'user' | 'contact';
+  text: string;
+  timestamp?: any;
+};
 
-const conversations = [
-    {
-        id: "CONV-001",
-        title: "Quotation for 200 bags of Cement",
-        contactName: "BuildRight Const.",
-        contactRole: "Buyer",
-        lastMessage: "Thank you, payment has been made via TradPay.",
-        lastMessageTimestamp: "2 hours ago",
-        status: "Approved",
-        statusIcon: <CheckCircle className="text-green-500" />,
-        isUnread: false,
-        messages: [
-            { from: "contact", text: "Is this the final price for the 200 bags of Industrial Grade Cement?" },
-            { from: "user", text: "Yes, this is our best offer for bulk purchase. The quote is attached." },
-            { from: "contact", text: "Thank you, payment has been made via TradPay." }
-        ]
-    },
-    {
-        id: "CONV-002",
-        title: "Order: 50 sacks of Baking Flour",
-        contactName: "Yum Foods",
-        contactRole: "Buyer",
-        lastMessage: "Okay, I will arrange for pickup tomorrow afternoon.",
-        lastMessageTimestamp: "1 day ago",
-        status: "Pending Fulfillment",
-        statusIcon: <Clock className="text-yellow-500" />,
-        isUnread: true,
-        messages: [
-            { from: "user", text: "Your order for 50 sacks of flour is ready for pickup." },
-            { from: "contact", text: "Okay, I will arrange for pickup tomorrow afternoon." },
+type Conversation = {
+  id: string;
+  title: string;
+  contactName: string;
+  contactRole: string;
+  lastMessage: string;
+  lastMessageTimestamp?: any;
+  isUnread: boolean;
+};
 
-        ]
-    },
-    {
-        id: "CONV-003",
-        title: "Inquiry about Steel Beams",
-        contactName: "Kimani Traders",
-        contactRole: "Buyer",
-        lastMessage: "We have a new shipment arriving next week. Let me know the specs you need.",
-        lastMessageTimestamp: "3 days ago",
-        status: "Inquiry",
-        statusIcon: <FileText className="text-blue-500" />,
-        isUnread: false,
-        messages: [
-            { from: "contact", text: "Do you have 10-inch steel beams in stock?"},
-            { from: "user", text: "We have a new shipment arriving next week. Let me know the specs you need." }
-        ]
-    }
-];
-
-
-export default function SellerMessagesPage() {
-    const [selectedConversation, setSelectedConversation] = React.useState(conversations[0]);
-
-    const getRoleBadgeVariant = (role: string) => {
-        switch (role) {
-            case 'Buyer': return 'secondary';
-            case 'Distributor': return 'outline';
-            default: return 'default';
-        }
-    }
-
-    return (
-        <div className="space-y-6">
-            <Breadcrumb>
-                <BreadcrumbList>
-                    <BreadcrumbItem>
-                        <BreadcrumbLink asChild>
-                            <Link href="/dashboards/seller-centre">Seller Centre</Link>
-                        </BreadcrumbLink>
-                    </BreadcrumbItem>
-                    <BreadcrumbSeparator />
-                    <BreadcrumbItem>
-                        <BreadcrumbPage>Messages</BreadcrumbPage>
-                    </BreadcrumbItem>
-                </BreadcrumbList>
-            </Breadcrumb>
-            
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><MessageSquare className="w-6 h-6 text-primary"/>Shop Inbox</CardTitle>
-                    <CardDescription>Your central hub for all communications with buyers and partners.</CardDescription>
-                </CardHeader>
-            </Card>
-            <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-280px)]">
-                {/* Left Column: Conversation List */}
-                <div className="md:col-span-1 flex flex-col">
-                    <Card className="flex flex-col h-full">
-                        <CardHeader className="border-b p-4">
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Search conversations..." className="pl-8" />
-                            </div>
-                        </CardHeader>
-                        <ScrollArea className="flex-grow">
-                            <CardContent className="p-2 space-y-1">
-                                {conversations.map(convo => (
-                                    <div key={convo.id} className={`p-3 rounded-lg cursor-pointer border-2 ${selectedConversation.id === convo.id ? 'bg-muted border-primary' : 'border-transparent hover:bg-muted/50'}`} onClick={() => setSelectedConversation(convo)}>
-                                        <div className="flex justify-between items-start mb-1">
-                                            <h3 className="font-semibold text-sm truncate pr-2">{convo.contactName}</h3>
-                                            {convo.isUnread && <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></div>}
-                                        </div>
-                                        <p className="text-sm font-bold truncate">{convo.title}</p>
-                                        <p className="text-xs text-muted-foreground truncate">{convo.lastMessage}</p>
-                                        <div className="flex justify-between items-center mt-2">
-                                            <Badge variant={getRoleBadgeVariant(convo.contactRole)}>{convo.contactRole}</Badge>
-                                            <p className="text-xs text-muted-foreground">{convo.lastMessageTimestamp}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </CardContent>
-                        </ScrollArea>
-                    </Card>
+const ConversationListSkeleton = () => (
+    <div className="p-2 space-y-1">
+        {Array.from({length: 3}).map((_, i) => (
+            <div key={i} className="p-3 space-y-2">
+                <div className="flex justify-between items-start">
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-3 w-3 rounded-full" />
                 </div>
-
-                {/* Right Column: Message and Details View */}
-                <div className="md:col-span-2 flex flex-col">
-                    <Card className="flex-grow flex flex-col">
-                        <CardHeader className="flex flex-row justify-between items-center border-b">
-                            <div>
-                                <CardTitle>{selectedConversation.title}</CardTitle>
-                                <CardDescription>Conversation with {selectedConversation.contactName}</CardDescription>
-                            </div>
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href="/dashboards/seller-centre/orders">
-                                    <FileText className="mr-2 h-4 w-4" /> View Related Order
-                                </Link>
-                            </Button>
-                        </CardHeader>
-                        <ScrollArea className="flex-grow p-6 space-y-4">
-                            {selectedConversation.messages.map((msg, index) => (
-                                <div key={index} className={`flex items-end gap-2 ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    {msg.from === 'contact' && (
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={`https://picsum.photos/seed/${selectedConversation.contactName}/32/32`} />
-                                            <AvatarFallback>{selectedConversation.contactName.charAt(0)}</AvatarFallback>
-                                        </Avatar>
-                                    )}
-                                    <div className={`max-w-md p-3 rounded-lg ${msg.from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                        <p className="text-sm">{msg.text}</p>
-                                    </div>
-                                    {msg.from === 'user' && (
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src="https://picsum.photos/seed/seller-avatar/32/32" />
-                                            <AvatarFallback>You</AvatarFallback>
-                                        </Avatar>
-                                    )}
-                                </div>
-                            ))}
-                        </ScrollArea>
-                        <CardFooter className="border-t p-4 bg-muted/50">
-                            <div className="flex w-full items-center gap-2">
-                                <Input placeholder="Type your message..." className="bg-background"/>
-                                <Button size="icon"><Send className="h-4 w-4" /></Button>
-                            </div>
-                        </CardFooter>
-                    </Card>
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-4/5" />
+                <div className="flex justify-between items-center">
+                    <Skeleton className="h-5 w-16" />
+                    <Skeleton className="h-4 w-20" />
                 </div>
             </div>
+        ))}
+    </div>
+);
+
+const MessageViewSkeleton = () => (
+    <div className="p-6 space-y-4">
+        <div className="flex justify-end gap-2">
+            <Skeleton className="h-12 w-48 rounded-lg" />
+            <Skeleton className="h-8 w-8 rounded-full" />
         </div>
-    )
+        <div className="flex justify-start gap-2">
+             <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-16 w-64 rounded-lg" />
+        </div>
+    </div>
+);
+
+export default function SellerMessagesPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const conversationsQuery = useMemoFirebase(() => {
+    if (!user) return null;
+    return query(
+      collection(firestore, 'manufacturers', user.uid, 'conversations'),
+      orderBy('lastMessageTimestamp', 'desc')
+    );
+  }, [user, firestore]);
+
+  const { data: conversations, isLoading: isLoadingConversations } =
+    useCollection<Conversation>(conversationsQuery);
+    
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+
+  const selectedConversation = useMemo(() => 
+    conversations?.find(c => c.id === selectedConversationId)
+  , [conversations, selectedConversationId]);
+
+  // Set initial selected conversation
+  React.useEffect(() => {
+    if (!selectedConversationId && conversations && conversations.length > 0) {
+      setSelectedConversationId(conversations[0].id);
+    }
+  }, [conversations, selectedConversationId]);
+
+  const messagesQuery = useMemoFirebase(() => {
+    if (!user || !selectedConversationId) return null;
+    return query(
+      collection(firestore, 'manufacturers', user.uid, 'conversations', selectedConversationId, 'messages'),
+      orderBy('timestamp', 'asc')
+    );
+  }, [user, selectedConversationId, firestore]);
+  
+  const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
+
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'Buyer':
+        return 'secondary';
+      case 'Distributor':
+        return 'outline';
+      default:
+        return 'default';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/dashboards/seller-centre">Seller Centre</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Messages</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <MessageSquare className="w-6 h-6 text-primary" />
+            Shop Inbox
+          </CardTitle>
+          <CardDescription>
+            Your central hub for all communications with buyers and partners.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-280px)]">
+        {/* Left Column: Conversation List */}
+        <div className="md:col-span-1 flex flex-col">
+          <Card className="flex flex-col h-full">
+            <CardHeader className="border-b p-4">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input placeholder="Search conversations..." className="pl-8" />
+              </div>
+            </CardHeader>
+            <ScrollArea className="flex-grow">
+              <CardContent className="p-2 space-y-1">
+                {isLoadingConversations ? (
+                    <ConversationListSkeleton />
+                ) : conversations && conversations.length > 0 ? (
+                    conversations.map((convo) => (
+                        <div
+                        key={convo.id}
+                        className={`p-3 rounded-lg cursor-pointer border-2 ${
+                            selectedConversationId === convo.id
+                            ? 'bg-muted border-primary'
+                            : 'border-transparent hover:bg-muted/50'
+                        }`}
+                        onClick={() => setSelectedConversationId(convo.id)}
+                        >
+                        <div className="flex justify-between items-start mb-1">
+                            <h3 className="font-semibold text-sm truncate pr-2">
+                            {convo.contactName}
+                            </h3>
+                            {convo.isUnread && (
+                            <div className="w-2.5 h-2.5 rounded-full bg-primary shrink-0"></div>
+                            )}
+                        </div>
+                        <p className="text-sm font-bold truncate">{convo.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                            {convo.lastMessage}
+                        </p>
+                        <div className="flex justify-between items-center mt-2">
+                            <Badge variant={getRoleBadgeVariant(convo.contactRole)}>
+                            {convo.contactRole}
+                            </Badge>
+                            <p className="text-xs text-muted-foreground">{convo.lastMessageTimestamp ? new Date(convo.lastMessageTimestamp.seconds * 1000).toLocaleDateString() : ''}</p>
+                        </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="text-center p-8 text-sm text-muted-foreground">
+                        No conversations yet.
+                    </div>
+                )}
+              </CardContent>
+            </ScrollArea>
+          </Card>
+        </div>
+
+        {/* Right Column: Message and Details View */}
+        <div className="md:col-span-2 flex flex-col">
+          <Card className="flex-grow flex flex-col">
+            {!selectedConversation ? (
+                <div className="flex-grow flex items-center justify-center text-muted-foreground">
+                    {isLoadingConversations ? <Loader2 className="h-8 w-8 animate-spin" /> : <p>Select a conversation to view messages.</p>}
+                </div>
+            ) : (
+                <>
+                <CardHeader className="flex flex-row justify-between items-center border-b">
+                    <div>
+                    <CardTitle>{selectedConversation.title}</CardTitle>
+                    <CardDescription>
+                        Conversation with {selectedConversation.contactName}
+                    </CardDescription>
+                    </div>
+                    <Button variant="outline" size="sm" asChild>
+                    <Link href="/dashboards/seller-centre/orders">
+                        <FileText className="mr-2 h-4 w-4" /> View Related Order
+                    </Link>
+                    </Button>
+                </CardHeader>
+                <ScrollArea className="flex-grow p-6 space-y-4">
+                    {isLoadingMessages ? <MessageViewSkeleton /> 
+                    : messages && messages.length > 0 ? messages.map((msg) => (
+                    <div
+                        key={msg.id}
+                        className={`flex items-end gap-2 ${
+                        msg.from === 'user' ? 'justify-end' : 'justify-start'
+                        }`}
+                    >
+                        {msg.from === 'contact' && (
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage
+                            src={`https://picsum.photos/seed/${selectedConversation.contactName}/32/32`}
+                            />
+                            <AvatarFallback>
+                            {selectedConversation.contactName.charAt(0)}
+                            </AvatarFallback>
+                        </Avatar>
+                        )}
+                        <div
+                        className={`max-w-md p-3 rounded-lg ${
+                            msg.from === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                        >
+                        <p className="text-sm">{msg.text}</p>
+                        </div>
+                        {msg.from === 'user' && (
+                        <Avatar className="h-8 w-8">
+                            <AvatarImage src="https://picsum.photos/seed/seller-avatar/32/32" />
+                            <AvatarFallback>You</AvatarFallback>
+                        </Avatar>
+                        )}
+                    </div>
+                    )) : (
+                         <div className="text-center p-8 text-sm text-muted-foreground">
+                            No messages in this conversation yet.
+                        </div>
+                    )}
+                </ScrollArea>
+                <CardFooter className="border-t p-4 bg-muted/50">
+                    <div className="flex w-full items-center gap-2">
+                    <Input
+                        placeholder="Type your message..."
+                        className="bg-background"
+                    />
+                    <Button size="icon">
+                        <Send className="h-4 w-4" />
+                    </Button>
+                    </div>
+                </CardFooter>
+                </>
+            )}
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
 }
