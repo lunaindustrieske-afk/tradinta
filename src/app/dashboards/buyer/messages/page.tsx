@@ -23,6 +23,7 @@ import {
   Archive,
   Edit,
   Download,
+  Paperclip,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -31,9 +32,12 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { PhotoUpload } from '@/components/ui/photo-upload';
 
 type Message = {
   id: string;
@@ -47,6 +51,7 @@ type Conversation = {
   id: string;
   title: string;
   contactName: string;
+  contactId: string;
   contactRole: string;
   lastMessage: string;
   lastMessageTimestamp?: any;
@@ -88,6 +93,12 @@ const MessageViewSkeleton = () => (
 export default function MessagesPage() {
     const { user } = useUser();
     const firestore = useFirestore();
+    const { toast } = useToast();
+
+    const [message, setMessage] = useState('');
+    const [imageUrl, setImageUrl] = useState<string | null>(null);
+    const [isSending, setIsSending] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
 
     const conversationsQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -140,6 +151,39 @@ export default function MessagesPage() {
             default: return 'default';
         }
     }
+    
+    const handleSendMessage = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if ((!message.trim() && !imageUrl) || !user || !firestore || !selectedConversationId || !selectedConversation) {
+            return;
+        }
+        setIsSending(true);
+
+        const messageData = {
+            from: 'user', // 'user' from the buyer's perspective
+            text: message,
+            imageUrl: imageUrl,
+            timestamp: serverTimestamp(),
+        };
+        
+        try {
+            // Add to buyer's messages subcollection
+            await addDoc(collection(firestore, 'users', user.uid, 'conversations', selectedConversationId, 'messages'), messageData);
+            // Add to seller's messages subcollection
+            await addDoc(collection(firestore, 'manufacturers', selectedConversation.contactId, 'conversations', selectedConversationId, 'messages'), {
+                ...messageData,
+                from: 'contact' // 'contact' from the seller's perspective
+            });
+            
+            setMessage('');
+            setImageUrl(null);
+            toast({ title: "Message Sent" });
+        } catch(error: any) {
+            toast({ title: "Error Sending Message", description: error.message, variant: "destructive" });
+        } finally {
+            setIsSending(false);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -269,10 +313,41 @@ export default function MessagesPage() {
                                 )}
                             </ScrollArea>
                             <CardFooter className="border-t p-4 bg-muted/50">
-                                <div className="flex w-full items-center gap-2">
-                                    <Input placeholder="Type your message..." className="bg-background"/>
-                                    <Button size="icon"><Send className="h-4 w-4" /></Button>
-                                </div>
+                                <form onSubmit={handleSendMessage} className="w-full space-y-2">
+                                    {imageUrl && (
+                                        <div className="relative w-24 h-24 p-2 border rounded-md bg-background">
+                                            <Image src={imageUrl} alt="preview" fill className="object-cover rounded-sm" />
+                                            <Button variant="ghost" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground" onClick={() => setImageUrl(null)}>
+                                                <span className="sr-only">Remove Image</span>
+                                                &times;
+                                            </Button>
+                                        </div>
+                                    )}
+                                    <div className="flex w-full items-center gap-2">
+                                        <Textarea
+                                            placeholder="Type your message..."
+                                            className="bg-background"
+                                            value={message}
+                                            onChange={(e) => setMessage(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSendMessage(e);
+                                                }
+                                            }}
+                                        />
+                                        <div className="flex flex-col gap-2">
+                                            <PhotoUpload onUpload={setImageUrl} onLoadingChange={setIsUploading}>
+                                                <Button type="button" variant="ghost" size="icon" disabled={isSending || isUploading}>
+                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+                                                </Button>
+                                            </PhotoUpload>
+                                            <Button type="submit" size="icon" disabled={isSending || isUploading || (!message.trim() && !imageUrl)}>
+                                                <Send className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </form>
                             </CardFooter>
                             </>
                         )}
