@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -10,6 +9,7 @@ import {
   Loader2,
   Trash2,
   PlusCircle,
+  Save,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -45,6 +45,7 @@ import { useFirestore, useUser } from '@/firebase';
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { generateSlug } from '@/lib/utils';
 import { nanoid } from 'nanoid';
+import { Separator } from '@/components/ui/separator';
 
 type Variant = {
     id: string;
@@ -69,11 +70,13 @@ export default function NewProductPage() {
   const [formKey, setFormKey] = React.useState(Date.now());
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isUploading, setIsUploading] = React.useState(false);
 
   // Form State
   const [name, setName] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [imageUrl, setImageUrl] = React.useState('');
+  const [bannerUrl, setBannerUrl] = React.useState('');
   const [tags, setTags] = React.useState<string[]>([]);
   
   const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
@@ -191,7 +194,8 @@ export default function NewProductPage() {
             description,
             category: selectedCategory?.name || '',
             subcategory: selectedSubCategory || '',
-            imageUrl,
+            imageUrl, // This is now a secondary/thumbnail image
+            bannerUrl, // This is the main banner image
             tags,
             options: options.filter(Boolean),
             variants: variants.map(v => ({
@@ -226,6 +230,8 @@ export default function NewProductPage() {
         setIsSaving(false);
     }
   }
+  
+  const isSaveDisabled = isSaving || isUploading;
 
 
   return (
@@ -241,13 +247,13 @@ export default function NewProductPage() {
           Add New Product
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaveDisabled}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save as Draft
           </Button>
-          <Button size="sm" onClick={() => handleSaveProduct('published')} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit for Review
+          <Button size="sm" onClick={() => handleSaveProduct('published')} disabled={isSaveDisabled}>
+             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save and Publish
           </Button>
         </div>
       </div>
@@ -416,6 +422,40 @@ export default function NewProductPage() {
             </CardContent>
           </Card>
           
+           <Card>
+            <CardHeader>
+              <CardTitle>Product Media</CardTitle>
+              <CardDescription>
+                Upload a main banner and additional images to showcase your product.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+                <PhotoUpload
+                    label="Main Banner Image"
+                    onUpload={setBannerUrl}
+                    onLoadingChange={setIsUploading}
+                />
+                <Separator />
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                    <PhotoUpload
+                        label="Additional Image 1"
+                        onUpload={setImageUrl}
+                        onLoadingChange={setIsUploading}
+                    />
+                     <PhotoUpload
+                        label="Additional Image 2"
+                        onUpload={(url) => {}} // Placeholder
+                        onLoadingChange={setIsUploading}
+                    />
+                     <PhotoUpload
+                        label="Additional Image 3"
+                        onUpload={(url) => {}} // Placeholder
+                        onLoadingChange={setIsUploading}
+                    />
+                </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Specifications & Packaging</CardTitle>
@@ -443,21 +483,6 @@ export default function NewProductPage() {
                   <Textarea id="packagingDetails" placeholder="Describe the product packaging..." className="min-h-24" value={packagingDetails} onChange={(e) => setPackagingDetails(e.target.value)} />
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Media</CardTitle>
-              <CardDescription>
-                Upload high-quality images to showcase your product.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <PhotoUpload
-                    label="Main Product Image"
-                    onUpload={setImageUrl}
-                    initialUrl={imageUrl}
-                />
             </CardContent>
           </Card>
         </div>
@@ -514,14 +539,14 @@ export default function NewProductPage() {
         </div>
       </div>
       <div className="flex items-center justify-center gap-2 md:hidden">
-        <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaveDisabled}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save as Draft
-        </Button>
-        <Button size="sm" onClick={() => handleSaveProduct('published')} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Submit for Review
-        </Button>
+          </Button>
+          <Button size="sm" onClick={() => handleSaveProduct('published')} disabled={isSaveDisabled}>
+             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Save and Publish
+          </Button>
       </div>
     </div>
   );
