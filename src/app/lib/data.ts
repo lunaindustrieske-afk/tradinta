@@ -168,7 +168,8 @@ export async function getAllProducts(): Promise<any[]> {
         return {
           ...sanitizedData,
           id: doc.id,
-          slug: manufInfo.slug,
+          // Use manufacturer's slug for the shop, and product's own slug for the product page.
+          manufacturerSlug: manufInfo.slug, 
           shopId: manufInfo.shopId,
           isVerified: manufInfo.isVerified,
         };
@@ -198,4 +199,3 @@ export async function getAllProducts(): Promise<any[]> {
     throw error;
   }
 }
-
