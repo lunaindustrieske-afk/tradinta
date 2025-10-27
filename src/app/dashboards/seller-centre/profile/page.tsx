@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -36,12 +37,13 @@ import { doc, setDoc, getDoc, serverTimestamp, updateDoc, arrayUnion } from 'fir
 import { useToast } from '@/hooks/use-toast';
 import { nanoid } from 'nanoid';
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn, generateSlug } from '@/lib/utils';
 import { useDropzone } from 'react-dropzone';
-import { PhotoUpload } from '@/components/ui/photo-upload';
+import { PhotoUpload } from '@/components/photo-upload';
 
 type ManufacturerData = {
   shopId?: string;
+  slug?: string;
   shopName?: string;
   tagline?: string;
   description?: string;
@@ -175,6 +177,7 @@ export default function EditShopProfilePage() {
 
   // Form state
   const [shopId, setShopId] = useState('');
+  const [slug, setSlug] = useState('');
   const [shopName, setShopName] = useState('');
   const [shopTagline, setShopTagline] = useState('');
   const [shopDescription, setShopDescription] = useState('');
@@ -206,6 +209,7 @@ export default function EditShopProfilePage() {
         if (docSnap.exists()) {
           const data = docSnap.data() as ManufacturerData;
           setShopId(data.shopId || '');
+          setSlug(data.slug || '');
           setShopName(data.shopName || '');
           setShopTagline(data.tagline || '');
           setShopDescription(data.description || '');
@@ -241,11 +245,12 @@ export default function EditShopProfilePage() {
     
     setIsLoading(true);
 
-    // Generate a new shopId only if one doesn't exist
     const finalShopId = shopId || nanoid(6);
+    const finalSlug = slug || generateSlug(shopName);
 
     const manufacturerData: Omit<ManufacturerData, 'logoHistory'> & { logoHistory?: any } = {
       shopId: finalShopId,
+      slug: finalSlug,
       shopName,
       tagline: shopTagline,
       description: shopDescription,
@@ -259,14 +264,12 @@ export default function EditShopProfilePage() {
       returnPolicy,
       website,
       linkedin,
-      acceptsTradPay: false, // Permanently disabled
+      acceptsTradPay: false,
       issuesTradPoints,
       certifications: [certUrl, kraPinUrl].filter(Boolean),
-      // Update status only if it's the first time submitting
       verificationStatus: verificationStatus === 'Unsubmitted' && (bizRegNo || certUrl || kraPinUrl) ? 'Pending Legal' : verificationStatus,
     };
     
-    // We handle logoHistory separately to use arrayUnion
     const newLogoForHistory = logoHistory.includes(logoUrl) ? null : logoUrl;
     if (newLogoForHistory) {
         manufacturerData.logoHistory = arrayUnion(newLogoForHistory);
@@ -281,12 +284,11 @@ export default function EditShopProfilePage() {
         description: "Your changes have been successfully saved.",
       });
 
-      // Optimistically update local state if needed
       if (manufacturerData.verificationStatus) {
         setVerificationStatus(manufacturerData.verificationStatus);
       }
       setShopId(finalShopId);
-
+      setSlug(finalSlug);
 
     } catch (error: any) {
       toast({
@@ -335,8 +337,8 @@ export default function EditShopProfilePage() {
           Edit Shop Profile
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="outline" size="sm" asChild disabled={!shopId}>
-              <Link href={`/manufacturer/${shopId}`} target="_blank">
+          <Button variant="outline" size="sm" asChild disabled={!slug}>
+              <Link href={`/manufacturer/${slug}`} target="_blank">
                   <Eye className="mr-2 h-4 w-4" />
                   View Public Shop
               </Link>
@@ -348,7 +350,6 @@ export default function EditShopProfilePage() {
         </div>
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Main Content Column */}
         <div className="lg:col-span-2 space-y-8">
           <Card>
             <CardHeader>
@@ -417,7 +418,6 @@ export default function EditShopProfilePage() {
             </CardContent>
           </Card>
         </div>
-        {/* Sidebar Column */}
         <div className="space-y-8">
             <Card>
                 <CardHeader><CardTitle>Shop Logo</CardTitle></CardHeader>
@@ -511,3 +511,5 @@ export default function EditShopProfilePage() {
     </div>
   );
 }
+
+    

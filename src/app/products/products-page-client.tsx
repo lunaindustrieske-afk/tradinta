@@ -58,7 +58,7 @@ import { type Product } from '@/lib/definitions';
 import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
-type ProductWithShopId = Product & { shopId: string };
+type ProductWithShopId = Product & { shopId: string; slug: string; };
 
 const categoryIcons: Record<string, React.ReactNode> = {
     "Industrial & Manufacturing Supplies": <Factory className="w-5 h-5" />,

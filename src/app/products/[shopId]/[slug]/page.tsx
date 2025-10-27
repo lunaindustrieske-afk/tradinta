@@ -398,7 +398,7 @@ export default function ProductDetailPage() {
                         </div>
                     </div>
                     <Button asChild className="w-full">
-                        <Link href={`/manufacturer/${manufacturer.shopId}`}>View Shop</Link>
+                        <Link href={`/manufacturer/${manufacturer.slug}`}>View Shop</Link>
                     </Button>
                 </CardContent>
             </Card>

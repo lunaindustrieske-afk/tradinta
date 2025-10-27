@@ -108,11 +108,11 @@ export async function getAllProducts(): Promise<any[]> {
   try {
     const manufCollection = db.collection('manufacturers');
     const manufSnapshot = await manufCollection.get();
-    const manufMap = new Map<string, { slug: string, shopId: string }>();
+    const manufMap = new Map<string, { slug: string }>();
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
-      if (data.slug && data.shopId) {
-        manufMap.set(doc.id, { slug: data.slug, shopId: data.shopId });
+      if (data.slug) {
+        manufMap.set(doc.id, { slug: data.slug });
       }
     });
 
@@ -139,9 +139,8 @@ export async function getAllProducts(): Promise<any[]> {
         ...sanitizedData,
         id: doc.id,
         slug: manufInfo?.slug || '',
-        shopId: manufInfo?.shopId || '',
       };
-    }).filter(p => p.slug && p.shopId); 
+    }).filter(p => p.slug); 
 
     return productsData;
   } catch (error) {
