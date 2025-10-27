@@ -58,18 +58,11 @@ import {
   where,
   orderBy,
   limit,
-  setDoc,
-  serverTimestamp,
-  collectionGroup,
 } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { Review } from '@/app/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
-import { setUserRoleClaim } from '@/app/(auth)/actions';
-import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { SuspendedShopOverlay } from '@/components/suspended-shop-overlay';
 
 
 const orders = [
@@ -214,90 +207,6 @@ const VerificationStatusCard = ({
   );
 };
 
-const ApplyToBecomeManufacturer = () => {
-  const { user } = useUser();
-  const firestore = useFirestore();
-  const { toast } = useToast();
-  const [isApplying, setIsApplying] = React.useState(false);
-
-  const handleApply = async () => {
-    if (!user || !firestore) return;
-
-    setIsApplying(true);
-    try {
-      // 1. Change user role via server action
-      const roleResult = await setUserRoleClaim(user.uid, 'manufacturer');
-      if (!roleResult.success) {
-        throw new Error(roleResult.message || 'Failed to update user role.');
-      }
-
-      // 2. Create the initial manufacturer document
-      const manufacturerRef = doc(firestore, 'manufacturers', user.uid);
-      await setDoc(manufacturerRef, {
-        ownerName: user.displayName,
-        email: user.email,
-        registrationDate: serverTimestamp(),
-        verificationStatus: 'Unsubmitted',
-      });
-
-      toast({
-        title: 'Application Started!',
-        description: "You're now ready to set up your manufacturer profile.",
-      });
-
-      // Forcing a hard reload to ensure the new user role and claims are fetched
-      window.location.reload();
-    } catch (error: any) {
-      toast({
-        title: 'Application Failed',
-        description: error.message || 'An unexpected error occurred.',
-        variant: 'destructive',
-      });
-      setIsApplying(false);
-    }
-  };
-
-  return (
-    <div className="flex justify-center items-center min-h-[60vh]">
-      <Card className="max-w-lg text-center">
-        <CardHeader>
-          <CardTitle className="flex flex-col items-center gap-2">
-            <Factory className="w-12 h-12 text-primary" />
-            Become a Manufacturer on Tradinta
-          </CardTitle>
-          <CardDescription>
-            Join hundreds of verified manufacturers and expand your reach
-            across Africa.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="text-left space-y-2">
-          <p className="flex items-start">
-            <ShieldCheck className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1" />
-            <span>List your products in our B2B marketplace.</span>
-          </p>
-          <p className="flex items-start">
-            <ShoppingCart className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1" />
-            <span>
-              Receive direct orders and quotation requests from verified buyers.
-            </span>
-          </p>
-          <p className="flex items-start">
-            <Wallet className="w-5 h-5 mr-2 text-green-500 shrink-0 mt-1" />
-            <span>Utilize secure payments with TradPay escrow.</span>
-          </p>
-        </CardContent>
-        <CardFooter>
-          <Button className="w-full" onClick={handleApply} disabled={isApplying}>
-            {isApplying ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : null}
-            {isApplying ? 'Setting up your shop...' : 'Start Your Application'}
-          </Button>
-        </CardFooter>
-      </Card>
-    </div>
-  );
-};
 
 const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => {
     if (!manufacturer) return 0;
@@ -319,7 +228,7 @@ const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => 
 }
 
 export default function SellerDashboardPage() {
-  const { user, isUserLoading, role } = useUser();
+  const { user } = useUser();
   const firestore = useFirestore();
 
   const manufacturerDocRef = useMemoFirebase(() => {
@@ -333,7 +242,7 @@ export default function SellerDashboardPage() {
   const reviewsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(
-      collectionGroup(firestore, 'reviews'),
+      collection(firestore, 'reviews'),
       where('manufacturerId', '==', user.uid),
       orderBy('createdAt', 'desc'),
       limit(5)
@@ -355,35 +264,8 @@ export default function SellerDashboardPage() {
   const { data: recentProducts, isLoading: isLoadingRecentProducts } = 
     useCollection<Product>(recentProductsQuery);
 
-  const isLoading = isUserLoading || isLoadingManufacturer;
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="ml-4 text-muted-foreground">Verifying permissions...</p>
-      </div>
-    );
-  }
-
-  const isManufacturer = role === 'manufacturer' || role === 'super-admin' || role === 'admin';
-  
-  if (!isManufacturer && user) {
-      return <ApplyToBecomeManufacturer />;
-  }
-
-  if (!isManufacturer) {
-      return <ApplyToBecomeManufacturer />;
-  }
-
   const shopName = manufacturer?.shopName;
   const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
-  const isBlockedFromDashboard = manufacturer?.suspensionDetails?.prohibitions?.includes('block_dashboard_access');
-  const suspensionReason = manufacturer?.suspensionDetails?.reason || 'Violation of platform policies.';
-
-  if (isSuspended && isBlockedFromDashboard) {
-    return <SuspendedShopOverlay reason={suspensionReason} />;
-  }
 
   return (
     <div className="space-y-6">
