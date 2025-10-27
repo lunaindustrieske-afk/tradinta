@@ -13,6 +13,7 @@ export type Product = {
   rating: number;
   reviewCount: number;
   manufacturerId: string; // Firebase UID of the manufacturer
+  isVerified?: boolean; // Added this to carry verification status
 };
 
 export type Order = {
@@ -50,7 +51,8 @@ export type Manufacturer = {
   location: string;
   memberSince: number;
   rating: number;
-  isVerified: boolean;
+  isVerified: boolean; // This is a computed field in the final product data
+  verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified'; // The source of truth
   acceptsTradPay: boolean;
   certifications: string[];
   businessType: string;

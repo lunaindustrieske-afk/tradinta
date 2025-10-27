@@ -100,52 +100,83 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
 }
 
 type ProductWithShopId = Product & { shopId: string; slug: string; };
+
+type ManufacturerInfo = {
+  slug: string;
+  shopId: string;
+  isVerified: boolean;
+  suspensionDetails?: { isSuspended?: boolean };
+};
+
 /**
  * Fetches all published products and their manufacturer's shopId.
  * This function runs on the server and uses the Admin SDK.
  */
 export async function getAllProducts(): Promise<any[]> {
   try {
+    // Fetch all manufacturers and create a map of their relevant info
     const manufCollection = db.collection('manufacturers');
     const manufSnapshot = await manufCollection.get();
-    const manufMap = new Map<string, { slug: string, shopId: string }>();
+    const manufMap = new Map<string, ManufacturerInfo>();
+
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
-      // Ensure both slug and shopId exist before adding to map
-      if (data.slug && data.shopId) {
-        manufMap.set(doc.id, { slug: data.slug, shopId: data.shopId });
+      // Only include manufacturers who are not suspended
+      if (data.slug && data.shopId && !data.suspensionDetails?.isSuspended) {
+        manufMap.set(doc.id, { 
+          slug: data.slug,
+          shopId: data.shopId,
+          isVerified: data.verificationStatus === 'Verified',
+          suspensionDetails: data.suspensionDetails,
+        });
       }
     });
 
+    // Query for all published products
     const productsQuery = db.collectionGroup('products')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc');
+      .where('status', '==', 'published');
+      // We can't orderBy createdAt here because it would require a composite index with manufacturerId,
+      // which we don't have since it's a collectionGroup query. We will sort in the application code.
+      
     const productSnapshot = await productsQuery.get();
     
-    const productsData = productSnapshot.docs.map(doc => {
-      const productData = doc.data();
-      
-      const sanitizedData: { [key: string]: any } = {};
-      for (const key in productData) {
-        const value = productData[key];
-        if (value && typeof value.toDate === 'function') {
-          sanitizedData[key] = value.toDate().toISOString();
-        } else {
-          sanitizedData[key] = value;
-        }
-      }
+    const productsData = productSnapshot.docs
+      .map(doc => {
+        const productData = doc.data();
+        const manufInfo = manufMap.get(productData.manufacturerId);
 
-      const manufInfo = manufMap.get(sanitizedData.manufacturerId);
-      
-      return {
-        ...sanitizedData,
-        id: doc.id,
-        // Safely access slug and shopId from the map
-        slug: manufInfo?.slug || '',
-        shopId: manufInfo?.shopId || '',
-      };
-      // Filter out products where we couldn't find the manufacturer info
-    }).filter(p => p.slug && p.shopId); 
+        // If the manufacturer is not in our map (e.g., they are suspended or have no slug/shopId), filter out this product
+        if (!manufInfo) {
+          return null;
+        }
+
+        // Sanitize Firestore Timestamps to strings for client component compatibility
+        const sanitizedData: { [key: string]: any } = {};
+        for (const key in productData) {
+          const value = productData[key];
+          if (value && typeof value.toDate === 'function') {
+            sanitizedData[key] = value.toDate().toISOString();
+          } else {
+            sanitizedData[key] = value;
+          }
+        }
+        
+        return {
+          ...sanitizedData,
+          id: doc.id,
+          slug: manufInfo.slug,
+          shopId: manufInfo.shopId,
+          isVerified: manufInfo.isVerified,
+        };
+      })
+      .filter(Boolean); // This removes any null entries from the map step
+
+    // Sort by creation date descending in code
+    productsData.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+        const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+        return dateB.getTime() - dateA.getTime();
+    });
 
     return productsData;
   } catch (error) {

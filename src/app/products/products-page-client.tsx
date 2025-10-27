@@ -51,6 +51,7 @@ import {
   Award,
   Handshake,
   RefreshCw,
+  ShieldCheck,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -61,7 +62,12 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 
-type ProductWithShopId = Product & { shopId: string; slug: string; variants: { price: number }[] };
+type ProductWithShopId = Product & { 
+    shopId: string; 
+    slug: string; 
+    variants: { price: number }[],
+    isVerified?: boolean;
+};
 
 const categoryIcons: Record<string, React.ReactNode> = {
     "Industrial & Manufacturing Supplies": <Factory className="w-5 h-5" />,
@@ -101,8 +107,19 @@ export function ProductsPageClient({ initialProducts: serverProducts }: { initia
   };
 
   const filteredProducts = useMemo(() => {
-    return allProducts;
+    return allProducts.filter(product => {
+      const price = product.variants?.[0]?.price ?? 0;
+      
+      const matchesCategory = filters.category === 'all' || product.category === filters.category;
+      const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesPrice = price >= filters.priceRange[0] && price <= filters.priceRange[1];
+      const matchesVerified = !filters.verified || product.isVerified;
+      const matchesRating = product.rating >= filters.rating;
+
+      return matchesCategory && matchesSearch && matchesPrice && matchesVerified && matchesRating;
+    });
   }, [allProducts, filters, searchQuery]);
+
 
   const FilterSidebar = () => (
     <Card className="p-4 lg:p-6">
@@ -221,9 +238,10 @@ export function ProductsPageClient({ initialProducts: serverProducts }: { initia
                           className="object-cover group-hover:scale-105 transition-transform"
                           data-ai-hint={product.imageHint}
                         />
-                        <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
-                          Verified Factory
-                        </Badge>
+                        {product.isVerified && <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm flex items-center gap-1">
+                          <ShieldCheck className="h-4 w-4 text-green-600" />
+                          Verified
+                        </Badge>}
                       </div>
                       <div className="p-4 space-y-2">
                         <CardTitle className="text-lg leading-tight h-10">
@@ -237,7 +255,7 @@ export function ProductsPageClient({ initialProducts: serverProducts }: { initia
                         </CardDescription>
                         <div className="flex items-baseline justify-between">
                           <p className="text-xl font-bold text-foreground">
-                            {price !== undefined ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
+                            {price !== undefined && price !== null ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
                           </p>
                           <div className="flex items-center gap-1">
                             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
