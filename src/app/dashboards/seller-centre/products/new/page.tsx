@@ -11,6 +11,7 @@ import {
   Trash2,
   PlusCircle,
   Save,
+  Book,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -243,6 +244,12 @@ export default function NewProductPage() {
             <ChevronLeft className="h-4 w-4" />
             <span className="sr-only">Back</span>
           </Link>
+        </Button>
+         <Button variant="outline" size="sm" asChild>
+            <Link href="/pages/product-upload-guide" target="_blank">
+                <Book className="mr-2 h-4 w-4" />
+                View Guide
+            </Link>
         </Button>
         <h1 className="flex-1 shrink-0 whitespace-nowrap text-xl font-semibold tracking-tight sm:grow-0">
           Add New Product
