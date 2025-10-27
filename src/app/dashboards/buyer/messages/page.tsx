@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -31,8 +32,9 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
+  updateDocumentNonBlocking,
 } from '@/firebase';
-import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, orderBy, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
@@ -173,6 +175,22 @@ export default function MessagesPage() {
             await addDoc(collection(firestore, 'manufacturers', selectedConversation.contactId, 'conversations', selectedConversationId, 'messages'), {
                 ...messageData,
                 from: 'contact' // 'contact' from the seller's perspective
+            });
+
+            // Update conversation doc for both users
+            const newTimestamp = serverTimestamp();
+            const buyerConvoRef = doc(firestore, 'users', user.uid, 'conversations', selectedConversationId);
+            updateDocumentNonBlocking(buyerConvoRef, {
+                lastMessage: message || 'Image sent',
+                lastMessageTimestamp: newTimestamp,
+                isUnread: false
+            });
+
+            const sellerConvoRef = doc(firestore, 'manufacturers', selectedConversation.contactId, 'conversations', selectedConversationId);
+             updateDocumentNonBlocking(sellerConvoRef, {
+                lastMessage: message || 'Image sent',
+                lastMessageTimestamp: newTimestamp,
+                isUnread: true
             });
             
             setMessage('');
@@ -343,7 +361,7 @@ export default function MessagesPage() {
                                                 </Button>
                                             </PhotoUpload>
                                             <Button type="submit" size="icon" disabled={isSending || isUploading || (!message.trim() && !imageUrl)}>
-                                                <Send className="h-4 w-4" />
+                                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
                                             </Button>
                                         </div>
                                     </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -34,8 +35,8 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
@@ -54,6 +55,7 @@ type Conversation = {
   id: string;
   title: string;
   contactName: string;
+  contactId: string;
   contactRole: string;
   lastMessage: string;
   lastMessageTimestamp?: any;
@@ -179,6 +181,22 @@ export default function SellerMessagesPage() {
             from: 'contact' // 'contact' from the buyer's perspective
         });
         
+        // Update conversation doc for both users
+        const newTimestamp = serverTimestamp();
+        const sellerConvoRef = doc(firestore, 'manufacturers', user.uid, 'conversations', selectedConversationId);
+        updateDocumentNonBlocking(sellerConvoRef, {
+            lastMessage: message || 'Image sent',
+            lastMessageTimestamp: newTimestamp,
+            isUnread: false
+        });
+
+        const buyerConvoRef = doc(firestore, 'users', selectedConversation.contactId, 'conversations', selectedConversationId);
+        updateDocumentNonBlocking(buyerConvoRef, {
+            lastMessage: message || 'Image sent',
+            lastMessageTimestamp: newTimestamp,
+            isUnread: true
+        });
+
         setMessage('');
         setImageUrl(null);
         toast({ title: "Message Sent" });
@@ -397,7 +415,7 @@ export default function SellerMessagesPage() {
                                     </Button>
                                 </PhotoUpload>
                                 <Button type="submit" size="icon" disabled={isSending || isUploading || (!message.trim() && !imageUrl)}>
-                                    <Send className="h-4 w-4" />
+                                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                                 </Button>
                             </div>
                         </div>
