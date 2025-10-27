@@ -11,6 +11,7 @@ import {
   Loader2,
   Eye,
   UploadCloud,
+  ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -40,11 +41,20 @@ import Image from 'next/image';
 import { cn, generateSlug } from '@/lib/utils';
 import { useDropzone } from 'react-dropzone';
 import { PhotoUpload } from '@/components/photo-upload';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
+
+type PolicyData = {
+    paymentPolicy?: string;
+    shippingPolicy?: string;
+    returnPolicy?: string;
+}
 
 type ManufacturerData = {
   shopId?: string;
   slug?: string;
   shopName?: string;
+  shopNameHistory?: string[];
   tagline?: string;
   description?: string;
   logoUrl?: string;
@@ -63,6 +73,8 @@ type ManufacturerData = {
   certifications?: string[];
   verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
   overview?: string;
+  pendingPolicies?: PolicyData;
+  policyChangesStatus?: 'pending' | 'approved' | 'rejected';
 };
 
 const LogoManager = ({
@@ -115,8 +127,8 @@ const LogoManager = ({
             if (!response.ok) throw new Error(data?.error?.message || 'Upload failed.');
             
             const newUrl = data.secure_url;
-            onHistoryChange(newUrl); // Propagate new URL to parent to be added to history
-            onLogoChange(newUrl); // Set new URL as active
+            onHistoryChange(newUrl);
+            onLogoChange(newUrl);
             setActiveLogo(newUrl);
             setLogoHistory(prev => [newUrl, ...prev]);
 
@@ -176,6 +188,9 @@ export default function EditShopProfilePage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  // DB state
+  const [dbData, setDbData] = useState<ManufacturerData | null>(null);
+
   // Form state
   const [shopId, setShopId] = useState('');
   const [slug, setSlug] = useState('');
@@ -185,7 +200,7 @@ export default function EditShopProfilePage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [logoHistory, setLogoHistory] = useState<string[]>([]);
   const [bizRegNo, setBizRegNo] = useState('');
-  const [kraPin, setKraPin] = useState('');
+  const [kraPin, setKraPin] useState('');
   const [bizAddress, setBizAddress] = useState('');
   const [bizPhone, setBizPhone] = useState('');
   const [paymentPolicy, setPaymentPolicy] = useState('');
@@ -209,11 +224,12 @@ export default function EditShopProfilePage() {
         const docSnap = await getDoc(manufRef);
         if (docSnap.exists()) {
           const data = docSnap.data() as ManufacturerData;
+          setDbData(data);
           setShopId(data.shopId || '');
           setSlug(data.slug || '');
           setShopName(data.shopName || '');
           setShopTagline(data.tagline || '');
-          setShopDescription(data.overview || ''); // Corrected from description
+          setShopDescription(data.overview || '');
           setLogoUrl(data.logoUrl || '');
           setLogoHistory(data.logoHistory || []);
           setBizRegNo(data.businessLicenseNumber || '');
@@ -238,6 +254,8 @@ export default function EditShopProfilePage() {
     }
   }, [user, firestore]);
 
+  const isVerified = verificationStatus === 'Verified';
+
   const handleSaveChanges = async () => {
     if (!user || !firestore) {
       toast({ title: "Not authenticated", description: "You must be logged in to save changes.", variant: "destructive" });
@@ -246,55 +264,73 @@ export default function EditShopProfilePage() {
     
     setIsLoading(true);
 
-    const finalShopId = shopId || nanoid(6);
-    let finalSlug = generateSlug(shopName);
-
-    // Check if the generated slug is unique
-    const slugQuery = query(
-      collection(firestore, "manufacturers"),
-      where("slug", "==", finalSlug)
-    );
-    const querySnapshot = await getDocs(slugQuery);
-    
-    let isSlugTaken = false;
-    querySnapshot.forEach((doc) => {
-        if (doc.id !== user.uid) {
-            isSlugTaken = true;
-        }
-    });
-
-    if (isSlugTaken) {
-        finalSlug = `${finalSlug}-${user.uid.substring(0, 6)}`;
-        toast({
-            title: "Shop Name Taken",
-            description: `Another shop has a similar name. A unique ID has been added to your shop URL: ${finalSlug}`,
-            variant: "default",
-        });
-    }
-
-
-    const manufacturerData: Omit<ManufacturerData, 'logoHistory'> & { logoHistory?: any } = {
-      shopId: finalShopId,
-      slug: finalSlug,
-      shopName,
-      tagline: shopTagline,
-      overview: shopDescription,
-      logoUrl,
-      businessLicenseNumber: bizRegNo,
-      kraPin,
-      address: bizAddress,
-      phone: bizPhone,
-      paymentPolicy,
-      shippingPolicy,
-      returnPolicy,
-      website,
-      linkedin,
-      acceptsTradPay: false,
-      issuesTradPoints,
-      certifications: [certUrl, kraPinUrl].filter(Boolean),
-      verificationStatus: verificationStatus === 'Unsubmitted' && (bizRegNo || certUrl || kraPinUrl) ? 'Pending Legal' : verificationStatus,
+    const manufacturerData: Omit<ManufacturerData, 'logoHistory'> & { logoHistory?: any; shopNameHistory?: any } = {
+        tagline: shopTagline,
+        overview: shopDescription,
+        logoUrl,
+        website,
+        linkedin,
+        acceptsTradPay: false, // Hardcoded as per original
+        issuesTradPoints,
+        certifications: [certUrl, kraPinUrl].filter(Boolean),
     };
+
+    // --- Conditional Logic for Verified Users ---
+    if (isVerified) {
+        const pendingPolicyChanges: PolicyData = {};
+        if (paymentPolicy !== dbData?.paymentPolicy) {
+            pendingPolicyChanges.paymentPolicy = paymentPolicy;
+        }
+        if (shippingPolicy !== dbData?.shippingPolicy) {
+            pendingPolicyChanges.shippingPolicy = shippingPolicy;
+        }
+        if (returnPolicy !== dbData?.returnPolicy) {
+            pendingPolicyChanges.returnPolicy = returnPolicy;
+        }
+
+        if (Object.keys(pendingPolicyChanges).length > 0) {
+            manufacturerData.pendingPolicies = pendingPolicyChanges;
+            manufacturerData.policyChangesStatus = 'pending';
+        }
+    } else {
+        // --- Logic for Unverified Users ---
+        manufacturerData.shopName = shopName;
+        manufacturerData.businessLicenseNumber = bizRegNo;
+        manufacturerData.kraPin = kraPin;
+        manufacturerData.address = bizAddress;
+        manufacturerData.phone = bizPhone;
+        manufacturerData.paymentPolicy = paymentPolicy;
+        manufacturerData.shippingPolicy = shippingPolicy;
+        manufacturerData.returnPolicy = returnPolicy;
+
+        // Handle shop name change and history
+        if (dbData?.shopName && shopName !== dbData.shopName) {
+            manufacturerData.shopNameHistory = arrayUnion(dbData.shopName);
+        }
+
+        // Handle slug generation and uniqueness check
+        const finalShopId = shopId || nanoid(6);
+        let finalSlug = generateSlug(shopName);
+        const slugQuery = query(collection(firestore, "manufacturers"), where("slug", "==", finalSlug));
+        const querySnapshot = await getDocs(slugQuery);
+        let isSlugTaken = false;
+        querySnapshot.forEach((doc) => { if (doc.id !== user.uid) { isSlugTaken = true; } });
+        if (isSlugTaken) {
+            finalSlug = `${finalSlug}-${user.uid.substring(0, 6)}`;
+            toast({ title: "Shop Name Taken", description: `A unique ID has been added to your shop URL: ${finalSlug}` });
+        }
+        manufacturerData.shopId = finalShopId;
+        manufacturerData.slug = finalSlug;
+        setShopId(finalShopId);
+        setSlug(finalSlug);
+
+        // Update verification status if documents are added
+        if (verificationStatus === 'Unsubmitted' && (bizRegNo || certUrl || kraPinUrl)) {
+            manufacturerData.verificationStatus = 'Pending Legal';
+        }
+    }
     
+    // Handle logo history
     const newLogoForHistory = logoHistory.includes(logoUrl) ? null : logoUrl;
     if (newLogoForHistory) {
         manufacturerData.logoHistory = arrayUnion(newLogoForHistory);
@@ -304,23 +340,17 @@ export default function EditShopProfilePage() {
       const manufRef = doc(firestore, 'manufacturers', user.uid);
       await setDoc(manufRef, manufacturerData, { merge: true });
       
-      toast({
-        title: "Profile Saved!",
-        description: "Your changes have been successfully saved.",
-      });
+      toast({ title: "Profile Saved!", description: "Your changes have been successfully saved." });
 
       if (manufacturerData.verificationStatus) {
         setVerificationStatus(manufacturerData.verificationStatus);
       }
-      setShopId(finalShopId);
-      setSlug(finalSlug);
+      if (manufacturerData.policyChangesStatus === 'pending') {
+        toast({ title: "Policies Awaiting Approval", description: "Your policy changes have been submitted for review." });
+      }
 
     } catch (error: any) {
-      toast({
-        title: "Save Failed",
-        description: error.message || "An error occurred while saving.",
-        variant: "destructive",
-      });
+      toast({ title: "Save Failed", description: error.message || "An error occurred while saving.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -334,7 +364,6 @@ export default function EditShopProfilePage() {
     );
   }
 
-  const isVerified = verificationStatus === 'Verified';
 
   return (
     <div className="space-y-6">
@@ -374,6 +403,15 @@ export default function EditShopProfilePage() {
           </Button>
         </div>
       </div>
+       {dbData?.policyChangesStatus === 'pending' && (
+        <Alert>
+          <ShieldCheck className="h-4 w-4" />
+          <AlertTitle>Policies Pending Approval</AlertTitle>
+          <AlertDescription>
+            Your recent policy changes are under review by our compliance team. They are not yet live on your shop profile.
+          </AlertDescription>
+        </Alert>
+      )}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <Card>
@@ -386,7 +424,8 @@ export default function EditShopProfilePage() {
             <CardContent className="space-y-6">
                <div className="grid gap-3">
                   <Label htmlFor="shop-name">Shop Name</Label>
-                  <Input id="shop-name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
+                  <Input id="shop-name" value={shopName} onChange={(e) => setShopName(e.target.value)} disabled={isVerified} />
+                  {isVerified && <p className="text-xs text-muted-foreground">Shop name cannot be changed after verification.</p>}
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="shop-tagline">Shop Tagline</Label>
@@ -406,26 +445,27 @@ export default function EditShopProfilePage() {
             <CardContent className="grid md:grid-cols-2 gap-6">
                 <div className="grid gap-3">
                     <Label htmlFor="biz-reg-no">Business Registration No.</Label>
-                    <Input id="biz-reg-no" value={bizRegNo} onChange={(e) => setBizRegNo(e.target.value)} />
+                    <Input id="biz-reg-no" value={bizRegNo} onChange={(e) => setBizRegNo(e.target.value)} disabled={isVerified} />
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="kra-pin">KRA PIN</Label>
-                    <Input id="kra-pin" value={kraPin} onChange={(e) => setKraPin(e.target.value)} />
+                    <Input id="kra-pin" value={kraPin} onChange={(e) => setKraPin(e.target.value)} disabled={isVerified} />
                 </div>
                 <div className="grid gap-3">
                     <Label htmlFor="biz-address">Physical Address</Label>
-                    <Input id="biz-address" value={bizAddress} onChange={(e) => setBizAddress(e.target.value)} />
+                    <Input id="biz-address" value={bizAddress} onChange={(e) => setBizAddress(e.target.value)} disabled={isVerified} />
                 </div>
                  <div className="grid gap-3">
                     <Label htmlFor="biz-phone">Business Phone</Label>
-                    <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} />
+                    <Input id="biz-phone" type="tel" value={bizPhone} onChange={(e) => setBizPhone(e.target.value)} disabled={isVerified} />
                 </div>
+                 {isVerified && <p className="text-xs text-muted-foreground md:col-span-2">Core business information cannot be changed after verification. Please contact support for assistance.</p>}
             </CardContent>
           </Card>
            <Card>
             <CardHeader>
                 <CardTitle>Policies</CardTitle>
-                <CardDescription>Define your payment, shipping, and return policies.</CardDescription>
+                <CardDescription>Define your payment, shipping, and return policies. {isVerified && "Changes require admin approval."}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
                 <div className="grid gap-3">
@@ -470,12 +510,15 @@ export default function EditShopProfilePage() {
                       label="Certificate of Incorporation"
                       onUpload={setCertUrl}
                       initialUrl={certUrl}
+                      disabled={isVerified}
                     />
                     <PhotoUpload
                       label="KRA PIN Certificate"
                       onUpload={setKraPinUrl}
                       initialUrl={kraPinUrl}
+                      disabled={isVerified}
                     />
+                     {isVerified && <p className="text-xs text-muted-foreground">Verification documents cannot be changed. Please contact support for assistance.</p>}
                 </CardContent>
             </Card>
 
@@ -536,3 +579,4 @@ export default function EditShopProfilePage() {
     </div>
   );
 }
+

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -14,16 +15,15 @@ interface PhotoUploadProps extends React.HTMLAttributes<HTMLDivElement> {
   onLoadingChange?: (isLoading: boolean) => void;
   initialUrl?: string | null;
   label: string;
+  disabled?: boolean;
 }
 
 const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
-  ({ onUpload, onLoadingChange, initialUrl, label, className, ...props }, ref) => {
+  ({ onUpload, onLoadingChange, initialUrl, label, disabled = false, className, ...props }, ref) => {
     const [preview, setPreview] = React.useState<string | null>(initialUrl || null);
     const [isLoading, setIsLoading] = React.useState(false);
     const { toast } = useToast();
     
-    // This effect synchronizes the internal preview state with the prop from the parent.
-    // This is crucial for showing the already uploaded image when the component re-mounts.
     React.useEffect(() => {
         setPreview(initialUrl || null);
     }, [initialUrl]);
@@ -38,7 +38,6 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
       setLoading(true);
 
       try {
-        // 1. Get signature from our new API route
         const paramsToSign = {
           timestamp: Math.round(new Date().getTime() / 1000),
         };
@@ -55,14 +54,12 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           throw new Error('Failed to get a signature for the upload.');
         }
 
-        // 2. Prepare form data for Cloudinary
         const formData = new FormData();
         formData.append('file', fileToUpload);
         formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY!);
         formData.append('signature', signature);
         formData.append('timestamp', paramsToSign.timestamp.toString());
 
-        // 3. Make the upload request to Cloudinary
         const response = await fetch(
           `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
           {
@@ -78,7 +75,6 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           throw new Error(errorMessage);
         }
 
-        // Use the callback to update the parent's state
         onUpload(data.secure_url);
 
         toast({
@@ -100,6 +96,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
     
     const onDrop = React.useCallback(
       (acceptedFiles: File[]) => {
+        if (disabled) return;
         if (acceptedFiles.length > 0) {
           const selectedFile = acceptedFiles[0];
           const previewUrl = URL.createObjectURL(selectedFile);
@@ -107,11 +104,12 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           handleUpload(selectedFile);
         }
       },
-      [] 
+      [disabled] 
     );
 
 
     const removeImage = () => {
+      if(disabled) return;
       setPreview(null);
       onUpload('');
     }
@@ -120,22 +118,23 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
       onDrop,
       accept: { 'image/*': ['.jpeg', '.jpg', '.png', '.gif'] },
       multiple: false,
+      disabled: disabled,
     };
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone(dropzoneOptions);
 
     return (
       <div ref={ref} className={cn('space-y-2', className)} {...props}>
-         <Label>{label}</Label>
+         <Label className={cn(disabled && "text-muted-foreground")}>{label}</Label>
         {preview ? (
-          <div className="relative group aspect-video w-full rounded-md border-2 border-dashed flex items-center justify-center cursor-pointer hover:bg-muted">
+          <div className="relative group aspect-video w-full rounded-md border-2 border-dashed flex items-center justify-center hover:bg-muted data-[disabled=true]:cursor-not-allowed data-[disabled=true]:opacity-70 data-[disabled=true]:hover:bg-transparent" data-disabled={disabled}>
              <Image
                 src={preview}
                 alt="Preview"
                 fill
                 className="object-contain rounded-md p-2"
               />
-            <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            {!disabled && <div className="absolute inset-0 bg-black/50 rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 {isLoading ? (
                   <Loader2 className="h-8 w-8 text-white animate-spin" />
                 ) : (
@@ -143,24 +142,25 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
                       <X className="h-5 w-5" />
                   </Button>
                 )}
-            </div>
+            </div>}
           </div>
         ) : (
           <div
             {...getRootProps()}
             className={cn(
-              'flex aspect-video w-full cursor-pointer items-center justify-center rounded-md border-2 border-dashed text-center',
+              'flex aspect-video w-full rounded-md border-2 border-dashed text-center',
+              disabled ? 'cursor-not-allowed bg-muted/50 opacity-70' : 'cursor-pointer',
               isDragActive ? 'border-primary bg-primary/10' : 'hover:bg-muted'
             )}
           >
             <input {...getInputProps()} />
-            <div className="flex flex-col items-center gap-2 text-muted-foreground">
+            <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
               {isLoading ? (
                 <Loader2 className="h-8 w-8 animate-spin" />
               ) : (
                 <>
                   <Upload className="h-8 w-8" />
-                  <p className="text-sm">Drag & drop or click to upload</p>
+                  <p className="text-sm">{disabled ? 'Uploading disabled' : 'Drag & drop or click to upload'}</p>
                 </>
               )}
             </div>
