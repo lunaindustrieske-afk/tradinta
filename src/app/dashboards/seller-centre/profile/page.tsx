@@ -9,6 +9,7 @@ import {
   Link as LinkIcon,
   Loader2,
   Eye,
+  UploadCloud,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,9 +33,12 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { PhotoUpload } from '@/components/photo-upload';
 import { useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { nanoid } from 'nanoid';
+import Image from 'next/image';
+import { cn } from '@/lib/utils';
+import { useDropzone } from 'react-dropzone';
 
 type ManufacturerData = {
   shopId?: string;
@@ -42,6 +46,7 @@ type ManufacturerData = {
   tagline?: string;
   description?: string;
   logoUrl?: string;
+  logoHistory?: string[];
   bannerUrl?: string;
   businessLicenseNumber?: string;
   kraPin?: string;
@@ -58,6 +63,111 @@ type ManufacturerData = {
   verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified';
 };
 
+const LogoManager = ({
+    initialLogoUrl,
+    initialHistory = [],
+    onLogoChange,
+    onHistoryChange
+}: {
+    initialLogoUrl?: string;
+    initialHistory?: string[];
+    onLogoChange: (url: string) => void;
+    onHistoryChange: (url: string) => void;
+}) => {
+    const [activeLogo, setActiveLogo] = useState(initialLogoUrl);
+    const [logoHistory, setLogoHistory] = useState(initialHistory);
+    const [isUploading, setIsUploading] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        setActiveLogo(initialLogoUrl);
+    }, [initialLogoUrl]);
+    
+    useEffect(() => {
+        setLogoHistory(initialHistory);
+    }, [initialHistory]);
+
+    const handleNewUpload = async (file: File) => {
+        setIsUploading(true);
+        try {
+            const paramsToSign = { timestamp: Math.round(new Date().getTime() / 1000) };
+            const signatureResponse = await fetch('/api/sign-image', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ paramsToSign }),
+            });
+            const { signature } = await signatureResponse.json();
+            if (!signature) throw new Error('Failed to get upload signature.');
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('api_key', process.env.NEXT_PUBLIC_CLOUDINARY_API_KEY!);
+            formData.append('signature', signature);
+            formData.append('timestamp', paramsToSign.timestamp.toString());
+
+            const response = await fetch(`https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`, {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data?.error?.message || 'Upload failed.');
+            
+            const newUrl = data.secure_url;
+            onHistoryChange(newUrl); // Propagate new URL to parent to be added to history
+            onLogoChange(newUrl); // Set new URL as active
+            setActiveLogo(newUrl);
+            setLogoHistory(prev => [newUrl, ...prev]);
+
+            toast({ title: 'Upload Successful' });
+        } catch (error: any) {
+            toast({ title: 'Upload Failed', description: error.message, variant: 'destructive' });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+    
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({
+        onDrop: acceptedFiles => {
+            if (acceptedFiles.length > 0) {
+                handleNewUpload(acceptedFiles[0]);
+            }
+        },
+        accept: { 'image/*': ['.png', '.jpg', '.jpeg', '.svg'] },
+        multiple: false,
+    });
+    
+    const handleSelectLogo = (url: string) => {
+        setActiveLogo(url);
+        onLogoChange(url);
+    };
+
+    return (
+        <div className="space-y-4">
+            <div>
+                <Label>Active Logo</Label>
+                <div className="mt-1 w-32 h-32 relative rounded-md border flex items-center justify-center bg-muted/50 overflow-hidden">
+                    {activeLogo ? <Image src={activeLogo} alt="Active Logo" fill className="object-contain p-2" /> : <span className="text-xs text-muted-foreground">No logo</span>}
+                </div>
+            </div>
+            <div>
+                <Label>Logo History</Label>
+                <p className="text-xs text-muted-foreground">Click a logo to make it active.</p>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                    {logoHistory.map((url, index) => (
+                        <div key={index} className={cn("relative w-full aspect-square rounded-md border-2 cursor-pointer overflow-hidden", activeLogo === url ? 'border-primary' : 'border-transparent')} onClick={() => handleSelectLogo(url)}>
+                            <Image src={url} alt={`Previous logo ${index + 1}`} fill className="object-cover" />
+                        </div>
+                    ))}
+                    <div {...getRootProps()} className={cn("flex aspect-square w-full cursor-pointer items-center justify-center rounded-md border-2 border-dashed text-center text-muted-foreground", isDragActive ? 'border-primary' : 'hover:border-primary/50')}>
+                        <input {...getInputProps()} />
+                        {isUploading ? <Loader2 className="h-6 w-6 animate-spin" /> : <UploadCloud className="h-6 w-6" />}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 
 export default function EditShopProfilePage() {
   const { user } = useUser();
@@ -70,7 +180,7 @@ export default function EditShopProfilePage() {
   const [shopTagline, setShopTagline] = useState('');
   const [shopDescription, setShopDescription] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
-  const [bannerUrl, setBannerUrl] = useState('');
+  const [logoHistory, setLogoHistory] = useState<string[]>([]);
   const [bizRegNo, setBizRegNo] = useState('');
   const [kraPin, setKraPin] = useState('');
   const [bizAddress, setBizAddress] = useState('');
@@ -101,7 +211,7 @@ export default function EditShopProfilePage() {
           setShopTagline(data.tagline || '');
           setShopDescription(data.description || '');
           setLogoUrl(data.logoUrl || '');
-          setBannerUrl(data.bannerUrl || '');
+          setLogoHistory(data.logoHistory || []);
           setBizRegNo(data.businessLicenseNumber || '');
           setKraPin(data.kraPin || '');
           setBizAddress(data.address || '');
@@ -135,13 +245,12 @@ export default function EditShopProfilePage() {
     // Generate a new shopId only if one doesn't exist
     const finalShopId = shopId || nanoid(6);
 
-    const manufacturerData: ManufacturerData = {
+    const manufacturerData: Omit<ManufacturerData, 'logoHistory'> & { logoHistory?: any } = {
       shopId: finalShopId,
       shopName,
       tagline: shopTagline,
       description: shopDescription,
       logoUrl,
-      bannerUrl,
       businessLicenseNumber: bizRegNo,
       kraPin,
       address: bizAddress,
@@ -157,6 +266,12 @@ export default function EditShopProfilePage() {
       // Update status only if it's the first time submitting
       verificationStatus: verificationStatus === 'Unsubmitted' && (bizRegNo || certUrl || kraPinUrl) ? 'Pending Legal' : verificationStatus,
     };
+    
+    // We handle logoHistory separately to use arrayUnion
+    const newLogoForHistory = logoHistory.includes(logoUrl) ? null : logoUrl;
+    if (newLogoForHistory) {
+        manufacturerData.logoHistory = arrayUnion(newLogoForHistory);
+    }
     
     try {
       const manufRef = doc(firestore, 'manufacturers', user.uid);
@@ -240,26 +355,10 @@ export default function EditShopProfilePage() {
             <CardHeader>
               <CardTitle>Shop Branding</CardTitle>
               <CardDescription>
-                Customize your shop's appearance to stand out.
+                Manage your shop's identity.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="flex items-start gap-6">
-                <div className="flex-shrink-0 w-32">
-                   <PhotoUpload
-                    label="Shop Logo"
-                    onUpload={setLogoUrl}
-                    initialUrl={logoUrl}
-                  />
-                </div>
-                <div className="flex-grow">
-                  <PhotoUpload
-                    label="Shop Banner"
-                    onUpload={setBannerUrl}
-                    initialUrl={bannerUrl}
-                  />
-                </div>
-              </div>
                <div className="grid gap-3">
                   <Label htmlFor="shop-name">Shop Name</Label>
                   <Input id="shop-name" value={shopName} onChange={(e) => setShopName(e.target.value)} />
@@ -321,6 +420,22 @@ export default function EditShopProfilePage() {
         </div>
         {/* Sidebar Column */}
         <div className="space-y-8">
+            <Card>
+                <CardHeader><CardTitle>Shop Logo</CardTitle></CardHeader>
+                <CardContent>
+                     <LogoManager 
+                        initialLogoUrl={logoUrl} 
+                        initialHistory={logoHistory}
+                        onLogoChange={setLogoUrl}
+                        onHistoryChange={(newUrl) => {
+                            if (!logoHistory.includes(newUrl)) {
+                                setLogoHistory(prev => [newUrl, ...prev]);
+                            }
+                        }}
+                    />
+                </CardContent>
+            </Card>
+
             <Card>
                 <CardHeader>
                     <CardTitle>Verification Documents</CardTitle>

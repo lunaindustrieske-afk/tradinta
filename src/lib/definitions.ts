@@ -44,14 +44,14 @@ export type Manufacturer = {
   slug: string;
   name: string;
   logoUrl?: string;
-  bannerUrl?: string; // Changed from coverImageUrl
+  logoHistory?: string[]; // Array of previously used logo URLs
+  overview: string;
   industry: string;
   location: string;
   memberSince: number;
   rating: number;
   isVerified: boolean;
   acceptsTradPay: boolean;
-  overview: string;
   certifications: string[];
   businessType: string;
   workforceSize: string;

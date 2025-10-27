@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -139,13 +138,19 @@ export default function ManufacturerPage() {
             </div>
           </div>
           <div className="hidden md:flex justify-end">
-            <Image
-              src={manufacturer.logoUrl || 'https://picsum.photos/seed/mfg-logo/200/200'}
-              alt={`${manufacturer.shopName} logo`}
-              width={128}
-              height={128}
-              className="rounded-full border-4 border-background shadow-lg"
-            />
+            {manufacturer.logoUrl ? (
+                <Image
+                    src={manufacturer.logoUrl}
+                    alt={`${manufacturer.shopName} logo`}
+                    width={128}
+                    height={128}
+                    className="rounded-full border-4 border-background shadow-lg"
+                />
+            ) : (
+                <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-lg">
+                    <span className="text-muted-foreground">No logo</span>
+                </div>
+            )}
           </div>
         </header>
 
