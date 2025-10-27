@@ -607,6 +607,39 @@
         "status": { "type": "string", "enum": ["pending", "approved", "rejected"] }
       },
       "required": [ "id", "productId", "manufacturerId", "buyerId", "buyerName", "rating", "comment", "createdAt", "status" ]
+    },
+    "PointsLedgerEvent": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PointsLedgerEvent",
+      "type": "object",
+      "description": "An immutable, append-only event representing a change in a user's points balance.",
+      "properties": {
+        "event_id": { "type": "string", "description": "Unique identifier for this event." },
+        "user_id": { "type": "string", "description": "The user ID this event applies to." },
+        "points": { "type": "number", "description": "The number of points awarded or revoked (can be negative)." },
+        "action": { "type": "string", "enum": ["award", "reversal", "adjustment"], "description": "The type of transaction." },
+        "reason_code": { "type": "string", "description": "A machine-readable code for why the points were issued (e.g., 'PROMO-2025-10-24')." },
+        "metadata": { "type": "object", "description": "Additional data, like order ID or referenced event IDs." },
+        "issued_by": { "type": "string", "description": "Identifier for the system or admin that issued the event." },
+        "created_at": { "type": "string", "format": "date-time", "description": "The timestamp of the event." },
+        "event_hash": { "type": "string", "description": "Cryptographic hash of the event's contents for integrity." }
+      },
+      "required": ["event_id", "user_id", "points", "action", "created_at", "event_hash"]
+    },
+    "LedgerBlock": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LedgerBlock",
+      "type": "object",
+      "description": "A block containing a batch of ledger events, forming a cryptographic chain.",
+      "properties": {
+        "block_number": { "type": "number", "description": "Sequential block number." },
+        "block_hash": { "type": "string", "description": "Cryptographic hash of the block's contents and the previous block's hash." },
+        "prev_hash": { "type": "string", "description": "The hash of the preceding block in the chain." },
+        "merkle_root": { "type": "string", "description": "The Merkle root of all event hashes within this block." },
+        "event_ids": { "type": "array", "items": { "type": "string" }, "description": "An array of event IDs included in this block." },
+        "created_at": { "type": "string", "format": "date-time", "description": "The timestamp when the block was created." }
+      },
+      "required": ["block_number", "block_hash", "prev_hash", "merkle_root", "event_ids", "created_at"]
     }
   },
   "auth": {
@@ -746,9 +779,23 @@
           },
           "description": "Stores all product reviews. A collection group query on this will be needed."
         }
+      },
+      {
+        "path": "/pointsLedgerEvents/{eventId}",
+        "definition": {
+          "entityName": "PointsLedgerEvent",
+          "schema": { "$ref": "#/backend/entities/PointsLedgerEvent" },
+          "description": "Append-only log of all TradPoint transactions."
+        }
+      },
+      {
+        "path": "/ledgerBlocks/{blockNumber}",
+        "definition": {
+          "entityName": "LedgerBlock",
+          "schema": { "$ref": "#/backend/entities/LedgerBlock" },
+          "description": "Immutable blocks containing batches of ledger events."
+        }
       }
     ]
   }
 }
-
-    
