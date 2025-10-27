@@ -5,7 +5,6 @@ import { useDoc, useUser, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { SuspendedShopOverlay } from '@/components/suspended-shop-overlay';
 import { Loader2 } from 'lucide-react';
-import { ApplyToBecomeManufacturer } from '@/components/apply-to-become-manufacturer';
 import { PermissionDenied } from '@/components/ui/permission-denied';
 
 type ManufacturerData = {
@@ -26,14 +25,14 @@ export default function SellerCentreLayout({
   const firestore = useFirestore();
 
   const manufacturerDocRef = useMemoFirebase(() => {
-    if (!user || !firestore) return null;
+    if (!user || !firestore || role !== 'manufacturer') return null;
     return doc(firestore, 'manufacturers', user.uid);
-  }, [user, firestore]);
+  }, [user, firestore, role]);
 
   const { data: manufacturer, isLoading: isLoadingManufacturer } =
     useDoc<ManufacturerData>(manufacturerDocRef);
 
-  const isLoading = isUserLoading || isLoadingManufacturer;
+  const isLoading = isUserLoading || (role === 'manufacturer' && isLoadingManufacturer);
 
   if (isLoading) {
     return (
@@ -44,29 +43,19 @@ export default function SellerCentreLayout({
     );
   }
 
-  // This check happens after loading is complete.
-  // We need to ensure a user is logged in before checking their role.
-  if (!user) {
-    // If not logged in, they shouldn't even be here. Redirecting or showing an error is better.
-    // For now, PermissionDenied will suffice.
-     return <PermissionDenied />;
-  }
+  // Only apply suspension logic if the user is a manufacturer
+  if (role === 'manufacturer') {
+    const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
+    const isBlockedFromDashboard =
+      manufacturer?.suspensionDetails?.prohibitions?.includes(
+        'block_dashboard_access'
+      );
+    const suspensionReason =
+      manufacturer?.suspensionDetails?.reason || 'Violation of platform policies.';
 
-  const isManufacturer = role === 'manufacturer' || role === 'admin' || role === 'super-admin';
-  if (!isManufacturer) {
-    return <ApplyToBecomeManufacturer />;
-  }
-
-  const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
-  const isBlockedFromDashboard =
-    manufacturer?.suspensionDetails?.prohibitions?.includes(
-      'block_dashboard_access'
-    );
-  const suspensionReason =
-    manufacturer?.suspensionDetails?.reason || 'Violation of platform policies.';
-
-  if (isSuspended && isBlockedFromDashboard) {
-    return <SuspendedShopOverlay reason={suspensionReason} />;
+    if (isSuspended && isBlockedFromDashboard) {
+      return <SuspendedShopOverlay reason={suspensionReason} />;
+    }
   }
 
   // If all checks pass, render the child page.
