@@ -54,8 +54,8 @@ type Variant = {
     price: string;
     stock: string;
     sku: string;
-    weight: string;
-    dimensions: string;
+    weight: { value: string, unit: string };
+    dimensions: { length: string, width: string, height: string, unit: string };
     attributes: Record<string, string>;
 };
 
@@ -137,7 +137,22 @@ export default function EditProductPage() {
         setPackagingDetails(productData.packagingDetails || '');
 
         setOptions(productData.options && productData.options.length > 0 ? productData.options : ['']);
-        setVariants(productData.variants || []);
+        setVariants(productData.variants?.map(v => ({
+            ...v,
+            price: v.price?.toString() || '',
+            stock: v.stock?.toString() || '',
+            weight: {
+                value: v.weight?.value?.toString() || '',
+                unit: v.weight?.unit || 'kg'
+            },
+            dimensions: {
+                length: v.dimensions?.length?.toString() || '',
+                width: v.dimensions?.width?.toString() || '',
+                height: v.dimensions?.height?.toString() || '',
+                unit: v.dimensions?.unit || 'cm'
+            }
+        })) || []);
+
 
         if (productData.category) {
             const category = categories.find(c => c.name === productData.category);
@@ -167,8 +182,8 @@ export default function EditProductPage() {
         price: '',
         stock: '',
         sku: '',
-        weight: '',
-        dimensions: '',
+        weight: { value: '', unit: 'kg' },
+        dimensions: { length: '', width: '', height: '', unit: 'cm' },
         attributes: options.reduce((acc, option) => {
             if (option) acc[option] = '';
             return acc;
@@ -176,9 +191,24 @@ export default function EditProductPage() {
     };
     setVariants([...variants, newVariant]);
   };
-  const handleVariantChange = (variantId: string, field: keyof Omit<Variant, 'id'|'attributes'>, value: string) => {
+  const handleVariantChange = (variantId: string, field: keyof Omit<Variant, 'id'|'attributes' | 'weight' | 'dimensions'>, value: string) => {
     setVariants(variants.map(v => v.id === variantId ? { ...v, [field]: value } : v));
   };
+
+  const handleVariantSubfieldChange = (
+    variantId: string,
+    field: 'weight' | 'dimensions',
+    subfield: string,
+    value: string
+  ) => {
+    setVariants(variants.map(v => 
+        v.id === variantId 
+            ? { ...v, [field]: { ...v[field], [subfield]: value } }
+            : v
+    ));
+  };
+
+
   const handleAttributeChange = (variantId: string, attribute: string, value: string) => {
     setVariants(variants.map(v => v.id === variantId ? { ...v, attributes: { ...v.attributes, [attribute]: value } } : v));
   };
@@ -257,6 +287,16 @@ export default function EditProductPage() {
                 ...v,
                 price: Number(v.price) || 0,
                 stock: Number(v.stock) || 0,
+                weight: {
+                    ...v.weight,
+                    value: Number(v.weight.value) || 0,
+                },
+                dimensions: {
+                    ...v.dimensions,
+                    length: Number(v.dimensions.length) || 0,
+                    width: Number(v.dimensions.width) || 0,
+                    height: Number(v.dimensions.height) || 0,
+                }
             })),
             material,
             certifications,
@@ -477,14 +517,44 @@ export default function EditProductPage() {
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                                    <div className="grid sm:grid-cols-2 gap-4 mt-4">
                                         <div className="grid gap-2"><Label className="text-xs">Price (KES)</Label><Input type="number" placeholder="0.00" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} /></div>
                                         <div className="grid gap-2"><Label className="text-xs">Stock</Label><Input type="number" placeholder="0" value={variant.stock} onChange={e => handleVariantChange(variant.id, 'stock', e.target.value)} /></div>
-                                        <div className="grid gap-2"><Label className="text-xs">Weight</Label><Input placeholder="e.g. 50kg" value={variant.weight} onChange={e => handleVariantChange(variant.id, 'weight', e.target.value)} /></div>
-                                        <div className="grid gap-2"><Label className="text-xs">Dimensions</Label><Input placeholder="e.g. 80x50x15cm" value={variant.dimensions} onChange={e => handleVariantChange(variant.id, 'dimensions', e.target.value)} /></div>
                                     </div>
-                                     <div className="grid grid-cols-1 gap-4 mt-4">
+                                    <div className="grid grid-cols-1 gap-4 mt-4">
                                         <div className="grid gap-2"><Label className="text-xs">SKU</Label><Input placeholder="SKU-VAR-01" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} /></div>
+                                    </div>
+                                    <div className="mt-4 space-y-4">
+                                        <div>
+                                            <Label className="text-xs">Weight</Label>
+                                            <div className="flex items-center gap-2">
+                                                <Input type="number" placeholder="0.0" value={variant.weight.value} onChange={e => handleVariantSubfieldChange(variant.id, 'weight', 'value', e.target.value)} />
+                                                <Select value={variant.weight.unit} onValueChange={value => handleVariantSubfieldChange(variant.id, 'weight', 'unit', value)}>
+                                                    <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="kg">kg</SelectItem>
+                                                        <SelectItem value="g">g</SelectItem>
+                                                        <SelectItem value="lb">lb</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                         <div>
+                                            <Label className="text-xs">Dimensions (L x W x H)</Label>
+                                            <div className="flex items-center gap-2">
+                                                <Input type="number" placeholder="L" value={variant.dimensions.length} onChange={e => handleVariantSubfieldChange(variant.id, 'dimensions', 'length', e.target.value)} />
+                                                <Input type="number" placeholder="W" value={variant.dimensions.width} onChange={e => handleVariantSubfieldChange(variant.id, 'dimensions', 'width', e.target.value)} />
+                                                <Input type="number" placeholder="H" value={variant.dimensions.height} onChange={e => handleVariantSubfieldChange(variant.id, 'dimensions', 'height', e.target.value)} />
+                                                <Select value={variant.dimensions.unit} onValueChange={value => handleVariantSubfieldChange(variant.id, 'dimensions', 'unit', value)}>
+                                                    <SelectTrigger className="w-[80px]"><SelectValue /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="cm">cm</SelectItem>
+                                                        <SelectItem value="in">in</SelectItem>
+                                                        <SelectItem value="m">m</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
                                     </div>
                                     <Button variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive" onClick={() => handleRemoveVariant(variant.id)}>Remove Variant</Button>
                                 </Card>

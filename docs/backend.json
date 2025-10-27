@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Manufacturer": {
@@ -203,12 +204,22 @@
           }
         },
         "weight": {
-            "type": "string",
-            "description": "Weight of this specific variant (e.g., '50kg', '250ml')."
+          "type": "object",
+          "description": "Weight of this specific variant.",
+          "properties": {
+            "value": { "type": "number" },
+            "unit": { "type": "string", "enum": ["g", "kg", "lb", "oz"] }
+          }
         },
         "dimensions": {
-            "type": "string",
-            "description": "Dimensions of this specific variant (e.g., '80cm x 50cm x 15cm')."
+          "type": "object",
+          "description": "Dimensions of this specific variant.",
+          "properties": {
+            "length": { "type": "number" },
+            "width": { "type": "number" },
+            "height": { "type": "number" },
+            "unit": { "type": "string", "enum": ["cm", "in", "m"] }
+          }
         }
       },
       "required": ["id", "price", "stock", "attributes"]
