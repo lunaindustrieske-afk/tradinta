@@ -8,15 +8,16 @@ import { doc, collection, query } from 'firebase/firestore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ChevronLeft, UserCheck, Star, BarChart, LifeBuoy, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, Trash2, BarChart2, Eye } from "lucide-react";
+import { UserCheck, Star, Loader2, AlertTriangle, Package, Search, ListFilter, MoreHorizontal, Edit, BarChart2, Eye } from "lucide-react";
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import Image from 'next/image';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { SuspendShopModal } from '@/components/suspend-shop-modal';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuLabel, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu";
 import { Separator } from '@/components/ui/separator';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Input } from '@/components/ui/input';
 
 type Manufacturer = {
     id: string;
@@ -44,6 +45,7 @@ type Product = {
   status: 'draft' | 'published' | 'archived';
   stock: number;
   price: number;
+  slug: string;
 };
 
 const DetailItem = ({ label, value, children }: { label: string; value?: string | null, children?: React.ReactNode }) => (
@@ -60,6 +62,10 @@ export default function ShopManagementPage() {
     const router = useRouter();
     const manufacturerId = params.id as string;
     const firestore = useFirestore();
+    
+    // --- State for Product Management ---
+    const [productSearchTerm, setProductSearchTerm] = React.useState('');
+    const [productStatusFilter, setProductStatusFilter] = React.useState<string[]>([]);
 
     const manufRef = useMemoFirebase(() => {
         if (!firestore || !manufacturerId) return null;
@@ -72,7 +78,24 @@ export default function ShopManagementPage() {
     }, [firestore, manufacturerId]);
 
     const { data: manufacturer, isLoading: isLoadingManufacturer } = useDoc<Manufacturer>(manufRef);
-    const { data: products, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+    const { data: allProducts, isLoading: isLoadingProducts } = useCollection<Product>(productsQuery);
+
+    const filteredProducts = React.useMemo(() => {
+        if (!allProducts) return [];
+        return allProducts.filter(p => {
+            const matchesSearch = productSearchTerm ? 
+                p.name.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
+                p.id.toLowerCase().includes(productSearchTerm.toLowerCase())
+                : true;
+            
+            const matchesStatus = productStatusFilter.length > 0 ? 
+                productStatusFilter.includes(p.status)
+                : true;
+
+            return matchesSearch && matchesStatus;
+        });
+    }, [allProducts, productSearchTerm, productStatusFilter]);
+
 
     const getStatusVariant = (status: Product['status']) => {
         switch (status) {
@@ -82,6 +105,12 @@ export default function ShopManagementPage() {
             default: return 'default';
         }
     };
+
+    const toggleProductStatusFilter = (status: string) => {
+        setProductStatusFilter(prev => 
+            prev.includes(status) ? prev.filter(s => s !== status) : [...prev, status]
+        );
+    }
     
     if (isLoadingManufacturer) {
         return (
@@ -135,7 +164,7 @@ export default function ShopManagementPage() {
              <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                      {manufacturer.logoUrl && (
-                        <Image src={manufacturer.logoUrl} alt={manufacturer.shopName} width={40} height={40} className="rounded-full" />
+                        <Image src={manufacturer.logoUrl} alt={manufacturer.shopName || ''} width={40} height={40} className="rounded-full" />
                     )}
                     <div>
                         <h1 className="text-xl font-semibold">{manufacturer.shopName}</h1>
@@ -165,9 +194,41 @@ export default function ShopManagementPage() {
                      <Card>
                         <CardHeader>
                             <CardTitle>Shop Products</CardTitle>
-                             <CardDescription>A list of all products belonging to this shop.</CardDescription>
+                             <CardDescription>Browse, search, and manage all products for this shop.</CardDescription>
                         </CardHeader>
                         <CardContent>
+                             <div className="flex items-center gap-2 mb-4">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Input 
+                                        placeholder="Search by product name or ID..." 
+                                        className="pl-8"
+                                        value={productSearchTerm}
+                                        onChange={e => setProductSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="gap-1">
+                                        <ListFilter className="h-3.5 w-3.5" />
+                                        <span>Filter Status</span>
+                                    </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>Filter by status</DropdownMenuLabel>
+                                        <DropdownMenuSeparator />
+                                        {['published', 'draft', 'archived'].map(status => (
+                                            <DropdownMenuCheckboxItem
+                                                key={status}
+                                                checked={productStatusFilter.includes(status)}
+                                                onCheckedChange={() => toggleProductStatusFilter(status)}
+                                            >
+                                                {status.charAt(0).toUpperCase() + status.slice(1)}
+                                            </DropdownMenuCheckboxItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
                              <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -191,8 +252,8 @@ export default function ShopManagementPage() {
                                                     <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                                                 </TableRow>
                                             ))
-                                        ) : products && products.length > 0 ? (
-                                            products.map((product) => (
+                                        ) : filteredProducts && filteredProducts.length > 0 ? (
+                                            filteredProducts.map((product) => (
                                                 <TableRow key={product.id}>
                                                     <TableCell className="hidden sm:table-cell">
                                                         <Image
@@ -223,7 +284,7 @@ export default function ShopManagementPage() {
                                                                     </Link>
                                                                 </DropdownMenuItem>
                                                                  <DropdownMenuItem asChild>
-                                                                    <Link href={`/dashboards/admin/products/analytics/${product.id}?manufacturerId=${manufacturerId}`} target="_blank">
+                                                                    <Link href={`/dashboards/admin/products/analytics/${product.id}?manufacturerId=${manufacturerId}`}>
                                                                         <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
                                                                     </Link>
                                                                 </DropdownMenuItem>
