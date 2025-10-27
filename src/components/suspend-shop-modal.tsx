@@ -40,10 +40,16 @@ interface SuspendShopModalProps {
 }
 
 const prohibitionOptions = [
-  { id: 'cannot_upload_products', label: 'Block new product uploads' },
-  { id: 'cannot_edit_products', label: 'Block product editing' },
-  { id: 'cannot_receive_messages', label: 'Disable incoming messages' },
+  { id: 'block_dashboard_access', label: 'Block Seller Dashboard access' },
+  { id: 'block_product_upload', label: 'Block new product uploads' },
+  { id: 'block_product_edit', label: 'Block product editing' },
+  { id: 'block_profile_edit', label: 'Block shop profile editing'},
+  { id: 'block_quotation_response', label: 'Block responding to quotations' },
+  { id: 'disable_messaging', label: 'Disable incoming messages' },
+  { id: 'prevent_payouts', label: 'Prevent payout requests from wallet'},
   { id: 'hide_from_search', label: 'Hide shop from search results' },
+  { id: 'hide_all_products', label: 'Hide all products from public view' },
+  { id: 'disable_ai_features', label: 'Disable AI generation features' },
 ];
 
 export function SuspendShopModal({ seller, children }: SuspendShopModalProps) {
@@ -73,6 +79,14 @@ export function SuspendShopModal({ seller, children }: SuspendShopModalProps) {
       checked ? [...prev, id] : prev.filter((p) => p !== id)
     );
   };
+  
+  const handleSelectAll = () => {
+    if (prohibitions.length === prohibitionOptions.length) {
+        setProhibitions([]); // Deselect all
+    } else {
+        setProhibitions(prohibitionOptions.map(p => p.id)); // Select all
+    }
+  }
 
   const handleSaveSuspension = async (suspend: boolean) => {
     if (suspend && !reason.trim()) {
@@ -169,8 +183,13 @@ export function SuspendShopModal({ seller, children }: SuspendShopModalProps) {
               />
             </div>
             <div className="grid gap-2">
-              <Label>Prohibitions</Label>
-              <div className="space-y-2 rounded-md border p-4">
+                <div className="flex items-center justify-between">
+                    <Label>Prohibitions</Label>
+                    <Button variant="link" size="sm" className="p-0 h-auto" onClick={handleSelectAll}>
+                       {prohibitions.length === prohibitionOptions.length ? 'Deselect All' : 'Select All'}
+                    </Button>
+                </div>
+              <div className="space-y-2 rounded-md border p-4 max-h-60 overflow-y-auto">
                 {prohibitionOptions.map((opt) => (
                   <div key={opt.id} className="flex items-center gap-2">
                     <Checkbox
