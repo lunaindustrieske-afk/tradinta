@@ -92,6 +92,7 @@ type ManufacturerData = {
   kraPin?: string;
   address?: string;
   phone?: string;
+  email?: string;
   paymentPolicy?: string;
   shippingPolicy?: string;
   returnPolicy?: string;
@@ -266,6 +267,7 @@ export default function SellerDashboardPage() {
 
   const shopName = manufacturer?.shopName;
   const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
+  const hasNoEmail = !manufacturer?.email;
 
   return (
     <div className="space-y-6">
@@ -277,6 +279,15 @@ export default function SellerDashboardPage() {
               <AlertTitle>Shop Suspended</AlertTitle>
               <AlertDescription>
                 Your shop has active restrictions. Please contact support for more information.
+              </AlertDescription>
+            </Alert>
+          )}
+          {hasNoEmail && !isSuspended && (
+             <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Contact Email Missing</AlertTitle>
+              <AlertDescription>
+                You will not receive email notifications for new messages from buyers. Please <Link href="/dashboards/seller-centre/profile" className="font-semibold underline">update your profile</Link> to add a contact email.
               </AlertDescription>
             </Alert>
           )}

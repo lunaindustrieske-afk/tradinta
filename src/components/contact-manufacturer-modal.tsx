@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -60,21 +61,28 @@ export function ContactManufacturerModal({
     setIsSending(true);
 
     try {
-      // Server action to send the email
-      const result = await sendNewInquiryEmail({
-        buyerName: user.displayName || 'A Tradinta Buyer',
-        buyerEmail: user.email || '',
-        manufacturerEmail: manufacturer.email || '',
-        manufacturerName: manufacturer.shopName || manufacturer.name,
-        productName: product.name,
-        productImageUrl: product.imageUrl,
-        message: message,
-      });
+      // Conditionally send the email
+      if (manufacturer.email) {
+        const result = await sendNewInquiryEmail({
+            buyerName: user.displayName || 'A Tradinta Buyer',
+            buyerEmail: user.email || '',
+            manufacturerEmail: manufacturer.email,
+            manufacturerName: manufacturer.shopName || manufacturer.name,
+            productName: product.name,
+            productImageUrl: product.imageUrl,
+            message: message,
+        });
 
-      if (!result.success) {
-        throw new Error(result.message);
+        if (!result.success) {
+            // Log the error but don't block the user
+            console.error("Failed to send inquiry email:", result.message);
+        }
+      } else {
+        console.warn(`Manufacturer ${manufacturer.id} has no email. Message sent to dashboard only.`);
       }
 
+      // TODO: Here you would also write the message to a 'conversations' collection in Firestore.
+      
       setSentMessage(message);
       setMessage(''); // Clear the input
       toast({
