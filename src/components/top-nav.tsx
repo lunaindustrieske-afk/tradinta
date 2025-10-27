@@ -1,6 +1,7 @@
 
 "use client";
 
+import * as React from 'react';
 import Link from 'next/link';
 import { ChevronDown, Heart, Mail, UserPlus } from 'lucide-react';
 import { Logo } from './logo';
@@ -19,13 +20,15 @@ import {
 } from './ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
-import { useUser, useAuth } from '@/firebase';
+import { useUser, useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { ModeToggle } from './mode-toggle';
+import { collection, query, where } from 'firebase/firestore';
 
 function UserMenu() {
-    const { user, isUserLoading } = useUser();
+    const { user, isUserLoading, role } = useUser();
+    const firestore = useFirestore();
     const auth = useAuth();
     const router = useRouter();
 
@@ -34,6 +37,19 @@ function UserMenu() {
       await signOut(auth);
       router.push('/');
     };
+
+    const conversationsCollectionPath = React.useMemo(() => {
+        if (!user) return null;
+        return role === 'manufacturer' ? `manufacturers/${user.uid}/conversations` : `users/${user.uid}/conversations`;
+    }, [user, role]);
+
+    const unreadConversationsQuery = useMemoFirebase(() => {
+        if (!firestore || !conversationsCollectionPath) return null;
+        return query(collection(firestore, conversationsCollectionPath), where('isUnread', '==', true));
+    }, [firestore, conversationsCollectionPath]);
+
+    const { data: unreadConversations } = useCollection(unreadConversationsQuery);
+    const hasUnreadMessages = unreadConversations && unreadConversations.length > 0;
 
     if (isUserLoading) {
       return null; // Or a loading spinner
@@ -57,14 +73,15 @@ function UserMenu() {
                    <Tooltip>
                       <TooltipTrigger asChild>
                           <Button asChild variant="ghost" size="icon" className="relative">
-                              <Link href="/dashboards/buyer/messages">
+                              <Link href={role === 'manufacturer' ? "/dashboards/seller-centre/messages" : "/dashboards/buyer/messages"}>
                                 <Mail className="h-5 w-5" />
                                 <span className="sr-only">Messages</span>
-                                {/* Pulsating badge - to be driven by state */}
-                                <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
-                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
-                                </span>
+                                {hasUnreadMessages && (
+                                    <span className="absolute top-1.5 right-1.5 flex h-2.5 w-2.5">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-primary"></span>
+                                    </span>
+                                )}
                               </Link>
                           </Button>
                       </TooltipTrigger>
