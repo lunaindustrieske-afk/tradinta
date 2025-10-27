@@ -68,6 +68,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { setUserRoleClaim } from '@/app/(auth)/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+
 
 const orders = [
   {
@@ -100,6 +102,12 @@ type ManufacturerData = {
   shippingPolicy?: string;
   returnPolicy?: string;
   verificationStatus?: VerificationStatus;
+  suspensionDetails?: {
+    isSuspended: boolean;
+    reason: string;
+    prohibitions: string[];
+    publicDisclaimer: boolean;
+  };
 };
 
 type Product = {
@@ -366,11 +374,21 @@ export default function SellerDashboardPage() {
   }
 
   const shopName = manufacturer?.shopName;
+  const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
 
   return (
     <div className="space-y-6">
       <Card>
         <CardHeader>
+          {isSuspended && (
+             <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Shop Suspended</AlertTitle>
+              <AlertDescription>
+                Your shop is currently suspended. Please contact support for more information.
+              </AlertDescription>
+            </Alert>
+          )}
           {isLoadingManufacturer ? <Skeleton className="h-8 w-2/3" /> : (
             <CardTitle>{shopName ? `${shopName} Shop Dashboard` : "Your Shop Dashboard"}</CardTitle>
           )}
@@ -718,5 +736,3 @@ export default function SellerDashboardPage() {
     </div>
   );
 }
-
-    
