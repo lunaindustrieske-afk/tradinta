@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,7 @@ import {
   Bolt,
   Award,
   Handshake,
+  RefreshCw,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
@@ -57,6 +58,8 @@ import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { type Product } from '@/lib/definitions';
 import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { getAllProducts } from '@/app/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 type ProductWithShopId = Product & { shopId: string; slug: string; };
 
@@ -78,7 +81,10 @@ const categoryIcons: Record<string, React.ReactNode> = {
     "Services & Trade Support": <Handshake className="w-5 h-5" />,
 };
 
-export function ProductsPageClient({ initialProducts }: { initialProducts: ProductWithShopId[] }) {
+export function ProductsPageClient({ initialProducts: serverProducts }: { initialProducts: ProductWithShopId[] }) {
+  const [allProducts, setAllProducts] = useState<ProductWithShopId[]>(serverProducts);
+  const [isLoading, setIsLoading] = useState(false);
+
   const [filters, setFilters] = useState({
     category: 'all',
     priceRange: [0, 200000],
@@ -87,8 +93,15 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
   });
   const [searchQuery, setSearchQuery] = useState('');
 
+  const fetchProducts = async () => {
+    setIsLoading(true);
+    const products = await getAllProducts();
+    setAllProducts(products);
+    setIsLoading(false);
+  };
+
   const filteredProducts = useMemo(() => {
-    return initialProducts.filter((product) => {
+    return allProducts.filter((product) => {
       return (
         (filters.category === 'all' || product.category === filters.category) &&
         product.price >= filters.priceRange[0] &&
@@ -97,7 +110,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
         product.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     });
-  }, [initialProducts, filters, searchQuery]);
+  }, [allProducts, filters, searchQuery]);
 
   const FilterSidebar = () => (
     <Card className="p-4 lg:p-6">
@@ -174,6 +187,85 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
       </div>
     </Card>
   );
+  
+  const ProductGrid = () => {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+          {Array.from({ length: 9 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-6 w-3/4" />
+              <Skeleton className="h-5 w-1/2" />
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (filteredProducts.length === 0) {
+      return (
+        <div className="col-span-full text-center py-12">
+          <h3 className="text-lg font-semibold">No Products Found</h3>
+          <p className="text-muted-foreground">Try adjusting your search or filter criteria.</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        {filteredProducts.map((product) => (
+          <Card key={product.id} className="overflow-hidden group flex flex-col">
+            <div className="flex-grow">
+              <Link href={`/products/${product.shopId}/${product.slug}`}>
+                <CardContent className="p-0">
+                  <div className="relative aspect-[4/3] overflow-hidden">
+                    <Image
+                      src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
+                      alt={product.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform"
+                      data-ai-hint={product.imageHint}
+                    />
+                    <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
+                      Verified Factory
+                    </Badge>
+                  </div>
+                  <div className="p-4 space-y-2">
+                    <CardTitle className="text-lg leading-tight h-10">
+                      {product.name}
+                    </CardTitle>
+                    <CardDescription className="text-sm">
+                      From a trusted supplier in{' '}
+                      <span className="font-semibold text-primary">
+                        {product.category}
+                      </span>
+                    </CardDescription>
+                    <div className="flex items-baseline justify-between">
+                      <p className="text-xl font-bold text-foreground">
+                        KES {product.price.toLocaleString()}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        <span className="text-sm font-medium">{product.rating}</span>
+                        <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Link>
+            </div>
+            <div className="p-4 pt-0">
+              <RequestQuoteModal product={product}>
+                <Button className="w-full mt-2">Request Quotation</Button>
+              </RequestQuoteModal>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  };
+
 
   return (
      <div className="container mx-auto py-8">
@@ -218,99 +310,54 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
         </div>
 
         <div className="lg:col-span-3">
-          <div className="flex flex-col md:flex-row gap-4 mb-6">
-            <div className="relative flex-grow">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Search for products or manufacturers..."
-                className="pl-10 text-base"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+          <div className="mb-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-grow">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                <Input
+                  placeholder="Search for products or manufacturers..."
+                  className="pl-10 text-base"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Select defaultValue="relevance">
+                  <SelectTrigger className="w-full md:w-auto">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevance">Sort by: Relevance</SelectItem>
+                    <SelectItem value="newest">Sort by: Newest</SelectItem>
+                    <SelectItem value="price-asc">Sort by: Price Low-High</SelectItem>
+                    <SelectItem value="price-desc">Sort by: Price High-Low</SelectItem>
+                  </SelectContent>
+                </Select>
+                 <Sheet>
+                  <SheetTrigger asChild>
+                      <Button variant="outline" size="icon" className="lg:hidden">
+                          <ListFilter className="h-5 w-5" />
+                      </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left">
+                      <FilterSidebar />
+                  </SheetContent>
+              </Sheet>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Select defaultValue="relevance">
-                <SelectTrigger className="w-full md:w-auto">
-                  <SelectValue placeholder="Sort by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="relevance">Sort by: Relevance</SelectItem>
-                  <SelectItem value="newest">Sort by: Newest</SelectItem>
-                  <SelectItem value="price-asc">Sort by: Price Low-High</SelectItem>
-                  <SelectItem value="price-desc">Sort by: Price High-Low</SelectItem>
-                </SelectContent>
-              </Select>
-               <Sheet>
-                <SheetTrigger asChild>
-                    <Button variant="outline" size="icon" className="lg:hidden">
-                        <ListFilter className="h-5 w-5" />
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="left">
-                    <FilterSidebar />
-                </SheetContent>
-            </Sheet>
-            </div>
+             <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 text-muted-foreground"
+                onClick={fetchProducts}
+                disabled={isLoading}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                {isLoading ? 'Refreshing...' : 'Refresh'}
+              </Button>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-            {filteredProducts.length > 0 ? (
-                 filteredProducts.map((product) => (
-                  <Card key={product.id} className="overflow-hidden group flex flex-col">
-                    <div className="flex-grow">
-                        <Link href={`/products/${product.shopId}/${product.slug}`}>
-                            <CardContent className="p-0">
-                              <div className="relative aspect-[4/3] overflow-hidden">
-                                <Image
-                                  src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
-                                  alt={product.name}
-                                  fill
-                                  className="object-cover group-hover:scale-105 transition-transform"
-                                  data-ai-hint={product.imageHint}
-                                />
-                                 <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm">
-                                  Verified Factory
-                                </Badge>
-                              </div>
-                              <div className="p-4 space-y-2">
-                                <CardTitle className="text-lg leading-tight h-10">
-                                  {product.name}
-                                </CardTitle>
-                                <CardDescription className="text-sm">
-                                  From a trusted supplier in{' '}
-                                  <span className="font-semibold text-primary">
-                                    {product.category}
-                                  </span>
-                                </CardDescription>
-
-                                <div className="flex items-baseline justify-between">
-                                     <p className="text-xl font-bold text-foreground">
-                                        KES {product.price.toLocaleString()}
-                                    </p>
-                                    <div className="flex items-center gap-1">
-                                        <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                        <span className="text-sm font-medium">{product.rating}</span>
-                                        <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
-                                    </div>
-                                </div>
-                              </div>
-                            </CardContent>
-                        </Link>
-                    </div>
-                     <div className="p-4 pt-0">
-                        <RequestQuoteModal product={product}>
-                            <Button className="w-full mt-2">Request Quotation</Button>
-                        </RequestQuoteModal>
-                      </div>
-                  </Card>
-                ))
-            ) : (
-                <div className="col-span-full text-center py-12">
-                    <h3 className="text-lg font-semibold">No Products Found</h3>
-                    <p className="text-muted-foreground">Try adjusting your search or filter criteria.</p>
-                </div>
-            )}
-          </div>
+          <ProductGrid />
           
           <div className="mt-8">
             <Pagination>
