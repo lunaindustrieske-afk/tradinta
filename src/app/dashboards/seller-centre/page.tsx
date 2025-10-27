@@ -69,6 +69,7 @@ import { setUserRoleClaim } from '@/app/(auth)/actions';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { SuspendedShopOverlay } from '@/components/suspended-shop-overlay';
 
 
 const orders = [
@@ -354,7 +355,9 @@ export default function SellerDashboardPage() {
   const { data: recentProducts, isLoading: isLoadingRecentProducts } = 
     useCollection<Product>(recentProductsQuery);
 
-  if (isUserLoading) {
+  const isLoading = isUserLoading || isLoadingManufacturer;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -375,6 +378,12 @@ export default function SellerDashboardPage() {
 
   const shopName = manufacturer?.shopName;
   const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
+  const isBlockedFromDashboard = manufacturer?.suspensionDetails?.prohibitions?.includes('block_dashboard_access');
+  const suspensionReason = manufacturer?.suspensionDetails?.reason || 'Violation of platform policies.';
+
+  if (isSuspended && isBlockedFromDashboard) {
+    return <SuspendedShopOverlay reason={suspensionReason} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -385,7 +394,7 @@ export default function SellerDashboardPage() {
               <AlertTriangle className="h-4 w-4" />
               <AlertTitle>Shop Suspended</AlertTitle>
               <AlertDescription>
-                Your shop is currently suspended. Please contact support for more information.
+                Your shop has active restrictions. Please contact support for more information.
               </AlertDescription>
             </Alert>
           )}
