@@ -40,7 +40,7 @@ import { nanoid } from 'nanoid';
 import Image from 'next/image';
 import { cn, generateSlug } from '@/lib/utils';
 import { useDropzone } from 'react-dropzone';
-import { PhotoUpload } from '@/components/photo-upload';
+import { PhotoUpload } from '@/components/ui/photo-upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 
@@ -200,7 +200,7 @@ export default function EditShopProfilePage() {
   const [logoUrl, setLogoUrl] = useState('');
   const [logoHistory, setLogoHistory] = useState<string[]>([]);
   const [bizRegNo, setBizRegNo] = useState('');
-  const [kraPin, setKraPin] useState('');
+  const [kraPin, setKraPin] = useState('');
   const [bizAddress, setBizAddress] = useState('');
   const [bizPhone, setBizPhone] = useState('');
   const [paymentPolicy, setPaymentPolicy] = useState('');
@@ -579,4 +579,3 @@ export default function EditShopProfilePage() {
     </div>
   );
 }
-
