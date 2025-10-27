@@ -203,7 +203,7 @@ export default function SellerProductsPage() {
             alt={product.name}
             className="aspect-square rounded-md object-cover"
             height="64"
-            src={product.imageUrl || 'https://placehold.co/64x64'}
+            src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
             width="64"
           />
         </TableCell>

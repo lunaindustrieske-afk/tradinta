@@ -163,7 +163,13 @@ export default function ManufacturerPage() {
                 />
             ) : (
                 <div className="w-32 h-32 rounded-full bg-muted flex items-center justify-center border-4 border-background shadow-lg">
-                    <span className="text-muted-foreground">No logo</span>
+                    <Image
+                        src="https://i.postimg.cc/j283ydft/image.png"
+                        alt="Tradinta Fallback Logo"
+                        width={128}
+                        height={128}
+                        className="rounded-full object-cover"
+                    />
                 </div>
             )}
           </div>
@@ -197,7 +203,7 @@ export default function ManufacturerPage() {
                     <CardContent className="p-0 flex-grow">
                       <div className="relative aspect-video overflow-hidden">
                         <Image
-                          src={product.imageUrl || 'https://picsum.photos/seed/product/600/400'}
+                          src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
                           alt={product.name}
                           fill
                           className="object-cover group-hover:scale-105 transition-transform"

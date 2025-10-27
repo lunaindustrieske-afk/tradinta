@@ -201,7 +201,7 @@ export default function ProductDetailPage() {
         <div className="lg:col-span-1">
           <div className="relative aspect-square w-full mb-4 rounded-lg overflow-hidden">
             <Image
-              src={mainImage || product.imageUrl}
+              src={mainImage || product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
               alt={product.name}
               fill
               className="object-cover transition-transform duration-300 hover:scale-105"
@@ -388,7 +388,7 @@ export default function ProductDetailPage() {
                 </CardHeader>
                 <CardContent>
                     <div className="flex items-center gap-4 mb-4">
-                        <Image src={manufacturer.logoUrl || 'https://placehold.co/64x64'} alt={manufacturer.shopName || ''} width={64} height={64} className="rounded-full" />
+                        <Image src={manufacturer.logoUrl || 'https://i.postimg.cc/j283ydft/image.png'} alt={manufacturer.shopName || ''} width={64} height={64} className="rounded-full" />
                         <div>
                             <h4 className="font-bold">{manufacturer.shopName}</h4>
                             <p className="text-sm text-muted-foreground">{manufacturer.location}</p>

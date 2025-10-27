@@ -262,7 +262,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
                             <CardContent className="p-0">
                               <div className="relative aspect-[4/3] overflow-hidden">
                                 <Image
-                                  src={product.imageUrl || 'https://placehold.co/600x400'}
+                                  src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
                                   alt={product.name}
                                   fill
                                   className="object-cover group-hover:scale-105 transition-transform"
