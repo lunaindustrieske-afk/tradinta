@@ -3,6 +3,9 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  env: {
+    PAYSTACK_PUBLIC_KEY: process.env.PAYSTACK_PUBLIC_KEY,
+  },
   experimental: {
     allowedDevOrigins: [
       'https://6000-firebase-studio-1761239467932.cluster-lu4mup47g5gm4rtyvhzpwbfadi.cloudworkstations.dev',

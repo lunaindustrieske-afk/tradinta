@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -6,11 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { FileText, Truck, CheckCircle, Clock, Eye, FileSignature } from "lucide-react";
+import { FileText, Truck, CheckCircle, Clock, Eye, FileSignature, Wallet } from "lucide-react";
 import Link from 'next/link';
 import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
+import { usePaystackPayment } from 'react-paystack';
+import { useToast } from '@/hooks/use-toast';
 
 type Order = {
     id: string;
@@ -18,6 +21,7 @@ type Order = {
     sellerName: string;
     totalAmount: number;
     status: string;
+    buyerId: string;
 }
 
 type Quotation = {
@@ -34,10 +38,12 @@ const getStatusBadge = (status: string) => {
         case 'Delivered':
         case 'Accepted':
             return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>;
+        case 'Processing':
         case 'Shipped':
             return <Badge><Truck className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'New':
         case 'Pending':
+        case 'Pending Payment':
             return <Badge variant="outline"><Clock className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'Responded':
             return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><FileSignature className="mr-1 h-3 w-3"/>{status}</Badge>;
@@ -45,6 +51,61 @@ const getStatusBadge = (status: string) => {
             return <Badge variant="outline">{status}</Badge>;
     }
 }
+
+const PayNowButton = ({ order }: { order: Order }) => {
+    const { toast } = useToast();
+
+    const config = {
+        reference: new Date().getTime().toString(),
+        email: order.buyerId, // Assuming user email is buyerId for now
+        amount: order.totalAmount * 100, // Paystack amount is in kobo
+        publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
+        metadata: {
+            orderId: order.id,
+            buyerId: order.buyerId,
+        }
+    };
+
+    const initializePayment = usePaystackPayment(config);
+
+    const onSuccess = (transaction: any) => {
+        // Call our server to verify the transaction
+        fetch('/api/paystack/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reference: transaction.reference, orderId: order.id, buyerId: order.buyerId }),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                toast({
+                    title: "Payment Successful!",
+                    description: "Your order is now being processed.",
+                });
+                // The page will automatically update due to the real-time listener
+            } else {
+                throw new Error(data.error || 'Verification failed');
+            }
+        })
+        .catch(error => {
+            toast({
+                title: "Payment Verification Failed",
+                description: `Your payment was successful but we couldn't verify it automatically. Please contact support with reference: ${transaction.reference}. Error: ${error.message}`,
+                variant: 'destructive',
+            });
+        });
+    };
+
+    const onClose = () => {
+        // User closed the popup
+    };
+
+    return (
+        <Button size="sm" onClick={() => initializePayment({onSuccess, onClose})}>
+            <Wallet className="mr-2 h-4 w-4"/> Pay Now
+        </Button>
+    );
+};
 
 
 export default function OrdersPage() {
@@ -131,7 +192,11 @@ export default function OrdersPage() {
                                         <TableCell>KES {order.totalAmount.toLocaleString()}</TableCell>
                                         <TableCell>{getStatusBadge(order.status)}</TableCell>
                                         <TableCell className="space-x-2">
-                                            <Button variant="outline" size="sm"><Truck className="mr-2 h-4 w-4"/>Track Order</Button>
+                                            {order.status === 'Pending Payment' ? (
+                                                <PayNowButton order={order} />
+                                            ) : (
+                                                <Button variant="outline" size="sm"><Truck className="mr-2 h-4 w-4"/>Track Order</Button>
+                                            )}
                                             <Button variant="ghost" size="sm">View Invoice</Button>
                                         </TableCell>
                                     </TableRow>
