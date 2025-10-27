@@ -35,7 +35,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
-import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import Image from 'next/image';
@@ -184,18 +184,18 @@ export default function SellerMessagesPage() {
         // Update conversation doc for both users
         const newTimestamp = serverTimestamp();
         const sellerConvoRef = doc(firestore, 'manufacturers', user.uid, 'conversations', selectedConversationId);
-        updateDocumentNonBlocking(sellerConvoRef, {
+        setDocumentNonBlocking(sellerConvoRef, {
             lastMessage: message || 'Image sent',
             lastMessageTimestamp: newTimestamp,
             isUnread: false
-        });
+        }, { merge: true });
 
         const buyerConvoRef = doc(firestore, 'users', selectedConversation.contactId, 'conversations', selectedConversationId);
-        updateDocumentNonBlocking(buyerConvoRef, {
+        setDocumentNonBlocking(buyerConvoRef, {
             lastMessage: message || 'Image sent',
             lastMessageTimestamp: newTimestamp,
             isUnread: true
-        });
+        }, { merge: true });
 
         setMessage('');
         setImageUrl(null);
@@ -415,7 +415,7 @@ export default function SellerMessagesPage() {
                                     </Button>
                                 </PhotoUpload>
                                 <Button type="submit" size="icon" disabled={isSending || isUploading || (!message.trim() && !imageUrl)}>
-                                    {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
                                 </Button>
                             </div>
                         </div>

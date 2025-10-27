@@ -32,7 +32,7 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
-  updateDocumentNonBlocking,
+  setDocumentNonBlocking,
 } from '@/firebase';
 import { collection, query, orderBy, addDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -180,18 +180,18 @@ export default function MessagesPage() {
             // Update conversation doc for both users
             const newTimestamp = serverTimestamp();
             const buyerConvoRef = doc(firestore, 'users', user.uid, 'conversations', selectedConversationId);
-            updateDocumentNonBlocking(buyerConvoRef, {
+            setDocumentNonBlocking(buyerConvoRef, {
                 lastMessage: message || 'Image sent',
                 lastMessageTimestamp: newTimestamp,
                 isUnread: false
-            });
+            }, { merge: true });
 
             const sellerConvoRef = doc(firestore, 'manufacturers', selectedConversation.contactId, 'conversations', selectedConversationId);
-             updateDocumentNonBlocking(sellerConvoRef, {
+             setDocumentNonBlocking(sellerConvoRef, {
                 lastMessage: message || 'Image sent',
                 lastMessageTimestamp: newTimestamp,
                 isUnread: true
-            });
+            }, { merge: true });
             
             setMessage('');
             setImageUrl(null);
@@ -361,7 +361,7 @@ export default function MessagesPage() {
                                                 </Button>
                                             </PhotoUpload>
                                             <Button type="submit" size="icon" disabled={isSending || isUploading || (!message.trim() && !imageUrl)}>
-                                                {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
+                                                {isSending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
                                             </Button>
                                         </div>
                                     </div>
