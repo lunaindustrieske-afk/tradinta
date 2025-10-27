@@ -19,6 +19,7 @@ import { useUser, useFirestore } from '@/firebase';
 import { Alert, AlertDescription } from './ui/alert';
 import { ChatInterface, getOrCreateConversation } from './chat-interface';
 import Link from 'next/link';
+import { useToast } from '@/hooks/use-toast';
 
 interface ContactManufacturerModalProps {
   product: Product;
@@ -33,6 +34,7 @@ export function ContactManufacturerModal({
 }: ContactManufacturerModalProps) {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [open, setOpen] = React.useState(false);
   const [conversationId, setConversationId] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -51,9 +53,18 @@ export function ContactManufacturerModal({
       ).then(id => {
         setConversationId(id);
         setIsLoading(false);
+      }).catch(error => {
+        console.error("Failed to get or create conversation:", error);
+        toast({
+          title: "Error",
+          description: "Could not start a conversation. Please try again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        setOpen(false);
       });
     }
-  }, [open, user, firestore, product, manufacturer, conversationId]);
+  }, [open, user, firestore, product, manufacturer, conversationId, toast]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -111,5 +122,3 @@ export function ContactManufacturerModal({
     </Dialog>
   );
 }
-
-    

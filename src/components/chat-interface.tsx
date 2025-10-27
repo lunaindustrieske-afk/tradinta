@@ -14,6 +14,7 @@ import {
   limit,
   doc,
   writeBatch,
+  setDoc,
 } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -195,7 +196,7 @@ export function ChatInterface({
               onLoadingChange={setIsUploading}
               disabled={isSending || isUploading}
             >
-              <Button type="button" variant="ghost" size="icon" disabled={isSending || isUploading}>
+               <Button type="button" variant="ghost" size="icon" disabled={isSending || isUploading}>
                 {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
               </Button>
             </PhotoUpload>
@@ -244,11 +245,11 @@ export async function getOrCreateConversation(
     const newConversationData = {
         id: conversationId,
         title: productName,
+        productId: productId, // Add productId
         contactName: sellerName,
         contactId: sellerId,
-        productId: productId,
         contactRole: 'Seller',
-        lastMessage: 'Conversation started',
+        lastMessage: 'Conversation started about ' + productName,
         lastMessageTimestamp: timestamp,
         isUnread: false,
     };
@@ -268,5 +269,3 @@ export async function getOrCreateConversation(
     await batch.commit();
     return conversationId;
 }
-
-    
