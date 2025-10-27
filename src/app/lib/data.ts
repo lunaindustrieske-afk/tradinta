@@ -113,41 +113,49 @@ type ManufacturerInfo = {
  * This function uses a collection group query and requires a composite index in Firestore.
  */
 export async function getAllProducts(): Promise<any[]> {
+  console.log("--- Starting getAllProducts ---");
   try {
     // 1. Fetch all manufacturers and create a map of their status.
     const manufCollection = db.collection('manufacturers');
     const manufSnapshot = await manufCollection.get();
+    console.log(`Found ${manufSnapshot.size} total manufacturers.`);
     
     const manufMap = new Map<string, ManufacturerInfo>();
+    const nonSuspendedManufIds: string[] = [];
+
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
+      if (data.suspensionDetails?.isSuspended) {
+        console.log(`- Skipping suspended manufacturer: ${data.shopName || doc.id}`);
+        return;
+      }
       manufMap.set(doc.id, { 
         slug: data.slug,
         shopId: data.shopId,
         isVerified: data.verificationStatus === 'Verified',
         suspensionDetails: data.suspensionDetails 
       });
+      nonSuspendedManufIds.push(doc.id);
     });
 
-    // 2. Query all published products across all sellers.
-    const productsQuery = db.collectionGroup('products')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc');
-    
-    const productSnapshot = await productsQuery.get();
-    
-    // 3. Filter out products from suspended manufacturers and map data.
-    const productsData = productSnapshot.docs
-      .map(doc => {
-        const productData = doc.data();
-        const manufInfo = manufMap.get(productData.manufacturerId);
+    console.log(`Found ${nonSuspendedManufIds.length} non-suspended manufacturers.`);
 
-        // Filter out products where the manufacturer is suspended or doesn't exist in the map
-        if (!manufInfo || manufInfo.suspensionDetails?.isSuspended) {
-          return null;
-        }
-        
-        // Sanitize Firestore Timestamps to strings for client component compatibility
+    if (nonSuspendedManufIds.length === 0) {
+        console.log("No non-suspended manufacturers found, returning empty product list.");
+        return [];
+    }
+
+    // 2. Fetch products for each non-suspended manufacturer
+    const allProductsPromises = nonSuspendedManufIds.map(async (manufId) => {
+      const productsQuery = db.collection('manufacturers').doc(manufId).collection('products').where('status', '==', 'published');
+      const productSnapshot = await productsQuery.get();
+      console.log(`-- Found ${productSnapshot.size} published products for manufacturer ${manufId}`);
+      
+      const manufInfo = manufMap.get(manufId);
+      if (!manufInfo) return [];
+
+      return productSnapshot.docs.map(doc => {
+        const productData = doc.data();
         const sanitizedData: { [key: string]: any } = {};
         for (const key in productData) {
           const value = productData[key];
@@ -157,7 +165,6 @@ export async function getAllProducts(): Promise<any[]> {
             sanitizedData[key] = value;
           }
         }
-        
         return {
           ...sanitizedData,
           id: doc.id,
@@ -165,15 +172,30 @@ export async function getAllProducts(): Promise<any[]> {
           shopId: manufInfo.shopId,
           isVerified: manufInfo.isVerified,
         };
-      })
-      .filter(p => p !== null); // Remove null entries from the filtered list
+      });
+    });
 
-    return productsData;
+    const productsByManufacturer = await Promise.all(allProductsPromises);
+    const combinedProducts = productsByManufacturer.flat();
+
+    // 3. Sort products in application code
+    combinedProducts.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA;
+    });
+
+    console.log(`Total combined products to be returned: ${combinedProducts.length}`);
+    console.log("--- Finished getAllProducts ---");
+
+    return combinedProducts;
 
   } catch (error) {
     console.error("Error fetching all products:", error);
+    console.log("--- Finished getAllProducts with an error ---");
     // Re-throw the error to be caught by Next.js error boundaries
     // This will help surface the index creation link if that's the issue.
     throw error;
   }
 }
+
