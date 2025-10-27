@@ -28,8 +28,9 @@ import {
   CarouselPrevious,
 } from '@/components/ui/carousel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { getHomepageBanners, getAllBlogPosts } from '@/app/lib/data';
-import { manufacturers, products as mockProducts } from '@/app/lib/mock-data';
+import { getHomepageBanners, getAllBlogPosts, getAllProducts } from '@/app/lib/data';
+import { manufacturers } from '@/app/lib/mock-data';
+import type { Product } from '@/lib/definitions';
 
 
 type HomepageBanner = {
@@ -45,6 +46,8 @@ type BlogPost = {
   title: string;
   slug: string;
 };
+
+type ProductWithShopId = Product & { shopId: string; slug: string; };
 
 const categories = [
   'Packaging',
@@ -219,6 +222,7 @@ const HeroCarousel = async () => {
 export default async function HomePage() {
   const blogPosts = await getAllBlogPosts();
   const recentBlogPosts = blogPosts.slice(0, 3);
+  const featuredProducts = (await getAllProducts()).slice(0, 4) as ProductWithShopId[];
 
 
   return (
@@ -269,9 +273,9 @@ export default async function HomePage() {
               </Button>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {mockProducts.slice(0, 4).map((product) => (
+              {featuredProducts.map((product) => (
                 <Card key={product.id} className="overflow-hidden group">
-                   <Link href={`/products/${manufacturers.find(m => m.id === product.manufacturerId)?.slug}/${product.slug}`}>
+                   <Link href={`/products/${product.shopId}/${product.slug}`}>
                     <CardContent className="p-0">
                       <div className="relative aspect-[4/3] overflow-hidden">
                         <Image
