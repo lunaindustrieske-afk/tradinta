@@ -107,6 +107,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
   };
 
   const filteredProducts = useMemo(() => {
+    if(!allProducts) return [];
     return allProducts.filter(product => {
       const price = product.variants?.[0]?.price ?? 0;
       
@@ -214,9 +215,19 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
 
     if (filteredProducts.length === 0) {
       return (
-        <div className="col-span-full text-center py-12">
+        <div className="col-span-full text-center py-12 bg-muted/50 rounded-lg">
           <h3 className="text-lg font-semibold">No Products Found</h3>
-          <p className="text-muted-foreground">Try adjusting your search or filter criteria.</p>
+          <p className="text-muted-foreground mt-2">
+            Try adjusting your search or filter criteria.
+          </p>
+          <div className="mt-4 text-sm text-muted-foreground">
+            <p>Total products loaded: <span className="font-bold text-foreground">{allProducts?.length || 0}</span></p>
+            <p>Products after filtering: <span className="font-bold text-foreground">{filteredProducts?.length || 0}</span></p>
+            <details className="mt-2 text-left w-fit mx-auto bg-background p-2 rounded-md">
+              <summary className="cursor-pointer font-medium">Active Filters</summary>
+              <pre className="text-xs mt-1 whitespace-pre-wrap">{JSON.stringify(filters, null, 2)}</pre>
+            </details>
+          </div>
         </div>
       );
     }
