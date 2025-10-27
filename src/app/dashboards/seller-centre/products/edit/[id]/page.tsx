@@ -126,44 +126,42 @@ export default function EditProductPage() {
     setHasLoaded(false);
   }, [productId]);
   
-  // Effect to load initial data from Firestore into the local storage draft
+  // Effect to load initial data from Firestore into the form state.
+  // This now correctly populates the form on first load.
   React.useEffect(() => {
     if (productData && !hasLoaded) {
-      const storedDraft = localStorage.getItem(draftKey);
-      if (!storedDraft) { // Only load from DB if no local draft exists
-          const dbState = {
-              name: productData.name || '',
-              description: productData.description || '',
-              imageUrl: productData.imageUrl || '',
-              bannerUrl: productData.bannerUrl || '',
-              tags: productData.tags || [],
-              category: productData.category || '',
-              subcategory: productData.subcategory || '',
-              options: productData.options && productData.options.length > 0 ? productData.options : [''],
-              variants: productData.variants?.map((v: any) => ({
-                ...v,
-                price: v.price?.toString() || '',
-                stock: v.stock?.toString() || '',
-                weight: {
-                    value: v.weight?.value?.toString() || '',
-                    unit: v.weight?.unit || 'kg'
-                },
-                dimensions: {
-                    length: v.dimensions?.length?.toString() || '',
-                    width: v.dimensions?.width?.toString() || '',
-                    height: v.dimensions?.height?.toString() || '',
-                    unit: v.dimensions?.unit || 'cm'
-                }
-              })) || [],
-              material: productData.material || '',
-              certifications: productData.certifications || '',
-              packagingDetails: productData.packagingDetails || '',
-          };
-          setFormState(dbState);
-      }
-      setHasLoaded(true);
+        const dbState = {
+            name: productData.name || '',
+            description: productData.description || '',
+            imageUrl: productData.imageUrl || '',
+            bannerUrl: productData.bannerUrl || '',
+            tags: productData.tags || [],
+            category: productData.category || '',
+            subcategory: productData.subcategory || '',
+            options: productData.options && productData.options.length > 0 ? productData.options : [''],
+            variants: productData.variants?.map((v: any) => ({
+              ...v,
+              price: v.price?.toString() || '',
+              stock: v.stock?.toString() || '',
+              weight: {
+                  value: v.weight?.value?.toString() || '',
+                  unit: v.weight?.unit || 'kg'
+              },
+              dimensions: {
+                  length: v.dimensions?.length?.toString() || '',
+                  width: v.dimensions?.width?.toString() || '',
+                  height: v.dimensions?.height?.toString() || '',
+                  unit: v.dimensions?.unit || 'cm'
+              }
+            })) || [],
+            material: productData.material || '',
+            certifications: productData.certifications || '',
+            packagingDetails: productData.packagingDetails || '',
+        };
+        setFormState(dbState);
+        setHasLoaded(true); // Mark that we have loaded the initial data
     }
-  }, [productData, hasLoaded, draftKey, setFormState]);
+  }, [productData, hasLoaded, setFormState]);
 
 
   const handleFormChange = (field: keyof ProductFormState, value: any) => {

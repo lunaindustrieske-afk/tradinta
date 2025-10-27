@@ -104,7 +104,7 @@ const PhotoUpload = React.forwardRef<HTMLDivElement, PhotoUploadProps>(
           handleUpload(selectedFile);
         }
       },
-      [disabled] 
+      [disabled, onUpload]
     );
 
 
