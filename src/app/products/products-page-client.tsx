@@ -93,9 +93,6 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
 
   const [filters, setFilters] = useState({
     category: 'all',
-    priceRange: [0, 200000],
-    verified: false,
-    rating: 0,
   });
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -109,15 +106,10 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
   const filteredProducts = useMemo(() => {
     if(!allProducts) return [];
     return allProducts.filter(product => {
-      const price = product.variants?.[0]?.price ?? 0;
-      
       const matchesCategory = filters.category === 'all' || product.category === filters.category;
       const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesPrice = price >= filters.priceRange[0] && price <= filters.priceRange[1];
-      const matchesVerified = !filters.verified || product.isVerified;
-      const matchesRating = product.rating >= filters.rating;
-
-      return matchesCategory && matchesSearch && matchesPrice && matchesVerified && matchesRating;
+      
+      return matchesCategory && matchesSearch;
     });
   }, [allProducts, filters, searchQuery]);
 
@@ -147,53 +139,6 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <Label className="font-semibold">Price Range (KES)</Label>
-          <Slider
-            min={0}
-            max={200000}
-            step={1000}
-            defaultValue={filters.priceRange}
-            onValueChange={(value) =>
-              setFilters({ ...filters, priceRange: value })
-            }
-          />
-          <div className="flex justify-between text-sm text-muted-foreground mt-2">
-            <span>{filters.priceRange[0].toLocaleString()}</span>
-            <span>{filters.priceRange[1].toLocaleString()}</span>
-          </div>
-        </div>
-        <div>
-          <Label className="font-semibold">Rating</Label>
-          <div className="flex space-x-1">
-            {[1, 2, 3, 4, 5].map((star) => (
-              <Star
-                key={star}
-                className={`cursor-pointer ${
-                  filters.rating >= star
-                    ? 'text-yellow-400 fill-yellow-400'
-                    : 'text-gray-300'
-                }`}
-                onClick={() => setFilters({ ...filters, rating: star })}
-              />
-            ))}
-          </div>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Checkbox
-            id="verified"
-            checked={filters.verified}
-            onCheckedChange={(checked) =>
-              setFilters({ ...filters, verified: !!checked })
-            }
-          />
-          <label
-            htmlFor="verified"
-            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-          >
-            Tradinta Verified
-          </label>
-        </div>
       </div>
     </Card>
   );
@@ -220,7 +165,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
           <p className="text-muted-foreground mt-2">
             Try adjusting your search or filter criteria.
           </p>
-          <div className="mt-4 text-sm text-muted-foreground">
+           <div className="mt-4 text-sm text-muted-foreground">
             <p>Total products loaded: <span className="font-bold text-foreground">{allProducts?.length || 0}</span></p>
             <p>Products after filtering: <span className="font-bold text-foreground">{filteredProducts?.length || 0}</span></p>
             <details className="mt-2 text-left w-fit mx-auto bg-background p-2 rounded-md">
@@ -235,7 +180,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredProducts.map((product) => {
-            const price = product.variants?.[0]?.price;
+            const price = product.variants?.[0]?.price ?? 0;
             return (
               <Card key={product.id} className="overflow-hidden group flex flex-col">
                 <div className="flex-grow">
@@ -266,7 +211,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
                         </CardDescription>
                         <div className="flex items-baseline justify-between">
                           <p className="text-xl font-bold text-foreground">
-                            {price !== undefined && price !== null ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
+                            {price > 0 ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
                           </p>
                           <div className="flex items-center gap-1">
                             <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />

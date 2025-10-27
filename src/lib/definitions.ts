@@ -14,6 +14,7 @@ export type Product = {
   reviewCount: number;
   manufacturerId: string; // Firebase UID of the manufacturer
   isVerified?: boolean;
+  status?: 'published' | 'draft' | 'archived'; // Add status to Product
 };
 
 export type Order = {
