@@ -12,6 +12,7 @@ import {
   PlusCircle,
   Save,
   Book,
+  RefreshCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -48,15 +49,47 @@ import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { generateSlug } from '@/lib/utils';
 import { nanoid } from 'nanoid';
 import { Separator } from '@/components/ui/separator';
+import { useLocalStorageState } from '@/hooks/use-local-storage-state';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 type Variant = {
-    id: string;
-    price: string;
-    stock: string;
-    sku: string;
-    weight: { value: string, unit: string };
-    dimensions: { length: string, width: string, height: string, unit: string };
-    attributes: Record<string, string>;
+  id: string;
+  price: string;
+  stock: string;
+  sku: string;
+  weight: { value: string; unit: string };
+  dimensions: { length: string; width: string; height: string; unit: string };
+  attributes: Record<string, string>;
+};
+
+type ProductFormState = {
+  name: string;
+  description: string;
+  imageUrl: string;
+  bannerUrl: string;
+  tags: string[];
+  category: string;
+  subcategory: string;
+  options: string[];
+  variants: Variant[];
+  material: string;
+  certifications: string;
+  packagingDetails: string;
+};
+
+const initialFormState: ProductFormState = {
+  name: '',
+  description: '',
+  imageUrl: '',
+  bannerUrl: '',
+  tags: [],
+  category: '',
+  subcategory: '',
+  options: [''],
+  variants: [],
+  material: '',
+  certifications: '',
+  packagingDetails: '',
 };
 
 export default function NewProductPage() {
@@ -65,136 +98,119 @@ export default function NewProductPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const initialState: AIFormState = { message: '', output: null, errors: null };
-  const [state, dispatch] = React.useActionState(
-    getAITagsAndDescription,
-    initialState
+  const [formState, setFormState, clearFormState] = useLocalStorageState<ProductFormState>(
+    'new-product-draft',
+    initialFormState
   );
-  
-  const [formKey, setFormKey] = React.useState(Date.now());
+
+  const [aiState, dispatch] = React.useActionState(
+    getAITagsAndDescription,
+    { message: '', output: null, errors: null }
+  );
+
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [isUploading, setIsUploading] = React.useState(false);
 
-  // Form State
-  const [name, setName] = React.useState('');
-  const [description, setDescription] = React.useState('');
-  const [imageUrl, setImageUrl] = React.useState('');
-  const [bannerUrl, setBannerUrl] = React.useState('');
-  const [tags, setTags] = React.useState<string[]>([]);
-  
-  const [selectedCategory, setSelectedCategory] = React.useState<Category | null>(null);
-  const [subcategories, setSubcategories] = React.useState<string[]>([]);
-  const [selectedSubCategory, setSelectedSubCategory] = React.useState<string>('');
+  const handleFormChange = (
+    field: keyof ProductFormState,
+    value: any
+  ) => {
+    setFormState((prev) => ({ ...prev, [field]: value }));
+  };
 
-  // Variant State
-  const [options, setOptions] = React.useState<string[]>(['']);
-  const [variants, setVariants] = React.useState<Variant[]>([]);
-
-  // New fields
-  const [material, setMaterial] = React.useState('');
-  const [certifications, setCertifications] = React.useState('');
-  const [packagingDetails, setPackagingDetails] = React.useState('');
-  
-  const handleAddOption = () => setOptions([...options, '']);
   const handleOptionChange = (index: number, value: string) => {
-    const newOptions = [...options];
+    const newOptions = [...formState.options];
     newOptions[index] = value;
-    setOptions(newOptions);
+    handleFormChange('options', newOptions);
   };
-  const handleRemoveOption = (index: number) => {
-    const newOptions = options.filter((_, i) => i !== index);
-    setOptions(newOptions);
+
+  const handleAddOption = () => {
+    handleFormChange('options', [...formState.options, '']);
   };
   
+  const handleRemoveOption = (index: number) => {
+    const newOptions = formState.options.filter((_, i) => i !== index);
+    handleFormChange('options', newOptions);
+  };
+
   const handleAddVariant = () => {
     const newVariant: Variant = {
-        id: nanoid(),
-        price: '',
-        stock: '',
-        sku: '',
-        weight: { value: '', unit: 'kg' },
-        dimensions: { length: '', width: '', height: '', unit: 'cm' },
-        attributes: options.reduce((acc, option) => {
-            if (option) acc[option] = '';
-            return acc;
-        }, {} as Record<string, string>),
+      id: nanoid(),
+      price: '',
+      stock: '',
+      sku: '',
+      weight: { value: '', unit: 'kg' },
+      dimensions: { length: '', width: '', height: '', unit: 'cm' },
+      attributes: formState.options.reduce((acc, option) => {
+        if (option) acc[option] = '';
+        return acc;
+      }, {} as Record<string, string>),
     };
-    setVariants([...variants, newVariant]);
-  };
-
-  const handleVariantChange = (variantId: string, field: keyof Omit<Variant, 'id' | 'attributes' | 'weight' | 'dimensions'>, value: string) => {
-    setVariants(variants.map(v => v.id === variantId ? { ...v, [field]: value } : v));
+    handleFormChange('variants', [...formState.variants, newVariant]);
   };
   
-  const handleVariantSubfieldChange = (
-    variantId: string,
-    field: 'weight' | 'dimensions',
-    subfield: string,
-    value: string
-  ) => {
-    setVariants(variants.map(v => 
+  const handleVariantChange = (variantId: string, field: keyof Omit<Variant, 'id'|'attributes' | 'weight' | 'dimensions'>, value: string) => {
+    const newVariants = formState.variants.map(v => v.id === variantId ? { ...v, [field]: value } : v);
+    handleFormChange('variants', newVariants);
+  };
+
+  const handleVariantSubfieldChange = (variantId: string, field: 'weight' | 'dimensions', subfield: string, value: string) => {
+     const newVariants = formState.variants.map(v => 
         v.id === variantId 
             ? { ...v, [field]: { ...v[field], [subfield]: value } }
             : v
-    ));
+    );
+    handleFormChange('variants', newVariants);
   };
 
   const handleAttributeChange = (variantId: string, attribute: string, value: string) => {
-    setVariants(variants.map(v => v.id === variantId ? { ...v, attributes: { ...v.attributes, [attribute]: value } } : v));
+     const newVariants = formState.variants.map(v => v.id === variantId ? { ...v, attributes: { ...v.attributes, [attribute]: value } } : v);
+    handleFormChange('variants', newVariants);
   };
 
-   const handleRemoveVariant = (variantId: string) => {
-    setVariants(variants.filter(v => v.id !== variantId));
+  const handleRemoveVariant = (variantId: string) => {
+    const newVariants = formState.variants.filter(v => v.id !== variantId);
+    handleFormChange('variants', newVariants);
   };
-
 
   const handleCategoryChange = (value: string) => {
-    const category = categories.find((c) => c.name === value);
-    if (category) {
-      setSelectedCategory(category);
-      setSubcategories(category.subcategories);
-      setSelectedSubCategory('');
-    } else {
-      setSelectedCategory(null);
-      setSubcategories([]);
-      setSelectedSubCategory('');
-    }
+    handleFormChange('category', value);
+    handleFormChange('subcategory', '');
   };
 
+  const selectedCategory = React.useMemo(() => {
+    return categories.find(c => c.name === formState.category) || null;
+  }, [formState.category]);
+  
+  const subcategories = React.useMemo(() => {
+    return selectedCategory?.subcategories || [];
+  }, [selectedCategory]);
+
+
   React.useEffect(() => {
-    if (state.message) {
+    if (aiState.message) {
       setIsGenerating(false);
-      if (state.output) {
+      if (aiState.output) {
         toast({
           title: 'AI Magic Complete!',
           description: 'Tags and description have been generated.',
         });
-        setTags(state.output.tags);
-        setDescription(state.output.description);
-      } else if (state.errors) {
-        toast({
-          title: 'Validation Error',
-          description: state.message,
-          variant: 'destructive',
-        });
+        handleFormChange('tags', aiState.output.tags);
+        handleFormChange('description', aiState.output.description);
       } else {
         toast({
           title: 'Uh oh!',
-          description: state.message,
+          description: aiState.message,
           variant: 'destructive',
         });
       }
     }
-  }, [state, toast]);
+  }, [aiState, toast]);
 
   const handleGenerate = (formData: FormData) => {
     setIsGenerating(true);
     dispatch(formData);
-  };
-  
-  const resetForm = () => {
-    setFormKey(Date.now());
   };
 
   const handleSaveProduct = async (status: 'draft' | 'published') => {
@@ -209,16 +225,16 @@ export default function NewProductPage() {
         
         await addDoc(productsCollectionRef, {
             manufacturerId: user.uid,
-            name,
-            slug: generateSlug(name),
-            description,
-            category: selectedCategory?.name || '',
-            subcategory: selectedSubCategory || '',
-            imageUrl, // This is now a secondary/thumbnail image
-            bannerUrl, // This is the main banner image
-            tags,
-            options: options.filter(Boolean),
-            variants: variants.map(v => ({
+            name: formState.name,
+            slug: generateSlug(formState.name),
+            description: formState.description,
+            category: formState.category,
+            subcategory: formState.subcategory,
+            imageUrl: formState.imageUrl,
+            bannerUrl: formState.bannerUrl,
+            tags: formState.tags,
+            options: formState.options.filter(Boolean),
+            variants: formState.variants.map(v => ({
                 ...v,
                 price: Number(v.price) || 0,
                 stock: Number(v.stock) || 0,
@@ -234,9 +250,9 @@ export default function NewProductPage() {
                 }
             })),
             status,
-            material,
-            certifications,
-            packagingDetails,
+            material: formState.material,
+            certifications: formState.certifications,
+            packagingDetails: formState.packagingDetails,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -245,6 +261,7 @@ export default function NewProductPage() {
             title: 'Product Saved!',
             description: `Your product has been saved as a ${status}.`,
         });
+        clearFormState(); // Clear local storage draft
         router.push('/dashboards/seller-centre/products');
 
     } catch (error) {
@@ -261,10 +278,9 @@ export default function NewProductPage() {
   
   const isSaveDisabled = isSaving || isUploading;
 
-
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="h-7 w-7" asChild>
           <Link href="/dashboards/seller-centre/products">
             <ChevronLeft className="h-4 w-4" />
@@ -281,6 +297,10 @@ export default function NewProductPage() {
           Add New Product
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
+          <Button variant="ghost" size="sm" onClick={clearFormState} disabled={isSaveDisabled}>
+            <RefreshCcw className="mr-2 h-4 w-4" />
+            Clear Draft
+          </Button>
           <Button variant="outline" size="sm" onClick={() => handleSaveProduct('draft')} disabled={isSaveDisabled}>
             {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
             Save as Draft
@@ -291,6 +311,15 @@ export default function NewProductPage() {
           </Button>
         </div>
       </div>
+      
+       <Alert>
+          <Save className="h-4 w-4" />
+          <AlertTitle>Auto-Save Enabled</AlertTitle>
+          <AlertDescription>
+            Your progress is being automatically saved to your browser. You can safely leave and come back to this page to resume.
+          </AlertDescription>
+        </Alert>
+
       <div className="grid gap-4 md:grid-cols-[1fr_250px] lg:grid-cols-3 lg:gap-8">
         <div className="grid auto-rows-max items-start gap-4 lg:col-span-2 lg:gap-8">
           <Card>
@@ -309,8 +338,8 @@ export default function NewProductPage() {
                     type="text"
                     className="w-full"
                     placeholder="e.g. Industrial Grade Cement"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    value={formState.name}
+                    onChange={(e) => handleFormChange('name', e.target.value)}
                   />
                 </div>
                 <div className="grid gap-3">
@@ -319,15 +348,15 @@ export default function NewProductPage() {
                     id="description"
                     placeholder="Provide a detailed description of your product, including features, benefits, and applications."
                     className="min-h-32"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
+                    value={formState.description}
+                    onChange={(e) => handleFormChange('description', e.target.value)}
                   />
                 </div>
-                {tags.length > 0 && (
+                {formState.tags.length > 0 && (
                     <div className="grid gap-3">
                         <Label>Tags</Label>
                         <div className="flex flex-wrap gap-2">
-                        {tags.map((tag) => (
+                        {formState.tags.map((tag) => (
                             <Badge key={tag} variant="secondary">
                             {tag}
                             </Badge>
@@ -347,7 +376,7 @@ export default function NewProductPage() {
                     </div>
                   </AccordionTrigger>
                   <AccordionContent>
-                    <form action={handleGenerate} key={formKey} className="p-4">
+                    <form action={handleGenerate} className="p-4">
                       <div className="grid gap-6">
                         <div className="grid gap-3">
                           <Label htmlFor="productName">Product Name</Label>
@@ -356,12 +385,12 @@ export default function NewProductPage() {
                             name="productName"
                             type="text"
                             className="w-full"
-                            defaultValue={name}
+                            defaultValue={formState.name}
                             placeholder="e.g. Industrial Grade Cement"
                           />
-                          {state.errors?.productName && (
+                          {aiState.errors?.productName && (
                             <p className="text-sm text-destructive">
-                              {state.errors.productName[0]}
+                              {aiState.errors.productName[0]}
                             </p>
                           )}
                         </div>
@@ -372,17 +401,16 @@ export default function NewProductPage() {
                           <Textarea
                             id="productDetails"
                             name="productDetails"
-                            defaultValue={description}
+                            defaultValue={formState.description}
                             placeholder="Provide key details for the AI. e.g., '50kg bag of high-strength Portland cement for construction projects. KEBS certified.'"
                           />
-                          {state.errors?.productDetails && (
+                          {aiState.errors?.productDetails && (
                             <p className="text-sm text-destructive">
-                              {state.errors.productDetails[0]}
+                              {aiState.errors.productDetails[0]}
                             </p>
                           )}
                         </div>
-                        <div className="flex justify-between">
-                            <Button type="button" variant="ghost" onClick={resetForm}>Reset</Button>
+                        <div className="flex justify-end">
                             <Button type="submit" disabled={isGenerating}>
                             {isGenerating ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -409,14 +437,14 @@ export default function NewProductPage() {
                 <div>
                     <Label>Variant Options</Label>
                     <div className="space-y-2 mt-2">
-                        {options.map((option, index) => (
+                        {formState.options.map((option, index) => (
                             <div key={index} className="flex items-center gap-2">
                                 <Input 
                                     placeholder={`Option ${index + 1} (e.g., Size)`}
                                     value={option}
                                     onChange={(e) => handleOptionChange(index, e.target.value)}
                                 />
-                                {options.length > 1 && <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(index)}><Trash2 className="w-4 h-4 text-destructive"/></Button>}
+                                {formState.options.length > 1 && <Button variant="ghost" size="icon" onClick={() => handleRemoveOption(index)}><Trash2 className="w-4 h-4 text-destructive"/></Button>}
                             </div>
                         ))}
                     </div>
@@ -425,11 +453,11 @@ export default function NewProductPage() {
                     </Button>
                 </div>
                 
-                {options.filter(Boolean).length > 0 && (
+                {formState.options.filter(Boolean).length > 0 && (
                     <div>
                          <Label>Variants List</Label>
                          <div className="space-y-4 mt-2">
-                            {variants.map(variant => (
+                            {formState.variants.map(variant => (
                                 <Card key={variant.id} className="p-4 bg-muted/50">
                                     <div className="grid sm:grid-cols-2 gap-4">
                                         {Object.keys(variant.attributes).map(attr => (
@@ -458,6 +486,7 @@ export default function NewProductPage() {
                                                         <SelectItem value="kg">kg</SelectItem>
                                                         <SelectItem value="g">g</SelectItem>
                                                         <SelectItem value="lb">lb</SelectItem>
+                                                        <SelectItem value="oz">oz</SelectItem>
                                                     </SelectContent>
                                                 </Select>
                                             </div>
@@ -479,8 +508,6 @@ export default function NewProductPage() {
                                             </div>
                                         </div>
                                     </div>
-
-
                                     <Button variant="ghost" size="sm" className="mt-2 text-destructive hover:text-destructive" onClick={() => handleRemoveVariant(variant.id)}>Remove Variant</Button>
                                 </Card>
                             ))}
@@ -503,19 +530,21 @@ export default function NewProductPage() {
             <CardContent className="space-y-6">
                 <PhotoUpload
                     label="Main Banner Image"
-                    onUpload={setBannerUrl}
+                    onUpload={(url) => handleFormChange('bannerUrl', url)}
                     onLoadingChange={setIsUploading}
+                    initialUrl={formState.bannerUrl}
                 />
                 <Separator />
                 <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
                     <PhotoUpload
                         label="Additional Image 1"
-                        onUpload={setImageUrl}
+                        onUpload={(url) => handleFormChange('imageUrl', url)}
                         onLoadingChange={setIsUploading}
+                        initialUrl={formState.imageUrl}
                     />
                      <PhotoUpload
                         label="Additional Image 2"
-                        onUpload={(url) => {}} // Placeholder
+                        onUpload={(url) => {}} // Placeholder for future multi-image support
                         onLoadingChange={setIsUploading}
                     />
                      <PhotoUpload
@@ -535,15 +564,15 @@ export default function NewProductPage() {
               <div className="grid gap-6 sm:grid-cols-2">
                 <div className="grid gap-3">
                   <Label htmlFor="material">Material</Label>
-                  <Input id="material" placeholder="e.g., Portland Cement Type I" value={material} onChange={(e) => setMaterial(e.target.value)} />
+                  <Input id="material" placeholder="e.g., Portland Cement Type I" value={formState.material} onChange={(e) => handleFormChange('material', e.target.value)} />
                 </div>
                 <div className="grid gap-3">
                   <Label htmlFor="certifications">Standards</Label>
-                  <Input id="certifications" placeholder="e.g., KEBS Certified, ISO 9001" value={certifications} onChange={(e) => setCertifications(e.target.value)} />
+                  <Input id="certifications" placeholder="e.g., KEBS Certified, ISO 9001" value={formState.certifications} onChange={(e) => handleFormChange('certifications', e.target.value)} />
                 </div>
                 <div className="grid gap-3 sm:col-span-2">
                   <Label htmlFor="packagingDetails">Packaging Details</Label>
-                  <Textarea id="packagingDetails" placeholder="Describe the product packaging..." className="min-h-24" value={packagingDetails} onChange={(e) => setPackagingDetails(e.target.value)} />
+                  <Textarea id="packagingDetails" placeholder="Describe the product packaging..." className="min-h-24" value={formState.packagingDetails} onChange={(e) => handleFormChange('packagingDetails', e.target.value)} />
                 </div>
               </div>
             </CardContent>
@@ -561,7 +590,7 @@ export default function NewProductPage() {
               <div className="grid gap-6">
                 <div className="grid gap-3">
                   <Label htmlFor="category">Category</Label>
-                  <Select onValueChange={handleCategoryChange}>
+                  <Select onValueChange={handleCategoryChange} value={formState.category}>
                     <SelectTrigger id="category" aria-label="Select category">
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
@@ -577,8 +606,8 @@ export default function NewProductPage() {
                 <div className="grid gap-3">
                   <Label htmlFor="subcategory">Sub-category</Label>
                   <Select
-                    value={selectedSubCategory}
-                    onValueChange={setSelectedSubCategory}
+                    value={formState.subcategory}
+                    onValueChange={(val) => handleFormChange('subcategory', val)}
                     disabled={!selectedCategory}
                   >
                     <SelectTrigger
@@ -614,3 +643,5 @@ export default function NewProductPage() {
     </div>
   );
 }
+
+    
