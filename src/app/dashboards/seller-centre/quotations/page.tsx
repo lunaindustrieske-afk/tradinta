@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -18,7 +19,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { BookCopy, Eye, Archive } from 'lucide-react';
+import { BookCopy, Eye, Archive, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import {
   Breadcrumb,
@@ -29,43 +30,21 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
 
-const quotations = [
-  {
-    id: 'RFQ-001',
-    buyerName: 'BuildRight Const.',
-    productName: 'Industrial Grade Cement',
-    quantity: 500,
-    date: '2023-11-21',
-    status: 'New',
-  },
-  {
-    id: 'RFQ-002',
-    buyerName: 'Yum Foods',
-    productName: 'Commercial Baking Flour',
-    quantity: 100,
-    date: '2023-11-20',
-    status: 'Responded',
-  },
-  {
-    id: 'RFQ-003',
-    buyerName: 'Kimani Traders',
-    productName: 'Steel Reinforcement Bars (Rebar)',
-    quantity: 2000,
-    date: '2023-11-19',
-    status: 'New',
-  },
-  {
-    id: 'RFQ-004',
-    buyerName: 'Office Solutions Ltd',
-    productName: 'Recycled Kraft Paper Rolls',
-    quantity: 50,
-    date: '2023-11-18',
-    status: 'Archived',
-  },
-];
+type Quotation = {
+    id: string;
+    buyerName: string;
+    productName: string;
+    quantity: number;
+    createdAt: any;
+    status: 'New' | 'Responded' | 'Archived';
+}
 
-const getStatusBadge = (status: string) => {
+const getStatusBadge = (status: Quotation['status']) => {
   switch (status) {
     case 'New':
       return <Badge variant="default">{status}</Badge>;
@@ -78,13 +57,47 @@ const getStatusBadge = (status: string) => {
   }
 };
 
-const QuotationTable = ({ filterStatus }: { filterStatus: string | 'all' }) => {
+const QuotationTable = ({ filterStatus, quotations, isLoading, onUpdate }: { 
+    filterStatus: 'all' | 'New' | 'Responded' | 'Archived', 
+    quotations: Quotation[] | null,
+    isLoading: boolean,
+    onUpdate: (id: string, status: 'Archived' | 'Responded') => void
+}) => {
   const filteredQuotes =
     filterStatus === 'all'
       ? quotations
-      : quotations.filter(
+      : quotations?.filter(
           (q) => q.status.toLowerCase() === filterStatus.toLowerCase()
-        );
+        ) || [];
+
+    if (isLoading) {
+        return (
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Buyer</TableHead>
+                        <TableHead>Product</TableHead>
+                        <TableHead>Quantity</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Actions</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {Array.from({length: 3}).map((_, i) => (
+                        <TableRow key={`skel-row-${i}`}>
+                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-40" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-16" /></TableCell>
+                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                            <TableCell><Skeleton className="h-6 w-20" /></TableCell>
+                            <TableCell><Skeleton className="h-9 w-24" /></TableCell>
+                        </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        )
+    }
 
   return (
     <Table>
@@ -105,14 +118,14 @@ const QuotationTable = ({ filterStatus }: { filterStatus: string | 'all' }) => {
               <TableCell className="font-medium">{quote.buyerName}</TableCell>
               <TableCell>{quote.productName}</TableCell>
               <TableCell>{quote.quantity}</TableCell>
-              <TableCell>{quote.date}</TableCell>
+              <TableCell>{quote.createdAt ? new Date(quote.createdAt?.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
               <TableCell>{getStatusBadge(quote.status)}</TableCell>
               <TableCell className="space-x-2">
-                <Button variant="outline" size="sm">
+                <Button variant="outline" size="sm" onClick={() => onUpdate(quote.id, 'Responded')}>
                   <Eye className="mr-2 h-4 w-4" /> View & Respond
                 </Button>
                 {quote.status !== 'Archived' && (
-                    <Button variant="ghost" size="sm">
+                    <Button variant="ghost" size="sm" onClick={() => onUpdate(quote.id, 'Archived')}>
                         <Archive className="mr-2 h-4 w-4" /> Archive
                     </Button>
                 )}
@@ -132,6 +145,39 @@ const QuotationTable = ({ filterStatus }: { filterStatus: string | 'all' }) => {
 };
 
 export default function SellerQuotationsPage() {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
+    const quotationsQuery = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return query(collection(firestore, 'manufacturers', user.uid, 'quotations'), orderBy('createdAt', 'desc'));
+    }, [user, firestore]);
+
+    const { data: quotations, isLoading } = useCollection<Quotation>(quotationsQuery);
+
+    const handleUpdateStatus = async (id: string, status: 'Archived' | 'Responded') => {
+        if (!user || !firestore) return;
+        const quoteRef = doc(firestore, 'manufacturers', user.uid, 'quotations', id);
+        try {
+            await updateDocumentNonBlocking(quoteRef, { status });
+            toast({
+                title: 'Quotation Updated',
+                description: `The status has been set to ${status}.`
+            });
+        } catch (error: any) {
+            toast({
+                title: 'Update Failed',
+                description: error.message,
+                variant: 'destructive',
+            })
+        }
+    };
+    
+    const newQuotesCount = useMemo(() => {
+        return quotations?.filter(q => q.status === 'New').length || 0;
+    }, [quotations]);
+
   return (
     <div className="space-y-6">
       <Breadcrumb>
@@ -161,21 +207,21 @@ export default function SellerQuotationsPage() {
           <Tabs defaultValue="new">
             <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="all">All</TabsTrigger>
-              <TabsTrigger value="new">New ({quotations.filter(q => q.status === 'New').length})</TabsTrigger>
+              <TabsTrigger value="new">New ({newQuotesCount})</TabsTrigger>
               <TabsTrigger value="responded">Responded</TabsTrigger>
               <TabsTrigger value="archived">Archived</TabsTrigger>
             </TabsList>
             <TabsContent value="all">
-              <QuotationTable filterStatus="all" />
+              <QuotationTable filterStatus="all" quotations={quotations} isLoading={isLoading} onUpdate={handleUpdateStatus}/>
             </TabsContent>
             <TabsContent value="new">
-              <QuotationTable filterStatus="new" />
+              <QuotationTable filterStatus="New" quotations={quotations} isLoading={isLoading} onUpdate={handleUpdateStatus}/>
             </TabsContent>
             <TabsContent value="responded">
-              <QuotationTable filterStatus="responded" />
+              <QuotationTable filterStatus="Responded" quotations={quotations} isLoading={isLoading} onUpdate={handleUpdateStatus}/>
             </TabsContent>
             <TabsContent value="archived">
-              <QuotationTable filterStatus="archived" />
+              <QuotationTable filterStatus="Archived" quotations={quotations} isLoading={isLoading} onUpdate={handleUpdateStatus}/>
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -183,3 +229,5 @@ export default function SellerQuotationsPage() {
     </div>
   );
 }
+
+    

@@ -39,7 +39,7 @@ const quotations = [
         id: "RFQ-004",
         product: "Steel Beams (Custom)",
         seller: "Regional Distributors",
-        status: "Pending",
+        status: "New",
         date: "2023-11-16",
     },
      {
@@ -57,12 +57,13 @@ const getStatusBadge = (status: string) => {
             return <Badge variant="secondary"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'Shipped':
             return <Badge><Truck className="mr-1 h-3 w-3"/>{status}</Badge>;
+        case 'New':
         case 'Pending':
             return <Badge variant="outline"><Clock className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'Responded':
-            return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><FileSignature className="mr-1 h-3 w-3"/>{status}</Badge>
+            return <Badge variant="secondary" className="bg-blue-100 text-blue-800"><FileSignature className="mr-1 h-3 w-3"/>{status}</Badge>;
         case 'Accepted':
-             return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>
+             return <Badge variant="secondary" className="bg-green-100 text-green-800"><CheckCircle className="mr-1 h-3 w-3"/>{status}</Badge>;
         default:
             return <Badge variant="outline">{status}</Badge>;
     }
@@ -174,3 +175,5 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+    

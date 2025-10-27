@@ -559,6 +559,26 @@
         "paidEarnings",
         "unpaidEarnings"
       ]
+    },
+    "Quotation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Quotation",
+      "type": "object",
+      "description": "Represents a Request for Quotation (RFQ) from a buyer to a seller.",
+      "properties": {
+        "id": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "buyerName": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "productId": { "type": "string" },
+        "productName": { "type": "string" },
+        "quantity": { "type": "number" },
+        "message": { "type": "string" },
+        "deliveryDate": { "type": "string", "format": "date" },
+        "status": { "type": "string", "enum": ["New", "Responded", "Accepted", "Archived"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [ "id", "buyerId", "sellerId", "productId", "productName", "quantity", "status", "createdAt" ]
     }
   },
   "auth": {
@@ -678,7 +698,19 @@
           },
           "description": "Aggregates earnings for each Growth Partner."
         }
+      },
+      {
+        "path": "/manufacturers/{manufacturerId}/quotations/{quotationId}",
+        "definition": {
+            "entityName": "Quotation",
+            "schema": {
+                "$ref": "#/backend/entities/Quotation"
+            },
+            "description": "Stores RFQs for each manufacturer."
+        }
       }
     ]
   }
 }
+
+    

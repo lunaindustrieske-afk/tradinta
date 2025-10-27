@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,13 +17,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import type { Product } from '@/lib/definitions';
-import { Calendar as CalendarIcon, Send } from 'lucide-react';
+import { Calendar as CalendarIcon, Send, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Calendar } from './ui/calendar';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from './logo';
+import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
+import { collection, serverTimestamp } from 'firebase/firestore';
 
 interface RequestQuoteModalProps {
   product: Product;
@@ -34,20 +37,62 @@ export function RequestQuoteModal({
   children,
 }: RequestQuoteModalProps) {
   const { toast } = useToast();
+  const { user } = useUser();
+  const firestore = useFirestore();
+
   const [date, setDate] = React.useState<Date | undefined>();
   const [open, setOpen] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    // Here you would typically handle form submission, e.g., send data to a server.
-    
-    toast({
-        title: "Quotation Request Sent!",
-        description: `Your request for ${product.name} has been sent successfully.`,
-    });
 
-    // Close the modal after submission
-    setOpen(false);
+    if (!user || !firestore) {
+        toast({
+            title: 'Please log in',
+            description: 'You must be logged in to request a quotation.',
+            variant: 'destructive',
+        });
+        return;
+    }
+    
+    setIsSubmitting(true);
+    const formData = new FormData(event.currentTarget);
+    const quantity = formData.get('quantity') as string;
+    const message = formData.get('message') as string;
+
+    try {
+        const quotationData = {
+            buyerId: user.uid,
+            buyerName: user.displayName || 'Anonymous Buyer',
+            sellerId: product.manufacturerId,
+            productId: product.id,
+            productName: product.name,
+            quantity: Number(quantity),
+            message: message,
+            deliveryDate: date ? format(date, 'yyyy-MM-dd') : null,
+            status: 'New',
+            createdAt: serverTimestamp(),
+        };
+
+        const quotationsRef = collection(firestore, 'manufacturers', product.manufacturerId, 'quotations');
+        await addDocumentNonBlocking(quotationsRef, quotationData);
+        
+        toast({
+            title: "Quotation Request Sent!",
+            description: `Your request for ${product.name} has been sent successfully.`,
+        });
+
+        setOpen(false); // Close the modal on success
+    } catch (error: any) {
+        toast({
+            title: 'Submission Failed',
+            description: error.message || 'An unexpected error occurred.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   return (
@@ -69,6 +114,7 @@ export function RequestQuoteModal({
               </Label>
               <Input
                 id="quantity"
+                name="quantity"
                 type="number"
                 placeholder="e.g., 500"
                 className="col-span-3"
@@ -108,6 +154,7 @@ export function RequestQuoteModal({
               </Label>
               <Textarea
                 id="message"
+                name="message"
                 placeholder="Include any specific requirements, questions, or customization needs here..."
                 className="col-span-3 min-h-24"
               />
@@ -117,8 +164,9 @@ export function RequestQuoteModal({
             <DialogClose asChild>
                 <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type="submit">
-                <Send className="mr-2 h-4 w-4" /> Submit Request
+            <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />} 
+                {isSubmitting ? 'Submitting...' : 'Submit Request'}
             </Button>
           </DialogFooter>
         </form>
@@ -126,3 +174,5 @@ export function RequestQuoteModal({
     </Dialog>
   );
 }
+
+    
