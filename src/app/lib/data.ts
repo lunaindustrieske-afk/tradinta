@@ -109,82 +109,66 @@ type ManufacturerInfo = {
 };
 
 /**
- * Fetches all published products from all non-suspended manufacturers.
- * This function avoids a collection group query by fetching manufacturers first.
+ * Fetches all products from all manufacturers for development purposes.
+ * This function avoids complex queries that require specific indexes.
  */
 export async function getAllProducts(): Promise<any[]> {
   try {
-    // 1. Fetch all manufacturers and create a map of their status.
+    // 1. Fetch all manufacturers and create a map.
     const manufCollection = db.collection('manufacturers');
     const manufSnapshot = await manufCollection.get();
     
     const manufMap = new Map<string, ManufacturerInfo>();
-    const nonSuspendedManufIds: string[] = [];
-
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
-      // Skip if the manufacturer is suspended
-      if (data.suspensionDetails?.isSuspended) {
-        return;
-      }
       manufMap.set(doc.id, { 
         slug: data.slug,
         shopId: data.shopId,
         isVerified: data.verificationStatus === 'Verified',
         suspensionDetails: data.suspensionDetails 
       });
-      nonSuspendedManufIds.push(doc.id);
     });
 
-    if (nonSuspendedManufIds.length === 0) {
+    if (manufMap.size === 0) {
+        console.log("No manufacturers found. Returning empty product list.");
         return [];
     }
 
-    // 2. Fetch products for each non-suspended manufacturer concurrently
-    const allProductsPromises = nonSuspendedManufIds.map(async (manufId) => {
-      const productsQuery = db.collection('manufacturers').doc(manufId).collection('products').where('status', '==', 'published');
-      const productSnapshot = await productsQuery.get();
+    // 2. Fetch all products using a collection group query without filters.
+    const productsSnapshot = await db.collectionGroup('products').get();
+    
+    console.log(`Found ${productsSnapshot.docs.length} total product documents.`);
+
+    const allProducts = productsSnapshot.docs.map(doc => {
+      const productData = doc.data() as Product;
+      const manufId = doc.ref.parent.parent?.id; // Get parent manufacturer ID
+      const manufInfo = manufId ? manufMap.get(manufId) : undefined;
       
-      const manufInfo = manufMap.get(manufId);
-      if (!manufInfo) return [];
-
-      return productSnapshot.docs.map(doc => {
-        const productData = doc.data();
-        // Sanitize Timestamps to ISO strings
-        const sanitizedData: { [key: string]: any } = {};
-        for (const key in productData) {
-          const value = productData[key];
-          if (value && typeof value.toDate === 'function') {
-            sanitizedData[key] = value.toDate().toISOString();
-          } else {
-            sanitizedData[key] = value;
-          }
+      // Sanitize Timestamps to ISO strings
+      const sanitizedData: { [key: string]: any } = {};
+      for (const key in productData) {
+        const value = productData[key];
+        if (value && typeof value.toDate === 'function') {
+          sanitizedData[key] = value.toDate().toISOString();
+        } else {
+          sanitizedData[key] = value;
         }
-        return {
-          ...sanitizedData,
-          id: doc.id,
-          manufacturerSlug: manufInfo.slug, 
-          shopId: manufInfo.shopId,
-          isVerified: manufInfo.isVerified,
-        };
-      });
+      }
+
+      return {
+        ...sanitizedData,
+        id: doc.id,
+        manufacturerId: manufId, // Make sure manufacturerId is present
+        manufacturerSlug: manufInfo?.slug,
+        shopId: manufInfo?.shopId,
+        isVerified: manufInfo?.isVerified,
+      };
     });
 
-    const productsByManufacturer = await Promise.all(allProductsPromises);
-    const combinedProducts = productsByManufacturer.flat();
-
-    // 3. Sort products in application code by creation date
-    combinedProducts.sort((a, b) => {
-        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return dateB - dateA; // Sort descending (newest first)
-    });
-
-    return combinedProducts;
+    return allProducts;
 
   } catch (error) {
-    console.error("Error fetching all products:", error);
-    // Return empty array on error to prevent page crashes
+    console.error("Error fetching all products (dev mode):", error);
     return [];
   }
 }
