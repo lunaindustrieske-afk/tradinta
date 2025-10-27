@@ -301,7 +301,7 @@ export default function MessagesPage() {
                                     {msg.from === 'contact' && (
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={`https://picsum.photos/seed/${selectedConversation.contactName}/32/32`} />
-                                            <AvatarFallback>{selectedConversation.contactName.charAt(0)}</AvatarFallback>
+                                            <AvatarFallback>{selectedConversation.contactName?.charAt(0) || '?'}</AvatarFallback>
                                         </Avatar>
                                     )}
                                     <div className={`max-w-md p-2 rounded-lg ${msg.from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>

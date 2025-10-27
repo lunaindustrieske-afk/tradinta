@@ -350,7 +350,7 @@ export default function SellerMessagesPage() {
                             src={`https://picsum.photos/seed/${selectedConversation.contactName}/32/32`}
                             />
                             <AvatarFallback>
-                            {selectedConversation.contactName.charAt(0)}
+                            {selectedConversation.contactName?.charAt(0) || '?'}
                             </AvatarFallback>
                         </Avatar>
                         )}
