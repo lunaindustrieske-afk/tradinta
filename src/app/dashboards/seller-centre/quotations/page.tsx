@@ -1,7 +1,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   Card,
   CardHeader,
@@ -229,5 +229,3 @@ export default function SellerQuotationsPage() {
     </div>
   );
 }
-
-    
