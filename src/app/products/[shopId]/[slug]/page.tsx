@@ -67,6 +67,7 @@ type ProductWithVariants = Product & {
     dimensions?: string;
     material?: string;
     packagingDetails?: string;
+    certifications?: string;
     sku?: string;
 };
 
@@ -534,5 +535,3 @@ export default function ProductDetailPage() {
     </div>
   );
 }
-
-    
