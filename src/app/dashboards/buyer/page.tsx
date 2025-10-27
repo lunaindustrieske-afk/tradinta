@@ -114,6 +114,22 @@ const ProfileCard = () => {
 
 
 export default function BuyerDashboard() {
+    const { user } = useUser();
+    const { toast } = useToast();
+    const [copied, setCopied] = React.useState(false);
+
+    const referralLink = React.useMemo(() => {
+        if (typeof window === 'undefined' || !user) return '';
+        return `${window.location.origin}/signup?ref=${user.uid}`;
+    }, [user]);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(referralLink);
+        setCopied(true);
+        toast({ title: 'Copied to clipboard!' });
+        setTimeout(() => setCopied(false), 2000);
+    };
+
     return (
         <div className="space-y-6">
             <Card>
@@ -221,8 +237,10 @@ export default function BuyerDashboard() {
                             <div className="bg-background/50 rounded-lg p-4 mb-4">
                                 <label htmlFor="referral-link" className="text-sm font-medium">Your Unique Referral Link</label>
                                 <div className="flex items-center gap-2 mt-1">
-                                    <input id="referral-link" type="text" value="https://tradinta.com/ref/johndoe123" readOnly className="flex-grow bg-muted border border-border rounded-md px-3 py-1.5 text-sm" />
-                                    <Button size="sm" variant="outline">Copy</Button>
+                                    <input id="referral-link" type="text" value={referralLink} readOnly className="flex-grow bg-muted border border-border rounded-md px-3 py-1.5 text-sm" />
+                                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleCopy}>
+                                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                    </Button>
                                 </div>
                             </div>
                             <p className="text-sm text-muted-foreground">Share your link via WhatsApp, Email, or Social Media to earn 50 points for every verified signup!</p>
