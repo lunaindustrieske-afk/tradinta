@@ -8,46 +8,32 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-  CardFooter,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  Send,
   FileText,
   Search,
   MessageSquare,
   Loader2,
   Archive,
   Edit,
-  Download,
-  Paperclip,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
-  useUser,
-  useFirestore,
-  useCollection,
-  useMemoFirebase,
-  setDocumentNonBlocking,
-} from '@/firebase';
-import { collection, query, orderBy, addDoc, serverTimestamp, doc } from 'firebase/firestore';
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import Image from 'next/image';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import { PhotoUpload } from '@/components/ui/photo-upload';
-
-type Message = {
-  id: string;
-  from: 'user' | 'contact';
-  text?: string;
-  imageUrl?: string;
-  timestamp?: any;
-};
+import { ChatInterface } from '@/components/chat-interface';
 
 type Conversation = {
   id: string;
@@ -79,28 +65,9 @@ const ConversationListSkeleton = () => (
     </div>
 );
 
-const MessageViewSkeleton = () => (
-    <div className="p-6 space-y-4">
-        <div className="flex justify-end gap-2">
-            <Skeleton className="h-12 w-48 rounded-lg" />
-            <Skeleton className="h-8 w-8 rounded-full" />
-        </div>
-        <div className="flex justify-start gap-2">
-             <Skeleton className="h-8 w-8 rounded-full" />
-            <Skeleton className="h-16 w-64 rounded-lg" />
-        </div>
-    </div>
-);
-
 export default function MessagesPage() {
     const { user } = useUser();
     const firestore = useFirestore();
-    const { toast } = useToast();
-
-    const [message, setMessage] = useState('');
-    const [imageUrl, setImageUrl] = useState<string | null>(null);
-    const [isSending, setIsSending] = useState(false);
-    const [isUploading, setIsUploading] = useState(false);
 
     const conversationsQuery = useMemoFirebase(() => {
         if (!user) return null;
@@ -134,18 +101,7 @@ export default function MessagesPage() {
         setSelectedConversationId(conversations[0].id);
         }
     }, [conversations, selectedConversationId]);
-
-    const messagesQuery = useMemoFirebase(() => {
-        if (!user || !selectedConversationId) return null;
-        return query(
-        collection(firestore, 'users', user.uid, 'conversations', selectedConversationId, 'messages'),
-        orderBy('timestamp', 'asc')
-        );
-    }, [user, selectedConversationId, firestore]);
     
-    const { data: messages, isLoading: isLoadingMessages } = useCollection<Message>(messagesQuery);
-
-
     const getRoleBadgeVariant = (role: string) => {
         switch (role) {
             case 'Seller': return 'secondary';
@@ -153,55 +109,6 @@ export default function MessagesPage() {
             default: return 'default';
         }
     }
-    
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if ((!message.trim() && !imageUrl) || !user || !firestore || !selectedConversationId || !selectedConversation) {
-            return;
-        }
-        setIsSending(true);
-
-        const messageData = {
-            from: 'user', // 'user' from the buyer's perspective
-            text: message,
-            imageUrl: imageUrl,
-            timestamp: serverTimestamp(),
-        };
-        
-        try {
-            // Add to buyer's messages subcollection
-            await addDoc(collection(firestore, 'users', user.uid, 'conversations', selectedConversationId, 'messages'), messageData);
-            // Add to seller's messages subcollection
-            await addDoc(collection(firestore, 'manufacturers', selectedConversation.contactId, 'conversations', selectedConversationId, 'messages'), {
-                ...messageData,
-                from: 'contact' // 'contact' from the seller's perspective
-            });
-
-            // Update conversation doc for both users
-            const newTimestamp = serverTimestamp();
-            const buyerConvoRef = doc(firestore, 'users', user.uid, 'conversations', selectedConversationId);
-            setDocumentNonBlocking(buyerConvoRef, {
-                lastMessage: message || 'Image sent',
-                lastMessageTimestamp: newTimestamp,
-                isUnread: false
-            }, { merge: true });
-
-            const sellerConvoRef = doc(firestore, 'manufacturers', selectedConversation.contactId, 'conversations', selectedConversationId);
-             setDocumentNonBlocking(sellerConvoRef, {
-                lastMessage: message || 'Image sent',
-                lastMessageTimestamp: newTimestamp,
-                isUnread: true
-            }, { merge: true });
-            
-            setMessage('');
-            setImageUrl(null);
-            toast({ title: "Message Sent" });
-        } catch(error: any) {
-            toast({ title: "Error Sending Message", description: error.message, variant: "destructive" });
-        } finally {
-            setIsSending(false);
-        }
-    };
 
     return (
         <div className="space-y-6">
@@ -294,79 +201,17 @@ export default function MessagesPage() {
                                     </Link>
                                 </Button>
                             </CardHeader>
-                            <ScrollArea className="flex-grow p-6 space-y-4">
-                                {isLoadingMessages ? <MessageViewSkeleton /> 
-                                : messages && messages.length > 0 ? messages.map((msg) => (
-                                <div key={msg.id} className={`flex items-end gap-2 ${msg.from === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    {msg.from === 'contact' && (
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src={`https://picsum.photos/seed/${selectedConversation.contactName}/32/32`} />
-                                            <AvatarFallback>{selectedConversation.contactName?.charAt(0) || '?'}</AvatarFallback>
-                                        </Avatar>
-                                    )}
-                                    <div className={`max-w-md p-2 rounded-lg ${msg.from === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                        {msg.imageUrl && (
-                                          <div className="relative group w-48 h-48 mb-2">
-                                            <Image src={msg.imageUrl} alt="Uploaded content" layout="fill" className="object-cover rounded-md" />
-                                            {msg.from === 'contact' && (
-                                              <a href={msg.imageUrl} download target="_blank" rel="noopener noreferrer" className="absolute bottom-1 right-1 bg-black/50 p-1 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Download className="h-4 w-4" />
-                                              </a>
-                                            )}
-                                          </div>
-                                        )}
-                                        {msg.text && <p className="text-sm px-1">{msg.text}</p>}
-                                    </div>
-                                    {msg.from === 'user' && (
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src="https://picsum.photos/seed/buyer-avatar/32/32" />
-                                            <AvatarFallback>You</AvatarFallback>
-                                        </Avatar>
-                                    )}
-                                </div>
-                                )) : (
-                                    <div className="text-center p-8 text-sm text-muted-foreground">
-                                        No messages in this conversation yet.
-                                    </div>
+                            <CardContent className="flex-grow flex flex-col p-4">
+                                {user && (
+                                     <ChatInterface
+                                        conversationId={selectedConversation.id}
+                                        currentUser={{ uid: user.uid, displayName: user.displayName || "You", photoURL: user.photoURL }}
+                                        contact={{ id: selectedConversation.contactId, name: selectedConversation.contactName }}
+                                        userCollectionPath="users"
+                                        contactCollectionPath="manufacturers"
+                                    />
                                 )}
-                            </ScrollArea>
-                            <CardFooter className="border-t p-4 bg-muted/50">
-                                <form onSubmit={handleSendMessage} className="w-full space-y-2">
-                                    {imageUrl && (
-                                        <div className="relative w-24 h-24 p-2 border rounded-md bg-background">
-                                            <Image src={imageUrl} alt="preview" fill className="object-cover rounded-sm" />
-                                            <Button variant="ghost" size="icon" className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-destructive text-destructive-foreground" onClick={() => setImageUrl(null)}>
-                                                <span className="sr-only">Remove Image</span>
-                                                &times;
-                                            </Button>
-                                        </div>
-                                    )}
-                                    <div className="flex w-full items-center gap-2">
-                                        <Textarea
-                                            placeholder="Type your message..."
-                                            className="bg-background"
-                                            value={message}
-                                            onChange={(e) => setMessage(e.target.value)}
-                                            onKeyDown={(e) => {
-                                                if (e.key === 'Enter' && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSendMessage(e);
-                                                }
-                                            }}
-                                        />
-                                        <div className="flex flex-col gap-2">
-                                            <PhotoUpload onUpload={setImageUrl} onLoadingChange={setIsUploading}>
-                                                <Button type="button" variant="ghost" size="icon" disabled={isSending || isUploading}>
-                                                    {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-                                                </Button>
-                                            </PhotoUpload>
-                                            <Button type="submit" size="icon" disabled={isSending || isUploading || (!message.trim() && !imageUrl)}>
-                                                {isSending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4" />}
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </form>
-                            </CardFooter>
+                            </CardContent>
                             </>
                         )}
                    </Card>
@@ -375,3 +220,5 @@ export default function MessagesPage() {
         </div>
     )
 }
+
+    
