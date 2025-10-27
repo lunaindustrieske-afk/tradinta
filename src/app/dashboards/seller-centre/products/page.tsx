@@ -30,6 +30,8 @@ import {
   Edit,
   Trash2,
   AlertTriangle,
+  Pencil,
+  Save,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -77,6 +79,51 @@ type PlatformSettings = {
     allowUnverifiedUploads?: boolean;
 }
 
+const StockEditor = ({ productId, currentStock, onSave }: { productId: string, currentStock: number, onSave: () => void }) => {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [newStock, setNewStock] = React.useState(currentStock);
+    const [isSaving, setIsSaving] = React.useState(false);
+
+    const handleSave = async () => {
+        if (!user || !firestore) return;
+        if (isNaN(newStock) || newStock < 0) {
+            toast({ title: "Invalid stock value", variant: "destructive" });
+            return;
+        }
+
+        setIsSaving(true);
+        const productRef = doc(firestore, 'manufacturers', user.uid, 'products', productId);
+        
+        try {
+            await updateDocumentNonBlocking(productRef, { stock: Number(newStock) });
+            toast({ title: "Stock Updated" });
+            onSave();
+        } catch (error: any) {
+            toast({ title: "Error updating stock", description: error.message, variant: "destructive" });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <Input 
+                type="number" 
+                value={newStock}
+                onChange={(e) => setNewStock(Number(e.target.value))}
+                className="h-8 w-20"
+                autoFocus
+            />
+            <Button size="icon" className="h-8 w-8" onClick={handleSave} disabled={isSaving}>
+                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            </Button>
+        </div>
+    );
+};
+
+
 export default function SellerProductsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -85,6 +132,7 @@ export default function SellerProductsPage() {
   const [activeTab, setActiveTab] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock' | 'outOfStock'>('all');
+  const [editingStock, setEditingStock] = React.useState<string | null>(null);
 
   // --- Data Fetching ---
   const manufacturerDocRef = useMemoFirebase(() => {
@@ -257,7 +305,19 @@ export default function SellerProductsPage() {
             {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
           </Badge>
         </TableCell>
-        <TableCell className="hidden md:table-cell">{product.stock > 0 ? product.stock : <Badge variant="destructive">Out of Stock</Badge>}</TableCell>
+        <TableCell className="hidden md:table-cell">
+          {editingStock === product.id ? (
+            <StockEditor 
+              productId={product.id} 
+              currentStock={product.stock}
+              onSave={() => setEditingStock(null)}
+            />
+          ) : product.stock > 0 ? (
+            product.stock
+          ) : (
+            <Badge variant="destructive">Out of Stock</Badge>
+          )}
+        </TableCell>
         <TableCell className="hidden md:table-cell">
           KES {product.price?.toLocaleString() || '0'}
         </TableCell>
@@ -271,6 +331,9 @@ export default function SellerProductsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem onClick={() => setEditingStock(product.id)}>
+                <Pencil className="mr-2 h-4 w-4" /> Quick Edit Stock
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`}>
                   <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
@@ -278,7 +341,7 @@ export default function SellerProductsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href={`/dashboards/seller-centre/products/edit/${product.id}`}>
-                  <Edit className="mr-2 h-4 w-4" /> Edit
+                  <Edit className="mr-2 h-4 w-4" /> Full Edit
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
