@@ -36,56 +36,53 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, getDocs, collectionGroup, doc } from 'firebase/firestore';
-import { type Manufacturer, type Review } from '@/app/lib/definitions';
+import { collection, query, where, limit, getDocs, doc } from 'firebase/firestore';
+import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { products as mockProducts } from '@/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 
-type Product = {
-  id: string;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  stock: number;
-  category: string;
-  imageUrl: string;
-  bannerUrl?: string; // Main image for the product page
-  otherImageUrls?: string[];
-  imageHint: string;
-  rating: number;
-  reviewCount: number;
-  manufacturerId: string;
-  sku?: string;
-  moq?: number;
-  weight?: string;
-  dimensions?: string;
-  material?: string;
-  certifications?: string;
-  packagingDetails?: string;
+type ProductWithVariants = Product & {
+    variants: { price: number }[];
 };
+
 
 const relatedProducts = mockProducts.slice(1, 5); // This should be replaced with real data logic
 
 export default function ProductDetailPage() {
     const params = useParams();
+    const shopId = params.shopId as string;
     const slug = params.slug as string;
     const firestore = useFirestore();
 
-    const [product, setProduct] = React.useState<Product | null>(null);
+    const [product, setProduct] = React.useState<ProductWithVariants | null>(null);
     const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            if (!firestore || !slug) return;
+            if (!firestore || !shopId || !slug) return;
             setIsLoading(true);
 
-            // 1. Find the product directly using a collectionGroup query on the unique slug.
+            // 1. Fetch Manufacturer by shopId
+            const manufQuery = query(collection(firestore, 'manufacturers'), where('shopId', '==', shopId), limit(1));
+            const manufSnapshot = await getDocs(manufQuery);
+
+            if (manufSnapshot.empty) {
+                setManufacturer(null);
+                setProduct(null);
+                setIsLoading(false);
+                return;
+            }
+            
+            const manufacturerDoc = manufSnapshot.docs[0];
+            const manufacturerData = { ...manufacturerDoc.data(), id: manufacturerDoc.id } as Manufacturer;
+            setManufacturer(manufacturerData);
+
+            // 2. Fetch Product from the manufacturer's subcollection using slug
             const productQuery = query(
-                collectionGroup(firestore, 'products'),
+                collection(firestore, 'manufacturers', manufacturerData.id, 'products'),
                 where('slug', '==', slug),
                 limit(1)
             );
@@ -93,32 +90,16 @@ export default function ProductDetailPage() {
 
             if (productSnapshot.empty) {
                 setProduct(null);
-                setManufacturer(null);
-                setIsLoading(false);
-                return;
-            }
-
-            const productDoc = productSnapshot.docs[0];
-            const productData = { ...productDoc.data(), id: productDoc.id } as Product;
-            setProduct(productData);
-
-            // 2. Once product is found, fetch its manufacturer using the manufacturerId.
-            if (productData.manufacturerId) {
-                const manufRef = doc(firestore, 'manufacturers', productData.manufacturerId);
-                const manufSnapshot = await getDocs(query(collection(firestore, 'manufacturers'), where('__name__', '==', productData.manufacturerId)));
-                if (!manufSnapshot.empty) {
-                    const manufacturerDoc = manufSnapshot.docs[0];
-                     setManufacturer({ ...manufacturerDoc.data(), id: manufacturerDoc.id } as Manufacturer);
-                } else {
-                    setManufacturer(null); // Manufacturer not found
-                }
+            } else {
+                const productDoc = productSnapshot.docs[0];
+                setProduct({ ...productDoc.data(), id: productDoc.id } as ProductWithVariants);
             }
             
             setIsLoading(false);
         };
 
         fetchData();
-    }, [firestore, slug]);
+    }, [firestore, shopId, slug]);
     
     const [mainImage, setMainImage] = React.useState<string | undefined>(product?.bannerUrl || product?.imageUrl);
 
@@ -130,8 +111,10 @@ export default function ProductDetailPage() {
 
     const reviewsQuery = useMemoFirebase(() => {
         if (!firestore || !product) return null;
+        // Correctly query the top-level 'reviews' collection
         return query(
-            collection(firestore, 'manufacturers', product.manufacturerId, 'products', product.id, 'reviews'),
+            collection(firestore, 'reviews'),
+            where('productId', '==', product.id),
             where('status', '==', 'approved')
         );
     }, [firestore, product]);
@@ -166,6 +149,8 @@ export default function ProductDetailPage() {
     if (!product || !manufacturer) {
         return notFound();
     }
+  
+  const price = product.variants?.[0]?.price;
 
   const images = [
     product.bannerUrl,
@@ -276,7 +261,9 @@ export default function ProductDetailPage() {
         <div className="lg:col-span-1">
             <Card className="p-6">
                 <p className="text-sm text-muted-foreground">Price starts from</p>
-                <p className="text-3xl font-bold mb-4">KES {product.price.toLocaleString()}</p>
+                 <p className="text-3xl font-bold mb-4">
+                    {price !== undefined && price !== null ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
+                </p>
                 
                 <div className="space-y-3">
                     <RequestQuoteModal product={product}>
