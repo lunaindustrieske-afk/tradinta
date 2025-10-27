@@ -53,6 +53,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { ContactManufacturerModal } from '@/components/contact-manufacturer-modal';
 
 type ProductWithVariants = Product & {
     variants: { price: number }[];
@@ -308,12 +309,12 @@ export default function ProductDetailPage() {
                     <RequestQuoteModal product={product}>
                         <Button size="lg" className="w-full">Request Quotation</Button>
                     </RequestQuoteModal>
-                    <Button asChild size="lg" variant="outline" className="w-full">
-                        <Link href={`/dashboards/buyer/messages?productId=${product.id}&manufacturerId=${manufacturer.id}`}>
+                    <ContactManufacturerModal product={product} manufacturer={manufacturer}>
+                        <Button size="lg" variant="outline" className="w-full">
                             <MessageSquare className="mr-2 h-5 w-5"/>
                             Contact Manufacturer
-                        </Link>
-                    </Button>
+                        </Button>
+                    </ContactManufacturerModal>
                 </div>
 
                 <div className="flex items-center justify-center gap-4 mt-4 text-sm">
