@@ -109,47 +109,33 @@ type ManufacturerInfo = {
 };
 
 /**
- * Fetches all published products and their manufacturer's shopId.
- * This function runs on the server and uses the Admin SDK.
+ * Fetches all published products from all non-suspended manufacturers.
+ * This function avoids collection group queries to prevent index-related issues.
  */
 export async function getAllProducts(): Promise<any[]> {
   try {
-    // Fetch all manufacturers and create a map of their relevant info
+    // 1. Fetch all manufacturers who are not suspended
     const manufCollection = db.collection('manufacturers');
     const manufSnapshot = await manufCollection.get();
-    const manufMap = new Map<string, ManufacturerInfo>();
-
+    
+    const activeManufacturers: (Manufacturer & { id: string })[] = [];
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
-      // Only include manufacturers who are not suspended
-      if (data.slug && data.shopId && !data.suspensionDetails?.isSuspended) {
-        manufMap.set(doc.id, { 
-          slug: data.slug,
-          shopId: data.shopId,
-          isVerified: data.verificationStatus === 'Verified',
-          suspensionDetails: data.suspensionDetails,
-        });
+      if (!data.suspensionDetails?.isSuspended) {
+        activeManufacturers.push({ id: doc.id, ...data });
       }
     });
 
-    // Query for all published products
-    const productsQuery = db.collectionGroup('products')
-      .where('status', '==', 'published');
-      // We can't orderBy createdAt here because it would require a composite index with manufacturerId,
-      // which we don't have since it's a collectionGroup query. We will sort in the application code.
+    // 2. For each manufacturer, fetch their published products
+    const productPromises = activeManufacturers.map(async (manuf) => {
+      if (!manuf.id) return []; // Skip if manufacturer has no ID
       
-    const productSnapshot = await productsQuery.get();
-    
-    const productsData = productSnapshot.docs
-      .map(doc => {
+      const productsQuery = db.collection('manufacturers').doc(manuf.id).collection('products').where('status', '==', 'published');
+      const productSnapshot = await productsQuery.get();
+
+      return productSnapshot.docs.map(doc => {
         const productData = doc.data();
-        const manufInfo = manufMap.get(productData.manufacturerId);
-
-        // If the manufacturer is not in our map (e.g., they are suspended or have no slug/shopId), filter out this product
-        if (!manufInfo) {
-          return null;
-        }
-
+        
         // Sanitize Firestore Timestamps to strings for client component compatibility
         const sanitizedData: { [key: string]: any } = {};
         for (const key in productData) {
@@ -164,21 +150,25 @@ export async function getAllProducts(): Promise<any[]> {
         return {
           ...sanitizedData,
           id: doc.id,
-          slug: manufInfo.slug,
-          shopId: manufInfo.shopId,
-          isVerified: manufInfo.isVerified,
+          slug: manuf.slug,
+          shopId: manuf.shopId,
+          isVerified: manuf.verificationStatus === 'Verified',
         };
-      })
-      .filter(Boolean); // This removes any null entries from the map step
+      });
+    });
 
-    // Sort by creation date descending in code
-    productsData.sort((a, b) => {
+    // 3. Wait for all product fetches to complete and flatten the array
+    const allProductsNested = await Promise.all(productPromises);
+    const allProducts = allProductsNested.flat();
+
+    // 4. Sort the combined list of products by date in application code
+    allProducts.sort((a, b) => {
         const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
         const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
         return dateB.getTime() - dateA.getTime();
     });
 
-    return productsData;
+    return allProducts;
   } catch (error) {
     console.error("Error fetching all products:", error);
     return [];
