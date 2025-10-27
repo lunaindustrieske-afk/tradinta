@@ -100,53 +100,91 @@ export async function getBlogPostBySlug(slug: string): Promise<BlogPost | null> 
 }
 
 type ProductWithShopId = Product & { shopId: string; slug: string; };
+
+type ManufacturerInfo = {
+  slug: string;
+  shopId: string;
+  isVerified: boolean;
+  suspensionDetails?: { isSuspended?: boolean };
+};
+
 /**
- * Fetches all published products and their manufacturer's shopId.
- * This function runs on the server and uses the Admin SDK.
+ * Fetches all published products from all non-suspended manufacturers.
+ * This function avoids a collection group query by fetching manufacturers first.
  */
 export async function getAllProducts(): Promise<any[]> {
   try {
+    // 1. Fetch all manufacturers and create a map of their status.
     const manufCollection = db.collection('manufacturers');
     const manufSnapshot = await manufCollection.get();
-    const manufMap = new Map<string, { slug: string }>();
+    
+    const manufMap = new Map<string, ManufacturerInfo>();
+    const nonSuspendedManufIds: string[] = [];
+
     manufSnapshot.forEach(doc => {
       const data = doc.data() as Manufacturer;
-      if (data.slug) {
-        manufMap.set(doc.id, { slug: data.slug });
+      // Skip if the manufacturer is suspended
+      if (data.suspensionDetails?.isSuspended) {
+        return;
       }
+      manufMap.set(doc.id, { 
+        slug: data.slug,
+        shopId: data.shopId,
+        isVerified: data.verificationStatus === 'Verified',
+        suspensionDetails: data.suspensionDetails 
+      });
+      nonSuspendedManufIds.push(doc.id);
     });
 
-    const productsQuery = db.collectionGroup('products')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc');
-    const productSnapshot = await productsQuery.get();
-    
-    const productsData = productSnapshot.docs.map(doc => {
-      const productData = doc.data();
+    if (nonSuspendedManufIds.length === 0) {
+        return [];
+    }
+
+    // 2. Fetch products for each non-suspended manufacturer concurrently
+    const allProductsPromises = nonSuspendedManufIds.map(async (manufId) => {
+      const productsQuery = db.collection('manufacturers').doc(manufId).collection('products').where('status', '==', 'published');
+      const productSnapshot = await productsQuery.get();
       
-      const sanitizedData: { [key: string]: any } = {};
-      for (const key in productData) {
-        const value = productData[key];
-        if (value && typeof value.toDate === 'function') {
-          sanitizedData[key] = value.toDate().toISOString();
-        } else {
-          sanitizedData[key] = value;
+      const manufInfo = manufMap.get(manufId);
+      if (!manufInfo) return [];
+
+      return productSnapshot.docs.map(doc => {
+        const productData = doc.data();
+        // Sanitize Timestamps to ISO strings
+        const sanitizedData: { [key: string]: any } = {};
+        for (const key in productData) {
+          const value = productData[key];
+          if (value && typeof value.toDate === 'function') {
+            sanitizedData[key] = value.toDate().toISOString();
+          } else {
+            sanitizedData[key] = value;
+          }
         }
-      }
+        return {
+          ...sanitizedData,
+          id: doc.id,
+          manufacturerSlug: manufInfo.slug, 
+          shopId: manufInfo.shopId,
+          isVerified: manufInfo.isVerified,
+        };
+      });
+    });
 
-      const manufInfo = manufMap.get(sanitizedData.manufacturerId);
-      return {
-        ...sanitizedData,
-        id: doc.id,
-        slug: manufInfo?.slug || '',
-      };
-    }).filter(p => p.slug); 
+    const productsByManufacturer = await Promise.all(allProductsPromises);
+    const combinedProducts = productsByManufacturer.flat();
 
-    return productsData;
+    // 3. Sort products in application code by creation date
+    combinedProducts.sort((a, b) => {
+        const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return dateB - dateA; // Sort descending (newest first)
+    });
+
+    return combinedProducts;
+
   } catch (error) {
     console.error("Error fetching all products:", error);
+    // Return empty array on error to prevent page crashes
     return [];
   }
 }
-
-    
