@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -23,7 +22,7 @@ import { sendNewInquiryEmail } from '@/app/(auth)/actions';
 import { Alert, AlertDescription } from './ui/alert';
 import { PhotoUpload } from './ui/photo-upload';
 import Image from 'next/image';
-import { collection, query, where, orderBy, addDoc, serverTimestamp, getDocs, limit } from 'firebase/firestore';
+import { collection, query, where, orderBy, addDoc, serverTimestamp, getDocs, limit, setDoc } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 
@@ -108,35 +107,40 @@ export function ContactManufacturerModal({
 
     try {
         let currentConversationId = conversationId;
+        const timestamp = serverTimestamp();
 
         // If no conversation exists, create one for both buyer and seller
         if (!currentConversationId) {
+            const newConversationRef = doc(collection(firestore, 'users', user.uid, 'conversations'));
+            currentConversationId = newConversationRef.id;
+
             const newConversationData = {
+                id: currentConversationId,
                 title: product.name,
                 contactName: manufacturer.shopName || manufacturer.name,
                 contactId: manufacturer.id,
                 productId: product.id,
                 contactRole: 'Seller',
                 lastMessage: message || 'Image sent',
-                lastMessageTimestamp: serverTimestamp(),
+                lastMessageTimestamp: timestamp,
                 isUnread: true,
             };
-
-            const buyerConvoRef = await addDoc(collection(firestore, 'users', user.uid, 'conversations'), newConversationData);
-            currentConversationId = buyerConvoRef.id;
-            setConversationId(currentConversationId); // Update state for message sending
-
+            
+            await setDoc(newConversationRef, newConversationData);
+            
+            const sellerConvoRef = doc(firestore, 'manufacturers', manufacturer.id, 'conversations', currentConversationId);
             const sellerConvoData = {
                 ...newConversationData,
                 contactName: user.displayName || 'A Tradinta Buyer',
                 contactId: user.uid,
                 contactRole: 'Buyer',
             };
-            await addDoc(collection(firestore, 'manufacturers', manufacturer.id, 'conversations'), sellerConvoData);
+            await setDoc(sellerConvoRef, sellerConvoData);
+
+            setConversationId(currentConversationId); // Update state for message sending
             
-            // Only send email for the very first message of a new conversation
             if (manufacturer.email) {
-                const result = await sendNewInquiryEmail({
+                await sendNewInquiryEmail({
                     buyerName: user.displayName || 'A Tradinta Buyer',
                     buyerEmail: user.email || '',
                     manufacturerEmail: manufacturer.email,
@@ -145,29 +149,30 @@ export function ContactManufacturerModal({
                     productImageUrl: imageUrl || product.imageUrl,
                     message: message,
                 });
-
-                if (!result.success) {
-                    console.error("Failed to send inquiry email:", result.message);
-                }
-            } else {
-                 console.warn(`Manufacturer ${manufacturer.id} has no email. Message sent to dashboard only.`);
             }
         }
         
-        // Add the new message to the messages subcollection
         if (currentConversationId) {
             const messageData = {
                 from: 'user',
                 text: message,
                 imageUrl: imageUrl,
-                timestamp: serverTimestamp(),
+                timestamp: timestamp,
             };
+            // Add to buyer's messages
             await addDoc(collection(firestore, 'users', user.uid, 'conversations', currentConversationId, 'messages'), messageData);
             // Also add to seller's messages
             await addDoc(collection(firestore, 'manufacturers', manufacturer.id, 'conversations', currentConversationId, 'messages'), {
                 ...messageData,
                 from: 'contact'
             });
+
+             // Update conversation doc for both users
+            const buyerConvoRef = doc(firestore, 'users', user.uid, 'conversations', currentConversationId);
+            setDoc(buyerConvoRef, { lastMessage: message || 'Image sent', lastMessageTimestamp: timestamp, isUnread: false }, { merge: true });
+
+            const sellerConvoRef = doc(firestore, 'manufacturers', manufacturer.id, 'conversations', currentConversationId);
+            setDoc(sellerConvoRef, { lastMessage: message || 'Image sent', lastMessageTimestamp: timestamp, isUnread: true }, { merge: true });
         }
         
         setMessage('');
@@ -178,6 +183,7 @@ export function ContactManufacturerModal({
         });
 
     } catch (error: any) {
+      console.error(error);
       toast({
         title: 'Failed to Send Message',
         description: error.message || 'An unknown error occurred.',
@@ -186,10 +192,6 @@ export function ContactManufacturerModal({
     } finally {
       setIsSending(false);
     }
-  };
-
-  const handleImageUpload = (url: string) => {
-    setImageUrl(url);
   };
 
   return (
@@ -261,7 +263,7 @@ export function ContactManufacturerModal({
                 <div className="flex gap-2">
                     <PhotoUpload
                         label=""
-                        onUpload={handleImageUpload}
+                        onUpload={setImageUrl}
                         onLoadingChange={setIsUploading}
                         disabled={isSending || isUploading}
                     >
@@ -301,5 +303,3 @@ export function ContactManufacturerModal({
     </Dialog>
   );
 }
-
-    
