@@ -47,6 +47,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from '@/components/ui/breadcrumb';
 
 type UserProfile = {
   id: string;
@@ -305,9 +306,17 @@ export default function UserManagementPage() {
 
     return (
         <div className="space-y-6">
+            <Breadcrumb>
+                <BreadcrumbList>
+                    <BreadcrumbItem>
+                        <BreadcrumbPage>User Management</BreadcrumbPage>
+                    </BreadcrumbItem>
+                </BreadcrumbList>
+            </Breadcrumb>
+            
             <Card>
                 <CardHeader>
-                <CardTitle>User Management</CardTitle>
+                <CardTitle>User Management Dashboard</CardTitle>
                 <CardDescription>
                     Oversee all users, manage roles, and control access across the
                     platform.

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -49,6 +50,7 @@ import { logActivity } from '@/lib/activity-log';
 import { Combobox } from '@/components/ui/combobox';
 import { RestrictPermissionsModal } from '@/components/restrict-permissions-modal';
 import { ROLES } from '@/lib/roles';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 
 
 type UserProfile = {
@@ -263,6 +265,19 @@ export default function UserDetailPage() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/dashboards/user-management">User Management</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>User Profile</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" className="h-7 w-7" asChild>
           <Link href="/dashboards/user-management">
