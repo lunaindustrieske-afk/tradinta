@@ -45,6 +45,14 @@ import { formatDistanceToNow } from 'date-fns';
 
 type ProductWithVariants = Product & {
     variants: { price: number }[];
+    otherImageUrls?: string[];
+    bannerUrl?: string;
+    moq?: number;
+    weight?: string;
+    dimensions?: string;
+    material?: string;
+    packagingDetails?: string;
+    sku?: string;
 };
 
 
@@ -147,7 +155,15 @@ export default function ProductDetailPage() {
     }
 
     if (!product || !manufacturer) {
-        return notFound();
+        return (
+            <div className="container mx-auto py-12 text-center">
+                <h1 className="text-2xl font-bold">Product Not Found</h1>
+                <p className="text-muted-foreground mt-2">The product you are looking for does not exist or may have been moved.</p>
+                <Button asChild className="mt-4">
+                    <Link href="/products">Back to Products</Link>
+                </Button>
+            </div>
+        );
     }
   
   const price = product.variants?.[0]?.price;
