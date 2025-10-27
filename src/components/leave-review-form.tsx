@@ -53,6 +53,7 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
       await addDocumentNonBlocking(collection(firestore, 'reviews'), {
         id: nanoid(),
         productId: product.id,
+        productName: product.name,
         manufacturerId: product.manufacturerId,
         buyerId: user.uid,
         buyerName: user.displayName || 'Anonymous',
@@ -60,12 +61,12 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
         rating,
         comment,
         createdAt: serverTimestamp(),
-        status: 'pending', // All reviews must be approved
+        status: 'approved', // Set status to 'approved' by default
       });
 
       toast({
         title: 'Review Submitted!',
-        description: 'Thank you. Your review is pending approval.',
+        description: 'Thank you for your feedback.',
       });
       setRating(0);
       setComment('');
@@ -115,5 +116,3 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
     </form>
   );
 }
-
-    
