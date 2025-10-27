@@ -31,8 +31,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
     const { data: reviews, isLoading, forceRefetch } = useCollection<Review>(reviewsQuery);
     
-    // We get the product from the review data itself to avoid an extra fetch
-    const product = reviews && reviews.length > 0 ? { id: reviews[0].productId, name: reviews[0].productName, manufacturerId: (reviews[0] as any).manufacturerId } : { id: productId, name: 'this product', manufacturerId: '' };
+    // We get the product from the review data itself to avoid an extra fetch, or use a fallback.
+    const product = reviews && reviews.length > 0 && reviews[0] 
+      ? { id: reviews[0].productId, name: (reviews[0] as any).productName, manufacturerId: (reviews[0] as any).manufacturerId } 
+      : { id: productId, name: 'this product', manufacturerId: '' };
 
     return (
         <div className="space-y-6">
