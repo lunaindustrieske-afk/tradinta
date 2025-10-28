@@ -2,7 +2,7 @@
 'use client';
 
 import React from 'react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import {
   Card,
   CardHeader,
@@ -38,7 +38,7 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, doc } from 'firebase/firestore';
 
 // Mock data until backend is fully integrated
 const mockMetrics = {
@@ -58,13 +58,22 @@ const mockPayouts = [
     { id: 'PAY-001', amount: 15000, date: '2023-11-01', status: 'Completed' },
 ];
 
+type UserProfile = {
+  tradintaId?: string;
+};
+
 export default function GrowthPartnerDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [referralLink, setReferralLink] = React.useState('');
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [copiedCampaignLink, setCopiedCampaignLink] = React.useState<string | null>(null);
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user || !firestore) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
   const campaignsQuery = useMemoFirebase(() => {
     if (!user?.uid || !firestore) return null;
@@ -73,13 +82,10 @@ export default function GrowthPartnerDashboard() {
 
   const { data: campaigns, isLoading: isLoadingCampaigns } = useCollection(campaignsQuery);
 
-
-  React.useEffect(() => {
-    if (user) {
-      const baseUrl = window.location.origin;
-      setReferralLink(`${baseUrl}/signup?ref=${user.uid}`);
-    }
-  }, [user]);
+  const referralLink = React.useMemo(() => {
+    if (typeof window === 'undefined' || !userProfile?.tradintaId) return '';
+    return `${window.location.origin}/signup?ref=${userProfile.tradintaId}`;
+  }, [userProfile]);
 
   const copyToClipboard = (link: string, type: 'general' | 'campaign', id?: string) => {
     navigator.clipboard.writeText(link);
@@ -96,7 +102,7 @@ export default function GrowthPartnerDashboard() {
     }
   };
 
-  if (isUserLoading) {
+  if (isUserLoading || isProfileLoading) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-24 w-full" />
@@ -135,7 +141,7 @@ export default function GrowthPartnerDashboard() {
           </Label>
           <div className="flex gap-2 mt-1">
             <Input id="referral-link" value={referralLink} readOnly />
-            <Button size="icon" onClick={() => copyToClipboard(referralLink, 'general')} aria-label="Copy referral link">
+            <Button size="icon" onClick={() => copyToClipboard(referralLink, 'general')} aria-label="Copy referral link" disabled={!referralLink}>
               {copiedLink ? <ClipboardCheck className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
@@ -229,7 +235,7 @@ export default function GrowthPartnerDashboard() {
                         </TableRow>
                    ) : campaigns && campaigns.length > 0 ? (
                         campaigns.map((campaign: any) => {
-                            const campaignLink = `${window.location.origin}/manufacturer/${campaign.seller?.toLowerCase().replace(/ /g, '-')}/?ref=${user.uid}&campaign=${campaign.id}`;
+                            const campaignLink = `${window.location.origin}/manufacturer/${campaign.seller?.toLowerCase().replace(/ /g, '-')}/?ref=${userProfile?.tradintaId}&campaign=${campaign.id}`;
                             return (
                                 <TableRow key={campaign.id}>
                                     <TableCell>
@@ -241,7 +247,7 @@ export default function GrowthPartnerDashboard() {
                                     <Badge>{campaign.status}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', campaign.id)}>
+                                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', campaign.id)} disabled={!userProfile?.tradintaId}>
                                             {copiedCampaignLink === campaign.id ? <ClipboardCheck className="mr-2 h-4 w-4 text-green-500"/> : <LinkIcon className="mr-2 h-4 w-4" />}
                                             {copiedCampaignLink === campaign.id ? 'Copied!' : 'Copy Link'}
                                         </Button>

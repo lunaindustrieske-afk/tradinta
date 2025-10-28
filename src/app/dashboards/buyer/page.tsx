@@ -229,11 +229,18 @@ export default function BuyerDashboard() {
     const { user } = useUser();
     const { toast } = useToast();
     const [copied, setCopied] = React.useState(false);
+    
+    const firestore = useFirestore();
+    const userDocRef = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [user, firestore]);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userDocRef);
 
     const referralLink = React.useMemo(() => {
-        if (typeof window === 'undefined' || !user) return '';
-        return `${window.location.origin}/signup?ref=${user.uid}`;
-    }, [user]);
+        if (typeof window === 'undefined' || !userProfile?.tradintaId) return '';
+        return `${window.location.origin}/signup?ref=${userProfile.tradintaId}`;
+    }, [userProfile]);
 
     const handleCopy = () => {
         navigator.clipboard.writeText(referralLink);
@@ -348,12 +355,14 @@ export default function BuyerDashboard() {
                         <CardContent>
                             <div className="bg-background/50 rounded-lg p-4 mb-4">
                                 <label htmlFor="referral-link" className="text-sm font-medium">Your Unique Referral Link</label>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <input id="referral-link" type="text" value={referralLink} readOnly className="flex-grow bg-muted border border-border rounded-md px-3 py-1.5 text-sm" />
-                                    <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleCopy}>
-                                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                                    </Button>
-                                </div>
+                                {isProfileLoading ? <Skeleton className="h-9 w-full mt-1"/> : (
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <input id="referral-link" type="text" value={referralLink} readOnly className="flex-grow bg-muted border border-border rounded-md px-3 py-1.5 text-sm" />
+                                        <Button size="icon" variant="outline" className="h-8 w-8" onClick={handleCopy} disabled={!referralLink}>
+                                            {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                             <p className="text-sm text-muted-foreground">Share your link via WhatsApp, Email, or Social Media to earn 50 points for every verified signup!</p>
                         </CardContent>
