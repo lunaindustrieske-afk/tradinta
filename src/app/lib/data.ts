@@ -108,6 +108,8 @@ type ManufacturerInfo = {
   shopName: string;
   isVerified: boolean;
   suspensionDetails?: { isSuspended?: boolean };
+  location?: string;
+  leadTime?: string;
 };
 
 /**
@@ -129,7 +131,9 @@ export async function getAllProducts(): Promise<any[]> {
         shopId: data.shopId,
         shopName: data.shopName || 'Tradinta Seller',
         isVerified: data.verificationStatus === 'Verified',
-        suspensionDetails: data.suspensionDetails 
+        suspensionDetails: data.suspensionDetails,
+        location: data.location,
+        leadTime: data.leadTime,
       });
     });
 
@@ -167,10 +171,12 @@ export async function getAllProducts(): Promise<any[]> {
         ...sanitizedData,
         id: doc.id,
         manufacturerName: manufInfo?.shopName,
+        manufacturerLocation: manufInfo?.location,
         manufacturerSlug: manufInfo?.slug,
         shopId: manufInfo?.shopId,
         isVerified: manufInfo?.isVerified,
         isSponsored: isSponsored,
+        leadTime: manufInfo?.leadTime,
       };
     });
 

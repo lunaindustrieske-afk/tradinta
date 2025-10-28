@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -27,9 +26,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
-import { Badge } from '@/components/ui/badge';
 import {
   Pagination,
   PaginationContent,
@@ -78,6 +74,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { PlaceHolderImages } from '@/app/lib/placeholder-images';
 import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 type ProductWithShopId = Product & {
   shopId: string;
@@ -88,17 +85,18 @@ type ProductWithShopId = Product & {
   moq?: number;
   variants: { price: number }[];
   isVerified?: boolean;
-  isSponsored?: boolean; // Added for marketing
+  isSponsored?: boolean;
+  listOnTradintaDirect?: boolean;
 };
 
 const categoryIcons: Record<string, React.ReactNode> = {
-  'industrial': <Factory className="w-8 h-8" />,
-  'construction': <Building2 className="w-8 h-8" />,
+  industrial: <Factory className="w-8 h-8" />,
+  construction: <Building2 className="w-8 h-8" />,
   'food-beverage': <UtensilsCrossed className="w-8 h-8" />,
   'beauty-hygiene': <Sparkles className="w-8 h-8" />,
   'packaging-printing': <Printer className="w-8 h-8" />,
-  'automotive': <Car className="w-8 h-8" />,
-  'agriculture': <Sprout className="w-8 h-8" />,
+  automotive: <Car className="w-8 h-8" />,
+  agriculture: <Sprout className="w-8 h-8" />,
   'fashion-textiles': <Shirt className="w-8 h-8" />,
 };
 
@@ -115,6 +113,7 @@ export function ProductsPageClient({
 
   const [filters, setFilters] = useState({
     category: 'all',
+    view: 'all', // 'all', 'b2b', 'b2c'
   });
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -125,53 +124,70 @@ export function ProductsPageClient({
     setIsLoading(false);
   };
 
-  const { filteredProducts, filteredManufacturers, promoSlides } = useMemo(() => {
-    if (!allProducts || !allManufacturers)
-      return { filteredProducts: [], filteredManufacturers: [], promoSlides: [] };
+  const { filteredProducts, filteredManufacturers, promoSlides } =
+    useMemo(() => {
+      if (!allProducts || !allManufacturers)
+        return {
+          filteredProducts: [],
+          filteredManufacturers: [],
+          promoSlides: [],
+        };
 
-    let products = allProducts.filter((product) => {
-      const matchesCategory =
-        filters.category === 'all' || product.category === filters.category;
-      const matchesSearch =
-        searchQuery === '' ||
-        product.name.toLowerCase().includes(searchQuery.toLowerCase());
-
-      return matchesCategory && matchesSearch;
-    });
-    
-    let manufacturers = allManufacturers.filter(mfg => {
-        const matchesSearch = searchQuery === '' || 
-            mfg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            mfg.industry.toLowerCase().includes(searchQuery.toLowerCase());
+      let products = allProducts.filter((product) => {
+        const matchesCategory =
+          filters.category === 'all' || product.category === filters.category;
+        const matchesSearch =
+          searchQuery === '' ||
+          product.name.toLowerCase().includes(searchQuery.toLowerCase());
         
-        return matchesSearch;
-    });
+        let matchesView = true;
+        if (filters.view === 'b2c') {
+            matchesView = product.listOnTradintaDirect === true;
+        }
+        // B2B products are those not exclusively on Tradinta Direct
+        if (filters.view === 'b2b') {
+             matchesView = true; // Assuming all products are B2B for now
+        }
 
-    // Prioritize sponsored items
-    products.sort((a, b) => {
-      if (a.isSponsored && !b.isSponsored) return -1;
-      if (!a.isSponsored && b.isSponsored) return 1;
-      return 0;
-    });
-    
-    // Create dynamic promo slides from random products if no ads exist
-    const dynamicPromoSlides = [...allProducts]
+        return matchesCategory && matchesSearch && matchesView;
+      });
+
+      let manufacturers = allManufacturers.filter((mfg) => {
+        const matchesSearch =
+          searchQuery === '' ||
+          mfg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          mfg.industry.toLowerCase().includes(searchQuery.toLowerCase());
+
+        return matchesSearch;
+      });
+
+      // Prioritize sponsored items
+      products.sort((a, b) => {
+        if (a.isSponsored && !b.isSponsored) return -1;
+        if (!a.isSponsored && b.isSponsored) return 1;
+        return 0;
+      });
+
+      // Create dynamic promo slides from random products if no ads exist
+      const dynamicPromoSlides = [...allProducts]
         .sort(() => 0.5 - Math.random())
         .slice(0, 5)
-        .map(p => ({
-            title: p.name,
-            description: p.description,
-            imageUrl: p.imageUrl || 'https://picsum.photos/seed/promo-fallback/1600/900',
-            imageHint: p.imageHint,
-            link: `/products/${p.shopId}/${p.slug}`
+        .map((p) => ({
+          title: p.name,
+          description: p.description,
+          imageUrl:
+            p.imageUrl ||
+            'https://picsum.photos/seed/promo-fallback/1600/900',
+          imageHint: p.imageHint,
+          link: `/products/${p.shopId}/${p.slug}`,
         }));
 
-    return { 
-        filteredProducts: products, 
+      return {
+        filteredProducts: products,
         filteredManufacturers: manufacturers,
         promoSlides: dynamicPromoSlides,
-    };
-  }, [allProducts, allManufacturers, filters, searchQuery]);
+      };
+    }, [allProducts, allManufacturers, filters, searchQuery]);
 
   const FilterSidebar = () => (
     <Card className="p-4 lg:p-6">
@@ -181,7 +197,9 @@ export function ProductsPageClient({
           <Label className="font-semibold">Category</Label>
           <Select
             value={filters.category}
-            onValueChange={(value) => setFilters({ ...filters, category: value })}
+            onValueChange={(value) =>
+              setFilters({ ...filters, category: value })
+            }
           >
             <SelectTrigger>
               <SelectValue placeholder="Select Category" />
@@ -214,7 +232,7 @@ export function ProductsPageClient({
         </div>
       );
     }
-    
+
     if (filteredProducts.length === 0) return null;
 
     return (
@@ -240,32 +258,42 @@ export function ProductsPageClient({
                         className="object-cover group-hover:scale-105 transition-transform"
                         data-ai-hint={product.imageHint}
                       />
-                      {product.isSponsored && (
-                        <Badge
-                          variant="destructive"
-                          className="absolute top-2 left-2"
-                        >
-                          Sponsored
+                      <div className='absolute top-2 left-2 flex gap-1'>
+                        {product.isSponsored && (
+                            <Badge
+                            variant="destructive"
+                            >
+                            Sponsored
+                            </Badge>
+                        )}
+                        <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm hover:bg-background">
+                            {product.listOnTradintaDirect ? 'Direct' : 'Wholesale'}
                         </Badge>
-                      )}
+                      </div>
                     </div>
                     <div className="p-4 space-y-2">
-                       <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <div className="flex items-center gap-1.5">
-                                <Building className="w-3 h-3"/>
-                                <span className="font-semibold">{product.manufacturerName || "Tradinta Seller"}</span>
-                                {product.isVerified && <ShieldCheck className="h-3.5 w-3.5 text-green-600" />}
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <MapPin className="w-3 h-3"/>
-                                <span>{product.manufacturerLocation || 'Kenya'}</span>
-                            </div>
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1.5">
+                          <Building className="w-3 h-3" />
+                          <span className="font-semibold">
+                            {product.manufacturerName || 'Tradinta Seller'}
+                          </span>
+                          {product.isVerified && (
+                            <ShieldCheck className="h-3.5 w-3.5 text-green-600" />
+                          )}
                         </div>
-                      <CardTitle className="text-lg leading-tight h-10">
+                        <div className="flex items-center gap-1.5">
+                          <MapPin className="w-3 h-3" />
+                          <span>
+                            {product.manufacturerLocation || 'Kenya'}
+                          </span>
+                        </div>
+                      </div>
+                      <CardTitle className="text-base leading-tight h-10 line-clamp-2">
                         {product.name}
                       </CardTitle>
-                      
-                       <div className="flex items-baseline justify-between">
+
+                      <div className="flex items-baseline justify-between">
                         <p className="text-2xl font-bold text-foreground">
                           {price > 0
                             ? `KES ${price.toLocaleString()}`
@@ -273,23 +301,27 @@ export function ProductsPageClient({
                         </p>
                         <div className="flex items-center gap-1">
                           <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
-                          <span className="font-bold">{product.rating.toFixed(1)}</span>
+                          <span className="font-bold">
+                            {product.rating?.toFixed(1) || '0.0'}
+                          </span>
                           <span className="text-sm text-muted-foreground">
-                            ({product.reviewCount})
+                            ({product.reviewCount || 0})
                           </span>
                         </div>
                       </div>
 
-                       <div className="grid grid-cols-2 gap-2 text-xs pt-2">
-                           <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Package className="w-3 h-3" />
-                                <span>MOQ: {product.moq || 1} units</span>
-                           </div>
-                           <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Clock className="w-3 h-3" />
-                                <span>Lead Time: {product.leadTime || '3-5 days'}</span>
-                           </div>
-                       </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Package className="w-3 h-3" />
+                          <span>MOQ: {product.moq || 1} units</span>
+                        </div>
+                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                          <Clock className="w-3 h-3" />
+                          <span>
+                            Lead Time: {product.leadTime || '3-5 days'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Link>
@@ -305,13 +337,16 @@ export function ProductsPageClient({
       </div>
     );
   };
-  
+
   const ManufacturerList = () => {
     if (isLoading) {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+            <div
+              key={i}
+              className="flex items-center gap-4 p-4 border rounded-lg"
+            >
               <Skeleton className="h-16 w-16 rounded-full" />
               <div className="space-y-2 flex-grow">
                 <Skeleton className="h-5 w-3/4" />
@@ -322,77 +357,86 @@ export function ProductsPageClient({
         </div>
       );
     }
-    
-    if(filteredManufacturers.length === 0) return null;
+
+    if (filteredManufacturers.length === 0) return null;
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {filteredManufacturers.map(mfg => (
-                <Card key={mfg.id} className="hover:shadow-lg transition-shadow">
-                    <Link href={`/manufacturer/${mfg.slug}`}>
-                        <CardContent className="p-4 flex items-center gap-4">
-                            <Avatar className="h-16 w-16 border">
-                                <AvatarImage src={mfg.logoUrl} alt={mfg.name} />
-                                <AvatarFallback>{mfg.name.charAt(0)}</AvatarFallback>
-                            </Avatar>
-                            <div className="flex-grow">
-                                <h3 className="font-bold">{mfg.name}</h3>
-                                <p className="text-sm text-muted-foreground">{mfg.industry}</p>
-                                <div className="flex items-center gap-1 mt-1 text-sm">
-                                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                                    <span>{mfg.rating}</span>
-                                </div>
-                            </div>
-                            {mfg.isVerified && <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm flex items-center gap-1">
-                                <ShieldCheck className="h-4 w-4 text-green-600" /> Verified
-                            </Badge>}
-                        </CardContent>
-                    </Link>
-                </Card>
-            ))}
-        </div>
-    )
-  }
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {filteredManufacturers.map((mfg) => (
+          <Card key={mfg.id} className="hover:shadow-lg transition-shadow">
+            <Link href={`/manufacturer/${mfg.slug}`}>
+              <CardContent className="p-4 flex items-center gap-4">
+                <Avatar className="h-16 w-16 border">
+                  <AvatarImage src={mfg.logoUrl} alt={mfg.name} />
+                  <AvatarFallback>{mfg.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-grow">
+                  <h3 className="font-bold">{mfg.name}</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {mfg.industry}
+                  </p>
+                  <div className="flex items-center gap-1 mt-1 text-sm">
+                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <span>{mfg.rating}</span>
+                  </div>
+                </div>
+                {mfg.isVerified && (
+                  <Badge
+                    variant="secondary"
+                    className="bg-background/80 backdrop-blur-sm flex items-center gap-1"
+                  >
+                    <ShieldCheck className="h-4 w-4 text-green-600" /> Verified
+                  </Badge>
+                )}
+              </CardContent>
+            </Link>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="container mx-auto py-8">
-        <section className="relative h-[40vh] lg:h-[50vh] rounded-lg overflow-hidden -mt-8 -mx-4 mb-8">
-            <Carousel className="w-full h-full" opts={{ loop: true }}>
-                <CarouselContent className="h-full">
-                    {promoSlides.length > 0 ? promoSlides.map((slide) => (
-                        <CarouselItem key={slide.title}>
-                            <div className="relative w-full h-full">
-                                <Image
-                                    src={slide.imageUrl}
-                                    alt={slide.title}
-                                    fill
-                                    className="object-cover"
-                                    data-ai-hint={slide.imageHint}
-                                />
-                                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
-                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-3 font-headline">
-                                        {slide.title}
-                                    </h2>
-                                    <p className="text-md md:text-lg text-primary-foreground max-w-2xl mb-6 line-clamp-2">
-                                        {slide.description}
-                                    </p>
-                                    <Button size="lg" asChild>
-                                        <Link href={slide.link}>Explore Now</Link>
-                                    </Button>
-                                </div>
-                            </div>
-                        </CarouselItem>
-                    )) : (
-                         <CarouselItem>
-                            <div className="flex items-center justify-center h-full bg-muted">
-                                <Loader2 className="h-12 w-12 text-muted-foreground animate-spin" />
-                            </div>
-                        </CarouselItem>
-                    )}
-                </CarouselContent>
-                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
-                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
-            </Carousel>
+      <section className="relative h-[40vh] lg:h-[50vh] rounded-lg overflow-hidden -mt-8 -mx-4 mb-8">
+        <Carousel className="w-full h-full" opts={{ loop: true }}>
+          <CarouselContent className="h-full">
+            {promoSlides.length > 0 ? (
+              promoSlides.map((slide) => (
+                <CarouselItem key={slide.title}>
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={slide.imageUrl}
+                      alt={slide.title}
+                      fill
+                      className="object-cover"
+                      data-ai-hint={slide.imageHint}
+                    />
+                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
+                      <h2 className="text-3xl md:text-5xl font-bold text-white mb-3 font-headline">
+                        {slide.title}
+                      </h2>
+                      <p className="text-md md:text-lg text-primary-foreground max-w-2xl mb-6 line-clamp-2">
+                        {slide.description}
+                      </p>
+                      <Button size="lg" asChild>
+                        <Link href={slide.link}>Explore Now</Link>
+                      </Button>
+                    </div>
+                  </div>
+                </CarouselItem>
+              ))
+            ) : (
+              <CarouselItem>
+                <div className="flex items-center justify-center h-full bg-muted">
+                  <Loader2 className="h-12 w-12 text-muted-foreground animate-spin" />
+                </div>
+              </CarouselItem>
+            )}
+          </CarouselContent>
+          <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+          <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+        </Carousel>
       </section>
 
       <div className="mb-6">
@@ -404,39 +448,40 @@ export function ProductsPageClient({
         </p>
       </div>
 
-       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
-          {categories.map((cat) => {
-            const sponsoredProduct = allProducts.find(p => p.isSponsored && p.category === cat.name);
-            const adminImage = PlaceHolderImages.find(img => img.id === cat.imageId);
-            const imageUrl = sponsoredProduct?.imageUrl || adminImage?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300';
-            const imageHint = sponsoredProduct?.imageHint || adminImage?.imageHint || 'industrial';
-            
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setFilters({ ...filters, category: cat.name })}
-                className={cn(
-                  "group relative aspect-video w-full overflow-hidden rounded-lg border-2",
-                  filters.category === cat.name ? "border-primary ring-2 ring-primary ring-offset-2" : "border-transparent"
-                )}
-              >
-                <Image
-                  src={imageUrl}
-                  alt={cat.name}
-                  fill
-                  className="object-cover transition-transform group-hover:scale-105"
-                  data-ai-hint={imageHint}
-                />
-                <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition-colors" />
-                <div className="absolute bottom-2 left-3 right-3 text-left text-white">
-                  <div className="text-lg text-primary-foreground">{categoryIcons[cat.id]}</div>
-                  <h3 className="font-bold text-sm mt-1">{cat.name}</h3>
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
+        {categories.map((cat) => {
+          const image = PlaceHolderImages.find(
+            (img) => img.id === cat.imageId
+          );
+          return (
+            <button
+              key={cat.id}
+              onClick={() => setFilters({ ...filters, category: cat.name })}
+              className={cn(
+                'group relative aspect-video w-full overflow-hidden rounded-lg border-2',
+                filters.category === cat.name
+                  ? 'border-primary ring-2 ring-primary ring-offset-2'
+                  : 'border-transparent'
+              )}
+            >
+              <Image
+                src={image?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300'}
+                alt={cat.name}
+                fill
+                className="object-cover transition-transform group-hover:scale-105"
+                data-ai-hint={image?.imageHint}
+              />
+              <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition-colors" />
+              <div className="absolute bottom-2 left-3 right-3 text-left text-white">
+                <div className="text-lg text-primary-foreground">
+                  {categoryIcons[cat.id]}
                 </div>
-              </button>
-            )
-          })}
-        </div>
-
+                <h3 className="font-bold text-sm mt-1">{cat.name}</h3>
+              </div>
+            </button>
+          );
+        })}
+      </div>
 
       <div className="grid lg:grid-cols-4 gap-8 mt-6">
         <div className="hidden lg:block lg:col-span-1">
@@ -483,20 +528,28 @@ export function ProductsPageClient({
                 </Sheet>
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-2 text-muted-foreground"
-              onClick={fetchProducts}
-              disabled={isLoading}
-            >
-              <RefreshCw
-                className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
-              />
-              {isLoading ? 'Refreshing...' : 'Refresh'}
-            </Button>
+             <div className="flex items-center gap-2 mt-4">
+                <Button 
+                    variant={filters.view === 'all' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilters(prev => ({...prev, view: 'all'}))}>
+                        All Products
+                </Button>
+                 <Button 
+                    variant={filters.view === 'b2b' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilters(prev => ({...prev, view: 'b2b'}))}>
+                        Wholesale Only
+                </Button>
+                 <Button 
+                    variant={filters.view === 'b2c' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setFilters(prev => ({...prev, view: 'b2c'}))}>
+                        Tradinta Direct
+                </Button>
+            </div>
           </div>
-          
+
           <div className="space-y-12">
             <div>
               <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
@@ -506,7 +559,7 @@ export function ProductsPageClient({
             </div>
 
             <Separator />
-            
+
             <div>
               <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
                 <Building className="w-6 h-6" /> Manufacturer Results
@@ -514,16 +567,16 @@ export function ProductsPageClient({
               <ManufacturerList />
             </div>
           </div>
-          
-          {filteredProducts.length === 0 && filteredManufacturers.length === 0 && (
-             <div className="col-span-full text-center py-12 bg-muted/50 rounded-lg">
+
+          {filteredProducts.length === 0 &&
+            filteredManufacturers.length === 0 && (
+              <div className="col-span-full text-center py-12 bg-muted/50 rounded-lg">
                 <h3 className="text-lg font-semibold">No Results Found</h3>
                 <p className="text-muted-foreground mt-2">
-                    Try adjusting your search or filter criteria.
+                  Try adjusting your search or filter criteria.
                 </p>
-            </div>
-          )}
-
+              </div>
+            )}
 
           <div className="mt-8">
             <Pagination>
