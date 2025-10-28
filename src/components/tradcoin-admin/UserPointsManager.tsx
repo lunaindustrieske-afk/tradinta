@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore } from '@/firebase';
+import { useAuth, useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { generateClaimCodes, findUserAndTheirPoints, banUserFromTradPoints } from '@/app/dashboards/tradcoin-airdrop/actions';
 import { awardPoints } from '@/app/(auth)/actions';
 import { Loader2, Ticket, Search, PlusCircle, AlertTriangle, Copy } from "lucide-react";
@@ -133,8 +133,10 @@ export default function UserPointsManager() {
         setIsAwarding(true);
 
         try {
-            await awardPoints(
-                firestore,
+            // This is a client->server action call so it doesn't need to be awaited
+            // by the client. The firestore argument will be handled by the server action.
+            awardPoints(
+                firestore, // This argument will be ignored by the server action
                 foundUser.id,
                 Number(awardPointsValue),
                 awardReason,
