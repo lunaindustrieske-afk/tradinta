@@ -436,7 +436,7 @@ export default function ProductDetailPage() {
                     <p>{product.packagingDetails || 'Standard packaging information not available.'}</p>
                 </TabsContent>
                 <TabsContent value="reviews" className="mt-4 space-y-6">
-                    <ProductReviews productId={product.id} />
+                    <ProductReviews product={product} />
                 </TabsContent>
             </Tabs>
         </div>

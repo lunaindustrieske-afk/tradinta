@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, orderBy, doc, serverTimestamp } from 'firebase/firestore';
-import { type Review } from '@/lib/definitions';
+import { type Review, type Product } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -80,10 +80,10 @@ const ReplyForm = ({ review, onReplySuccess }: { review: Review, onReplySuccess:
 }
 
 interface ProductReviewsProps {
-    productId: string;
+    product: Product;
 }
 
-export function ProductReviews({ productId }: ProductReviewsProps) {
+export function ProductReviews({ product }: ProductReviewsProps) {
     const firestore = useFirestore();
     const { user, role } = useUser();
     const { toast } = useToast();
@@ -91,20 +91,16 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
 
     const reviewsQuery = useMemoFirebase(() => {
-        if (!firestore || !productId) return null;
+        if (!firestore || !product.id) return null;
         return query(
             collection(firestore, 'reviews'),
-            where('productId', '==', productId),
+            where('productId', '==', product.id),
             orderBy('createdAt', 'desc')
         );
-    }, [firestore, productId]);
+    }, [firestore, product.id]);
 
     const { data: reviews, isLoading, forceRefetch } = useCollection<Review>(reviewsQuery);
     
-    const product = reviews && reviews.length > 0
-      ? { id: reviews[0].productId, name: reviews[0].productName, manufacturerId: (reviews[0] as any).manufacturerId } 
-      : { id: productId, name: 'this product', manufacturerId: '' };
-
     const userHasReviewed = React.useMemo(() => {
         if (!user || !reviews) return false;
         return reviews.some(review => review.buyerId === user.uid);
@@ -167,6 +163,8 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                         <div>
                                             <p className="font-semibold">{review.buyerName}</p>
                                             <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                <p>on {review.productName}</p>
+                                                <span className="mx-1">•</span>
                                                 <p>{review.createdAt ? formatDistanceToNow(review.createdAt.toDate()) : ''} ago</p>
                                             </div>
                                         </div>
