@@ -20,6 +20,7 @@ import {
   Check,
   FileText,
   Eye,
+  Loader2,
 } from 'lucide-react';
 import {
   Card,
@@ -42,8 +43,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, limit, getDocs, doc, collectionGroup, getDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, limit, getDocs, doc, collectionGroup, getDoc, serverTimestamp } from 'firebase/firestore';
 import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -56,6 +57,7 @@ import {
 } from "@/components/ui/popover";
 import { ContactManufacturerModal } from '@/components/contact-manufacturer-modal';
 import { ProductReviews } from '@/components/product-reviews';
+import { nanoid } from 'nanoid';
 
 type ProductWithVariants = Product & {
     variants: { price: number }[];
@@ -71,6 +73,13 @@ type ProductWithVariants = Product & {
     shopId?: string;
 };
 
+type ForgingEvent = {
+    id: string;
+    currentBuyerCount: number;
+    endTime: any; // Firestore Timestamp
+    tiers: { buyerCount: number; discountPercentage: number }[];
+};
+
 export default function ProductDetailPage() {
     const params = useParams();
     const shopId = params.shopId as string;
@@ -80,8 +89,12 @@ export default function ProductDetailPage() {
 
     const [product, setProduct] = React.useState<ProductWithVariants | null>(null);
     const [manufacturer, setManufacturer] = React.useState<Manufacturer | null>(null);
+    const [forgingEvent, setForgingEvent] = React.useState<ForgingEvent | null>(null);
     const [relatedProducts, setRelatedProducts] = React.useState<ProductWithVariants[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [isPledging, setIsPledging] = React.useState(false);
+    const [userHasPledged, setUserHasPledged] = React.useState(false);
+
     const [isInWishlist, setIsInWishlist] = React.useState(false);
     const { toast } = useToast();
     
@@ -140,6 +153,26 @@ export default function ProductDetailPage() {
                 const productData = { ...productDoc.data(), id: productDoc.id } as ProductWithVariants;
                 setProduct(productData);
 
+                // 2a. Check for an active forging event for this product
+                const eventQuery = query(
+                    collection(firestore, 'forgingEvents'),
+                    where('productId', '==', productDoc.id),
+                    where('status', '==', 'active'),
+                    limit(1)
+                );
+                const eventSnapshot = await getDocs(eventQuery);
+                if (!eventSnapshot.empty) {
+                    const eventData = eventSnapshot.docs[0].data() as ForgingEvent;
+                    setForgingEvent(eventData);
+
+                    // Check if current user has pledged
+                    if (user) {
+                        const pledgeQuery = query(collection(firestore, 'pledges'), where('buyerId', '==', user.uid), where('forgingEventId', '==', eventData.id), limit(1));
+                        const pledgeSnapshot = await getDocs(pledgeQuery);
+                        setUserHasPledged(!pledgeSnapshot.empty);
+                    }
+                }
+
                  // 3. Fetch related products from the same category
                 const relatedQuery = query(
                   collectionGroup(firestore, 'products'),
@@ -171,7 +204,7 @@ export default function ProductDetailPage() {
         };
 
         fetchData();
-    }, [firestore, shopId, slug]);
+    }, [firestore, shopId, slug, user]);
     
     const [mainImage, setMainImage] = React.useState<string | undefined>(product?.bannerUrl || product?.imageUrl);
 
@@ -191,6 +224,29 @@ export default function ProductDetailPage() {
     
     const productUrl = typeof window !== 'undefined' ? window.location.href : '';
     const shareText = `Check out this product on Tradinta: ${product?.name}`;
+    
+    const handlePledge = async () => {
+        if (!user || !firestore || !forgingEvent) {
+            toast({ title: 'You must be logged in to pledge.', variant: 'destructive'});
+            return;
+        }
+        setIsPledging(true);
+        try {
+            await addDocumentNonBlocking(collection(firestore, 'pledges'), {
+                id: nanoid(),
+                forgingEventId: forgingEvent.id,
+                buyerId: user.uid,
+                pledgedAt: serverTimestamp(),
+            });
+            // Note: Cloud Function would update the count on forgingEvent
+            toast({ title: "You've Pledged!", description: "You will be notified when the event ends."});
+            setUserHasPledged(true);
+        } catch (error: any) {
+             toast({ title: 'Pledge failed', description: error.message, variant: 'destructive'});
+        } finally {
+            setIsPledging(false);
+        }
+    };
 
 
     if (isLoading) {
@@ -345,11 +401,18 @@ export default function ProductDetailPage() {
                 </p>
                 
                 <div className="space-y-3">
+                   {forgingEvent ? (
+                      <Button size="lg" className="w-full" onClick={handlePledge} disabled={isPledging || userHasPledged}>
+                        {isPledging ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <Sparkles className="mr-2 h-5 w-5" />}
+                        {userHasPledged ? "You've Pledged!" : "Pledge to Purchase"}
+                      </Button>
+                   ) : (
                     <RequestQuoteModal product={product}>
                         <Button size="lg" className="w-full" disabled={!!existingQuote}>
                             Request Quotation
                         </Button>
                     </RequestQuoteModal>
+                   )}
                     {existingQuote && (
                         <p className="text-xs text-center text-muted-foreground">
                             You have an existing quotation for this product.{' '}

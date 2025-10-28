@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -130,7 +129,7 @@ const quickActions = [
   { title: "My Orders & RFQs", icon: <Package className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/orders" },
   { title: "Messages", icon: <MessageSquare className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/messages" },
   { title: "TradPoints", icon: <Coins className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/tradpoints" },
-  { title: "Browse Products", icon: <Search className="w-6 h-6 text-primary" />, href: "/products" },
+  { title: "The Foundry", icon: <Sparkles className="w-6 h-6 text-primary" />, href: "/foundry" },
 ];
 
 type UserProfile = {
@@ -320,33 +319,16 @@ export default function BuyerDashboard() {
                         ))}
                     </div>
 
-                    {/* Insights & Tasks Panel */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Your Next Steps</CardTitle>
-                            <CardDescription>Complete these tasks to earn more points and improve your profile.</CardDescription>
+                            <CardTitle>My Pledges</CardTitle>
+                            <CardDescription>Track your active and completed Forging Events.</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                                <div className="flex items-center gap-3">
-                                    <Star className="w-5 h-5 text-yellow-500" />
-                                    <div>
-                                        <p className="font-semibold">Review your last purchase</p>
-                                        <p className="text-sm text-muted-foreground">Product: Industrial Grade Cement</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" size="sm">Write Review (+15 Points)</Button>
-                            </div>
-                            <div className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
-                                <div className="flex items-center gap-3">
-                                    <Badge>New</Badge>
-                                    <div>
-                                        <p className="font-semibold">Verify Your Business Details</p>
-                                        <p className="text-sm text-muted-foreground">Get a verified buyer badge.</p>
-                                    </div>
-                                </div>
-                                <Button variant="outline" size="sm">Start Verification (+100 Points)</Button>
-                            </div>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground text-center py-8">
+                                You have not pledged to any Forging Events yet.
+                                <Button variant="link" asChild><Link href="/foundry">Explore active deals</Link></Button>
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
