@@ -754,6 +754,26 @@
         "claimedBy": { "type": "string", "description": "The user ID of the user who claimed the code." }
       },
       "required": ["code", "points", "status", "createdAt"]
+    },
+    "Following": {
+      "title": "Following",
+      "type": "object",
+      "description": "A document representing a follow relationship, stored in a user's `following` subcollection.",
+      "properties": {
+        "type": { "type": "string", "enum": ["manufacturer", "partner"], "description": "The type of entity being followed." },
+        "followedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the follow action occurred." }
+      },
+      "required": ["type", "followedAt"]
+    },
+    "Follower": {
+      "title": "Follower",
+      "type": "object",
+      "description": "A document representing a follower, stored in an entity's `followers` subcollection.",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who is following." },
+        "followedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the follow action occurred." }
+      },
+      "required": ["userId", "followedAt"]
     }
   },
   "auth": {
@@ -948,6 +968,30 @@
           "entityName": "ClaimCode",
           "schema": { "$ref": "#/backend/entities/ClaimCode" },
           "description": "Stores redeemable codes for TradPoints."
+        }
+      },
+      {
+        "path": "/users/{userId}/following/{targetId}",
+        "definition": {
+          "entityName": "Following",
+          "schema": { "$ref": "#/backend/entities/Following" },
+          "description": "Subcollection storing entities a user is following."
+        }
+      },
+      {
+        "path": "/manufacturers/{manufacturerId}/followers/{userId}",
+        "definition": {
+          "entityName": "Follower",
+          "schema": { "$ref": "#/backend/entities/Follower" },
+          "description": "Subcollection storing users who follow a manufacturer."
+        }
+      },
+      {
+        "path": "/partners/{partnerId}/followers/{userId}",
+        "definition": {
+          "entityName": "Follower",
+          "schema": { "$ref": "#/backend/entities/Follower" },
+          "description": "Subcollection storing users who follow a growth partner."
         }
       }
     ]

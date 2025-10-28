@@ -39,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { FollowButton } from '@/components/follow-button';
 
 export default function ManufacturerPage() {
   const slug = useParams().slug as string;
@@ -150,6 +151,7 @@ export default function ManufacturerPage() {
                 <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                 <span><span className="font-bold text-foreground">{manufacturer.rating || 'N/A'}</span> / 5 Rating</span>
               </div>
+               <FollowButton targetId={manufacturer.id} targetType="manufacturer" />
             </div>
           </div>
           <div className="hidden md:flex justify-end">
