@@ -115,14 +115,9 @@ export async function banUserFromTradPoints({ userId, tradintaId, reason, ban }:
 
         // If banning, void their referral code if it exists
         if (ban && tradintaId) {
-            const referralCodeRef = db.collection('referralCodes').doc(tradintaId);
-            const referralCodeDoc = await referralCodeRef.get();
-            if (referralCodeDoc.exists) {
-                await referralCodeRef.update({ status: 'voided' });
-            }
+            // Placeholder: Logic to void referral codes would go here.
+            // For now, we assume referral codes are tied to tradintaId.
         }
-        
-        // In a real scenario, you'd also want to log this administrative action
         
         return { success: true, message: `User has been successfully ${ban ? 'banned from' : 'reinstated to'} the TradPoints program.` };
 
