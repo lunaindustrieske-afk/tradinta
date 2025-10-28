@@ -56,6 +56,9 @@ function HandshakeIcon(props: React.SVGProps<SVGSVGElement>) {
     );
 }
 
+const kenyanCounties = ["Mombasa", "Kwale", "Kilifi", "Tana River", "Lamu", "Taita-Taveta", "Garissa", "Wajir", "Mandera", "Marsabit", "Isiolo", "Meru", "Tharaka-Nithi", "Embu", "Kitui", "Machakos", "Makueni", "Nyandarua", "Nyeri", "Kirinyaga", "Murang'a", "Kiambu", "Turkana", "West Pokot", "Samburu", "Trans Nzoia", "Uasin Gishu", "Elgeyo-Marakwet", "Nandi", "Baringo", "Laikipia", "Nakuru", "Narok", "Kajiado", "Kericho", "Bomet", "Kakamega", "Vihiga", "Bungoma", "Busia", "Siaya", "Kisumu", "Homa Bay", "Migori", "Kisii", "Nyamira", "Nairobi"];
+
+
 export default function SignUpPage() {
   const [role, setRole] = useState("manufacturer");
   const [email, setEmail] = useState('');
@@ -67,6 +70,7 @@ export default function SignUpPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [country, setCountry] = useState('');
   
   const auth = useAuth();
   const firestore = useFirestore();
@@ -260,7 +264,7 @@ export default function SignUpPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <Label htmlFor="country">Country</Label>
-                         <Select>
+                         <Select onValueChange={setCountry} value={country}>
                             <SelectTrigger id="country" className="mt-1">
                                 <SelectValue placeholder="Select country" />
                             </SelectTrigger>
@@ -271,7 +275,22 @@ export default function SignUpPage() {
                             </SelectContent>
                         </Select>
                     </div>
-                     <div>
+                    {country === 'kenya' && (
+                         <div>
+                            <Label htmlFor="county">County</Label>
+                            <Select>
+                                <SelectTrigger id="county" className="mt-1">
+                                    <SelectValue placeholder="Select county" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {kenyanCounties.map(county => (
+                                        <SelectItem key={county} value={county.toLowerCase()}>{county}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+                     <div className="md:col-span-2">
                         <Label htmlFor="category">Business Category</Label>
                         <Select>
                             <SelectTrigger id="category" className="mt-1">
@@ -321,3 +340,5 @@ export default function SignUpPage() {
     </div>
   );
 }
+
+    
