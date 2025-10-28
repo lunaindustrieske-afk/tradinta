@@ -1,23 +1,135 @@
 
 'use client';
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { ArrowRight, Coins, Gift, Heart, MessageSquare, Package, Search, Sparkles, Star, User, Wallet, Copy, Check } from "lucide-react";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { useDoc, useFirestore, useUser, useMemoFirebase, updateDocumentNonBlocking } from "@/firebase";
-import { doc } from "firebase/firestore";
-import { Skeleton } from "@/components/ui/skeleton";
-import React from "react";
-import { useToast } from "@/hooks/use-toast";
-import { nanoid } from "nanoid";
+import * as React from 'react';
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Package,
+  ShoppingCart,
+  FileText,
+  Star,
+  DollarSign,
+  ArrowRight,
+  Lock,
+  Banknote,
+  MessageSquare,
+  Info,
+  CheckCircle,
+  Clock,
+  AlertTriangle,
+  ShieldCheck,
+  Loader2,
+  Wallet,
+  BookCopy,
+  Factory,
+  Send,
+  Coins,
+  Gift,
+  Heart,
+  Search,
+  Sparkles,
+  User,
+  Copy,
+  Check
+} from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Progress } from '@/components/ui/progress';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  useDoc,
+  useUser,
+  useFirestore,
+  useMemoFirebase,
+  useCollection,
+  updateDocumentNonBlocking
+} from '@/firebase';
+import {
+  doc,
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+} from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Review } from '@/app/lib/definitions';
+import { formatDistanceToNow } from 'date-fns';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { logFeatureUsage } from '@/lib/analytics';
+import { ReportModal } from '@/components/report-modal';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
+import { nanoid } from 'nanoid';
+
+
+const orders = [
+  {
+    id: 'ORD-006',
+    customer: 'BuildRight Const.',
+    total: 450000,
+    status: 'Pending Fulfillment',
+  },
+  { id: 'ORD-008', customer: 'Yum Foods', total: 66000, status: 'Shipped' },
+];
+
+type VerificationStatus =
+  | 'Unsubmitted'
+  | 'Pending Legal'
+  | 'Pending Admin'
+  | 'Action Required'
+  | 'Verified';
+  
+type ManufacturerData = {
+  shopName?: string;
+  tagline?: string;
+  description?: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  businessLicenseNumber?: string;
+  kraPin?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  paymentPolicy?: string;
+  shippingPolicy?: string;
+  returnPolicy?: string;
+  verificationStatus?: VerificationStatus;
+  suspensionDetails?: {
+    isSuspended: boolean;
+    reason: string;
+    prohibitions: string[];
+    publicDisclaimer: boolean;
+  };
+};
+
+type Product = {
+  id: string;
+  name: string;
+  status: 'draft' | 'published' | 'archived';
+};
 
 const quickActions = [
   { title: "My Orders & RFQs", icon: <Package className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/orders" },
   { title: "Messages", icon: <MessageSquare className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/messages" },
-  { title: "My Wishlist", icon: <Heart className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/wishlist" },
+  { title: "TradPoints", icon: <Coins className="w-6 h-6 text-primary" />, href: "/dashboards/buyer/tradpoints" },
   { title: "Browse Products", icon: <Search className="w-6 h-6 text-primary" />, href: "/products" },
 ];
 
@@ -246,7 +358,9 @@ export default function BuyerDashboard() {
                             <p className="text-sm text-muted-foreground">Share your link via WhatsApp, Email, or Social Media to earn 50 points for every verified signup!</p>
                         </CardContent>
                         <CardFooter>
-                            <Button>View All Tasks & Rewards <ArrowRight className="ml-2 w-4 h-4" /></Button>
+                            <Button asChild>
+                               <Link href="/dashboards/buyer/tradpoints">View All Tasks & Rewards <ArrowRight className="ml-2 w-4 h-4" /></Link>
+                            </Button>
                         </CardFooter>
                     </Card>
                 </div>
@@ -254,5 +368,3 @@ export default function BuyerDashboard() {
         </div>
     );
 }
-
-    
