@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,10 +6,10 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, ShoppingCart, DollarSign, Activity, MousePointerClick, BarChart, LineChart } from "lucide-react";
-import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
+import { Users, ShoppingCart, DollarSign, Activity, MousePointerClick, BarChart as BarChartIcon, LineChart } from "lucide-react";
+import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, collectionGroup, orderBy, Timestamp, startOfDay, endOfDay } from "firebase/firestore";
+import { collection, query, where, collectionGroup, orderBy, Timestamp, startOfDay } from "firebase/firestore";
 import { subDays } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
