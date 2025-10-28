@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -10,7 +11,8 @@ import { useAuth, useFirestore } from '@/firebase';
 import { generateClaimCodes, findUserAndTheirPoints, banUserFromTradPoints } from '@/app/dashboards/tradcoin-airdrop/actions';
 import { awardPoints } from '@/app/(auth)/actions';
 import { Loader2, Ticket, Search, PlusCircle, AlertTriangle, Copy } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -262,19 +264,19 @@ export default function UserPointsManager() {
                                                 <Button variant="secondary" className="w-full">Reinstate User</Button>
                                             </AlertDialogTrigger>
                                             <AlertDialogContent>
-                                                <DialogHeader>
-                                                    <DialogTitle>Are you sure?</DialogTitle>
-                                                    <DialogDescription>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
                                                         This will allow {foundUser.fullName} to earn and spend TradPoints again. Their referral code will need to be manually reactivated if applicable.
-                                                    </DialogDescription>
-                                                </DialogHeader>
-                                                <DialogFooter>
-                                                    <Button variant='outline' onClick={() => {}}>Cancel</Button>
-                                                    <Button onClick={handleUnbanUser} disabled={isProcessingBan}>
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleUnbanUser} disabled={isProcessingBan}>
                                                         {isProcessingBan && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
                                                         Confirm Reinstatement
-                                                    </Button>
-                                                </DialogFooter>
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
                                             </AlertDialogContent>
                                         </AlertDialog>
                                     ) : (
