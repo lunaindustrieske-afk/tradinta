@@ -120,6 +120,10 @@ export async function POST(request: Request) {
     const pointsConfigSnap = await db.collection('platformSettings').doc('pointsConfig').get();
     const pointsConfig = pointsConfigSnap.data() || {};
     const orderAmount = data.data.amount / 100;
+    
+    const sellerDoc = await db.collection('manufacturers').doc(sellerId).get();
+    const sellerData = sellerDoc.data();
+    const isSellerVerified = sellerData?.verificationStatus === 'Verified';
 
     // Award points to buyer
     const buyerPointsPer10Kes = pointsConfig.buyerPurchasePointsPer10 || 1;
@@ -128,7 +132,13 @@ export async function POST(request: Request) {
     
     // Award points to seller
     const sellerPointsPer10Kes = pointsConfig.sellerSalePointsPer10 || 1;
-    const sellerPoints = Math.floor((orderAmount / 10) * sellerPointsPer10Kes);
+    let sellerPoints = Math.floor((orderAmount / 10) * sellerPointsPer10Kes);
+    
+    // Apply global multiplier if seller is verified
+    if (isSellerVerified && pointsConfig.globalSellerPointMultiplier && pointsConfig.globalSellerPointMultiplier > 1) {
+        sellerPoints *= pointsConfig.globalSellerPointMultiplier;
+    }
+
     await awardPoints(db, sellerId, sellerPoints, 'SALE_COMPLETE', { orderId, buyerId });
 
     return NextResponse.json({ success: true, message: 'Payment verified and order updated.' });

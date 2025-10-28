@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2 } from "lucide-react";
+import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,17 +24,17 @@ const airdropPhases = [
 ];
 
 const buyerEarningRuleDefs = [
-  { id: 'SIGNUP_BONUS', action: 'Sign Up & Verify Email', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "One-time reward for joining the platform." },
-  { id: 'PURCHASE_COMPLETE', action: 'Make a Purchase', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: "Points earned per KES 10 spent." },
-  { id: 'REVIEW_SUBMITTED', action: 'Write a Product Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for reviewing a purchased product." },
-  { id: 'REFERRAL_SUCCESS', action: 'Refer a New User', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "Awarded when your referral verifies their account." },
+  { id: 'buyerSignupPoints', action: 'Sign Up & Verify Email', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "One-time reward for joining the platform." },
+  { id: 'buyerPurchasePointsPer10', action: 'Make a Purchase', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: "Points earned per KES 10 spent." },
+  { id: 'buyerReviewPoints', action: 'Write a Product Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for reviewing a purchased product." },
+  { id: 'buyerReferralPoints', action: 'Refer a New User', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "Awarded when your referral verifies their account." },
 ];
 
 const sellerEarningRuleDefs = [
-    { id: 'VERIFY_PROFILE', action: 'Complete Profile Verification', icon: <ShieldCheck className="w-5 h-5 text-primary" />, description: 'One-time reward for becoming a "Verified" seller.' },
-    { id: 'SALE_COMPLETE', action: 'Make a Sale', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: 'Points earned per KES 10 of sale value.' },
-    { id: 'FIRST_PRODUCT_PUBLISH', action: 'Publish First Product', icon: <UploadCloud className="w-5 h-5 text-primary" />, description: "Awarded when the first product goes live." },
-    { id: 'FIVE_STAR_REVIEW_RECEIVED', action: 'Receive a 5-Star Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for each 5-star review received from a verified buyer." },
+    { id: 'sellerVerificationPoints', action: 'Complete Profile Verification', icon: <ShieldCheck className="w-5 h-5 text-primary" />, description: 'One-time reward for becoming a "Verified" seller.' },
+    { id: 'sellerSalePointsPer10', action: 'Make a Sale', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: 'Points earned per KES 10 of sale value.' },
+    { id: 'sellerFirstProductPoints', action: 'Publish First Product', icon: <UploadCloud className="w-5 h-5 text-primary" />, description: "Awarded when the first product goes live." },
+    { id: 'sellerFiveStarReviewPoints', action: 'Receive a 5-Star Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for each 5-star review received from a verified buyer." },
 ];
 
 type PointsConfig = {
@@ -46,6 +46,7 @@ type PointsConfig = {
     sellerSalePointsPer10?: number;
     sellerFirstProductPoints?: number;
     sellerFiveStarReviewPoints?: number;
+    globalSellerPointMultiplier?: number;
 }
 
 export default function TradCoinAirdropDashboard() {
@@ -65,14 +66,15 @@ export default function TradCoinAirdropDashboard() {
     React.useEffect(() => {
         if (pointsConfig) {
             setRules({
-                'SIGNUP_BONUS': pointsConfig.buyerSignupPoints || 50,
-                'PURCHASE_COMPLETE': pointsConfig.buyerPurchasePointsPer10 || 1,
-                'REVIEW_SUBMITTED': pointsConfig.buyerReviewPoints || 15,
-                'REFERRAL_SUCCESS': pointsConfig.buyerReferralPoints || 100,
-                'VERIFY_PROFILE': pointsConfig.sellerVerificationPoints || 150,
-                'SALE_COMPLETE': pointsConfig.sellerSalePointsPer10 || 1,
-                'FIRST_PRODUCT_PUBLISH': pointsConfig.sellerFirstProductPoints || 25,
-                'FIVE_STAR_REVIEW_RECEIVED': pointsConfig.sellerFiveStarReviewPoints || 10,
+                buyerSignupPoints: pointsConfig.buyerSignupPoints || 50,
+                buyerPurchasePointsPer10: pointsConfig.buyerPurchasePointsPer10 || 1,
+                buyerReviewPoints: pointsConfig.buyerReviewPoints || 15,
+                buyerReferralPoints: pointsConfig.buyerReferralPoints || 100,
+                sellerVerificationPoints: pointsConfig.sellerVerificationPoints || 150,
+                sellerSalePointsPer10: pointsConfig.sellerSalePointsPer10 || 1,
+                sellerFirstProductPoints: pointsConfig.sellerFirstProductPoints || 25,
+                sellerFiveStarReviewPoints: pointsConfig.sellerFiveStarReviewPoints || 10,
+                globalSellerPointMultiplier: pointsConfig.globalSellerPointMultiplier || 1,
             });
         }
     }, [pointsConfig]);
@@ -86,14 +88,15 @@ export default function TradCoinAirdropDashboard() {
         setIsSaving(true);
         try {
             const dataToSave: PointsConfig = {
-                buyerSignupPoints: rules.SIGNUP_BONUS,
-                buyerPurchasePointsPer10: rules.PURCHASE_COMPLETE,
-                buyerReviewPoints: rules.REVIEW_SUBMITTED,
-                buyerReferralPoints: rules.REFERRAL_SUCCESS,
-                sellerVerificationPoints: rules.VERIFY_PROFILE,
-                sellerSalePointsPer10: rules.SALE_COMPLETE,
-                sellerFirstProductPoints: rules.FIRST_PRODUCT_PUBLISH,
-                sellerFiveStarReviewPoints: rules.FIVE_STAR_REVIEW_RECEIVED,
+                buyerSignupPoints: rules.buyerSignupPoints,
+                buyerPurchasePointsPer10: rules.buyerPurchasePointsPer10,
+                buyerReviewPoints: rules.buyerReviewPoints,
+                buyerReferralPoints: rules.buyerReferralPoints,
+                sellerVerificationPoints: rules.sellerVerificationPoints,
+                sellerSalePointsPer10: rules.sellerSalePointsPer10,
+                sellerFirstProductPoints: rules.sellerFirstProductPoints,
+                sellerFiveStarReviewPoints: rules.sellerFiveStarReviewPoints,
+                globalSellerPointMultiplier: rules.globalSellerPointMultiplier,
             };
             await setDocumentNonBlocking(pointsConfigRef, dataToSave);
             toast({ title: "Success", description: "Points earning rules have been updated." });
@@ -176,14 +179,19 @@ export default function TradCoinAirdropDashboard() {
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>Buyer Earning Rules</CardTitle>
-                                    <CardDescription>Define how buyers are awarded TradPoints.</CardDescription>
+                                    <CardTitle>Points Earning Rules</CardTitle>
+                                    <CardDescription>Define how users are awarded TradPoints for their actions.</CardDescription>
                                 </div>
                                 <Button onClick={isEditing ? handleSaveRules : () => setIsEditing(true)} disabled={isSaving}>
                                   {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : isEditing ? <Save className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
                                   {isSaving ? 'Saving...' : isEditing ? 'Save Rules' : 'Edit Rules'}
                                 </Button>
                             </div>
+                        </CardHeader>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>Buyer Earning Rules</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
@@ -213,12 +221,7 @@ export default function TradCoinAirdropDashboard() {
 
                      <Card>
                         <CardHeader>
-                             <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Seller Earning Rules</CardTitle>
-                                    <CardDescription>Define how sellers are awarded TradPoints.</CardDescription>
-                                </div>
-                            </div>
+                            <CardTitle>Seller Earning Rules</CardTitle>
                         </CardHeader>
                         <CardContent>
                            <div className="space-y-4">
@@ -242,6 +245,30 @@ export default function TradCoinAirdropDashboard() {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                     <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2"><TrendingUp /> Global Boost Settings</CardTitle>
+                             <CardDescription>Apply platform-wide multipliers to incentivize specific user groups.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                             <div className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="flex items-center gap-4">
+                                    <ShieldCheck className="w-5 h-5 text-primary" />
+                                    <div>
+                                        <p className="font-semibold">Global Seller Point Multiplier</p>
+                                        <p className="text-sm text-muted-foreground">Boosts points earned from sales for all "Verified" sellers. Default is 1 (no boost).</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {isEditing ? (
+                                        <Input type="number" value={rules['globalSellerPointMultiplier'] || 1} onChange={(e) => handleRuleChange('globalSellerPointMultiplier', e.target.value)} className="w-24 h-9" />
+                                    ) : (
+                                        <p className="font-bold text-lg">{rules['globalSellerPointMultiplier'] || 1}x</p>
+                                    )}
+                                </div>
                             </div>
                         </CardContent>
                     </Card>

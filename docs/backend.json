@@ -618,7 +618,11 @@
         "user_id": { "type": "string", "description": "The user ID this event applies to." },
         "points": { "type": "number", "description": "The number of points awarded or revoked (can be negative)." },
         "action": { "type": "string", "enum": ["award", "reversal", "adjustment"], "description": "The type of transaction." },
-        "reason_code": { "type": "string", "description": "A machine-readable code for why the points were issued (e.g., 'PROMO-2025-10-24', 'MANUAL_CORRECTION')." },
+        "reason_code": {
+          "type": "string",
+          "description": "A machine-readable code for why the points were issued.",
+          "enum": ["SIGNUP_BONUS", "REFERRAL_SUCCESS", "PURCHASE_COMPLETE", "SALE_COMPLETE", "REVIEW_SUBMITTED", "FIVE_STAR_REVIEW_RECEIVED", "PROMOTIONAL_GIFT", "MANUAL_CORRECTION"]
+        },
         "metadata": { "type": "object", "description": "Additional data, like order ID or referenced event IDs." },
         "issued_by": { "type": "string", "description": "Identifier for the system or admin that issued the event." },
         "created_at": { "type": "string", "format": "date-time", "description": "The timestamp of the event." },
@@ -689,6 +693,32 @@
         "timestamp": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "type", "severity", "message", "status", "timestamp"]
+    },
+    "PlatformSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PlatformSettings",
+      "type": "object",
+      "description": "Global settings for the Tradinta platform, including points configuration.",
+      "properties": {
+        "pointsConfig": {
+          "type": "object",
+          "properties": {
+            "buyerSignupPoints": { "type": "number", "description": "Points for a buyer signing up and verifying email." },
+            "buyerPurchasePointsPer10": { "type": "number", "description": "Points a buyer earns for every 10 KES spent." },
+            "buyerReviewPoints": { "type": "number", "description": "Points a buyer earns for submitting a product review." },
+            "buyerReferralPoints": { "type": "number", "description": "Points a referrer earns when a new buyer signs up and verifies." },
+            "sellerVerificationPoints": { "type": "number", "description": "Points a seller earns upon successful profile verification." },
+            "sellerSalePointsPer10": { "type": "number", "description": "Points a seller earns for every 10 KES of sale value." },
+            "sellerFirstProductPoints": { "type": "number", "description": "Points a seller earns for publishing their first product." },
+            "sellerFiveStarReviewPoints": { "type": "number", "description": "Points a seller earns for receiving a 5-star review." },
+            "globalSellerPointMultiplier": { "type": "number", "description": "A global multiplier for points earned by verified sellers from sales." }
+          }
+        },
+        "allowUnverifiedUploads": {
+          "type": "boolean",
+          "description": "If true, new sellers can upload products before being fully verified."
+        }
+      }
     }
   },
   "auth": {
@@ -867,6 +897,14 @@
           "entityName": "SystemAlert",
           "schema": { "$ref": "#/backend/entities/SystemAlert" },
           "description": "Stores system-generated alerts for admin attention."
+        }
+      },
+      {
+        "path": "/platformSettings/config",
+        "definition": {
+          "entityName": "PlatformSettings",
+          "schema": { "$ref": "#/backend/entities/PlatformSettings" },
+          "description": "Stores global platform settings like points configuration."
         }
       }
     ]
