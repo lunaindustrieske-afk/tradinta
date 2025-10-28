@@ -42,12 +42,12 @@ type ReferredUser = {
   emailVerified: boolean;
 };
 
-const waysToEarn = [
-  { icon: <UserPlus className="w-5 h-5 text-primary" />, title: 'Sign Up & Verify Email', points: '50 Points (Admin Defined)', description: 'One-time reward for joining the platform.' },
-  { icon: <ShoppingCart className="w-5 h-5 text-primary" />, title: 'Make a Purchase', points: 'Variable', description: 'Earn points for every KES spent on orders from Verified sellers.' },
-  { icon: <Star className="w-5 h-5 text-primary" />, title: 'Write a Review', points: '15 Points (Admin Defined)', description: 'Get rewarded for reviewing a product you purchased.' },
-  { icon: <UserPlus className="w-5 h-5 text-primary" />, title: 'Refer a Friend', points: '100 Points (Admin Defined)', description: 'Awarded when your referral signs up and verifies their email.' },
-];
+type PointsConfig = {
+    buyerSignupPoints?: number;
+    buyerPurchasePointsPer10?: number;
+    buyerReviewPoints?: number;
+    buyerReferralPoints?: number;
+}
 
 export default function TradPointsDashboardPage() {
   const { user, isUserLoading } = useUser();
@@ -62,6 +62,38 @@ export default function TradPointsDashboardPage() {
   }, [user, firestore]);
   const { data: userProfile, isLoading: isLoadingProfile } = useDoc(userDocRef);
 
+  // Fetch points configuration
+  const pointsConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'platformSettings', 'pointsConfig') : null, [firestore]);
+  const { data: pointsConfig, isLoading: isLoadingPointsConfig } = useDoc<PointsConfig>(pointsConfigRef);
+
+  const waysToEarn = React.useMemo(() => {
+    return [
+      { 
+        icon: <UserPlus className="w-5 h-5 text-primary" />, 
+        title: 'Sign Up & Verify Email', 
+        points: `${pointsConfig?.buyerSignupPoints || 50} Points`, 
+        description: 'One-time reward for joining the platform.' 
+      },
+      { 
+        icon: <ShoppingCart className="w-5 h-5 text-primary" />, 
+        title: 'Make a Purchase', 
+        points: `${pointsConfig?.buyerPurchasePointsPer10 || 1} Points per KES 10 spent`, 
+        description: 'Earn points for every KES spent on orders from Verified sellers.' 
+      },
+      { 
+        icon: <Star className="w-5 h-5 text-primary" />, 
+        title: 'Write a Review', 
+        points: `${pointsConfig?.buyerReviewPoints || 15} Points`, 
+        description: 'Get rewarded for reviewing a product you purchased.' 
+      },
+      { 
+        icon: <UserPlus className="w-5 h-5 text-primary" />, 
+        title: 'Refer a Friend', 
+        points: `${pointsConfig?.buyerReferralPoints || 100} Points`, 
+        description: 'Awarded when your referral signs up and verifies their email.' 
+      },
+    ];
+  }, [pointsConfig]);
 
   // Fetch points ledger
   const ledgerQuery = useMemoFirebase(() => {
@@ -219,16 +251,20 @@ export default function TradPointsDashboardPage() {
                     <CardDescription>Complete tasks to earn more points.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {waysToEarn.map(item => (
-                        <div key={item.title} className="flex items-start gap-4">
-                            <div>{item.icon}</div>
-                            <div>
-                                <p className="font-semibold">{item.title}</p>
-                                <p className="text-sm text-muted-foreground">{item.description}</p>
-                                <Badge variant="outline" className="mt-1">{item.points}</Badge>
+                    {isLoadingPointsConfig ? (
+                        Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)
+                    ) : (
+                        waysToEarn.map(item => (
+                            <div key={item.title} className="flex items-start gap-4">
+                                <div>{item.icon}</div>
+                                <div>
+                                    <p className="font-semibold">{item.title}</p>
+                                    <p className="text-sm text-muted-foreground">{item.description}</p>
+                                    <Badge variant="outline" className="mt-1">{item.points}</Badge>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        ))
+                    )}
                 </CardContent>
             </Card>
             <Card>
