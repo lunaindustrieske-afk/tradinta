@@ -19,6 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+} from '@/components/ui/carousel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Badge } from '@/components/ui/badge';
@@ -91,6 +98,12 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Local & Small Manufacturers (Made in Kenya)': <Award className="w-5 h-5" />,
   'Services & Trade Support': <Handshake className="w-5 h-5" />,
 };
+
+const promoSlides = [
+  { title: "Heavy Duty Construction", description: "Top grade cement, steel, and building supplies.", imageUrl: "https://picsum.photos/seed/promo1/1600/900", imageHint: "construction site crane", link: "/products?category=Construction+%26+Building+Materials" },
+  { title: "Packaging Solutions", description: "Boxes, plastics, and branding materials for your products.", imageUrl: "https://picsum.photos/seed/promo2/1600/900", imageHint: "packaging warehouse", link: "/products?category=Packaging%2C+Printing+%26+Branding" },
+  { title: "Food & Beverage Ingredients", description: "Bulk flour, oils, and processing supplies.", imageUrl: "https://picsum.photos/seed/promo3/1600/900", imageHint: "wheat field", link: "/products?category=Food+%26+Beverage" },
+];
 
 export function ProductsPageClient({
   initialProducts,
@@ -327,6 +340,41 @@ export function ProductsPageClient({
 
   return (
     <div className="container mx-auto py-8">
+        <section className="relative h-[40vh] lg:h-[50vh] rounded-lg overflow-hidden -mt-8 -mx-4 mb-8">
+            <Carousel className="w-full h-full" opts={{ loop: true }} plugins={[
+                // Autoplay({ delay: 5000 }),
+            ]}>
+                <CarouselContent className="h-full">
+                    {promoSlides.map((slide) => (
+                        <CarouselItem key={slide.title}>
+                            <div className="relative w-full h-full">
+                                <Image
+                                    src={slide.imageUrl}
+                                    alt={slide.title}
+                                    fill
+                                    className="object-cover"
+                                    data-ai-hint={slide.imageHint}
+                                />
+                                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center text-center p-4">
+                                    <h2 className="text-3xl md:text-5xl font-bold text-white mb-3 font-headline">
+                                        {slide.title}
+                                    </h2>
+                                    <p className="text-md md:text-lg text-primary-foreground max-w-2xl mb-6">
+                                        {slide.description}
+                                    </p>
+                                    <Button size="lg" asChild>
+                                        <Link href={slide.link}>Explore Now</Link>
+                                    </Button>
+                                </div>
+                            </div>
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
+            </Carousel>
+      </section>
+
       <div className="mb-6">
         <h1 className="text-4xl font-bold font-headline mb-2">
           Tradinta Marketplace
