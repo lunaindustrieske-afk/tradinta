@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -30,8 +29,9 @@ import {
   Calendar as CalendarIcon,
   Gift,
   PlusCircle,
+  Ticket,
 } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
+import { DateRange, DayPicker } from 'react-day-picker';
 import {
   Popover,
   PopoverContent,
@@ -52,11 +52,24 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
-import { useFirestore, useAuth } from '@/firebase';
-import { getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { useFirestore, useAuth, useCollection, useMemoFirebase } from '@/firebase';
+import { getDocs, collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { awardPoints } from '@/app/(auth)/actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { generateClaimCodes, voidClaimCode } from './actions';
+import { useFormState, useFormStatus } from 'react-dom';
+import { Skeleton } from '@/components/ui/skeleton';
+
+type ClaimCode = {
+  id: string;
+  code: string;
+  points: number;
+  status: 'active' | 'claimed' | 'voided';
+  expiresAt?: any;
+  createdAt: any;
+};
 
 // Mock data based on the user's design
 const mockSearchResults = [
@@ -64,6 +77,147 @@ const mockSearchResults = [
   { userId: 'user-def', fullName: 'Jane Smith', totalPoints: 150, kycStatus: 'Pending' },
   { userId: 'user-ghi', fullName: 'Kimani Ltd', totalPoints: 150, kycStatus: 'Verified' },
 ];
+
+function GenerateCodesForm() {
+  const { toast } = useToast();
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const count = Number(formData.get('count'));
+    const points = Number(formData.get('points'));
+    const expiresAt = formData.get('expiresAt') ? new Date(formData.get('expiresAt') as string) : undefined;
+    
+    if (isNaN(count) || count <= 0 || isNaN(points) || points <= 0) {
+        toast({ title: 'Invalid input', description: 'Please enter valid numbers for count and points.', variant: 'destructive' });
+        return;
+    }
+
+    try {
+        const result = await generateClaimCodes({ count, points, expiresAt });
+        if(result.success) {
+            toast({ title: "Success!", description: `${result.count} claim codes have been generated.`});
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Generate New Claim Codes</CardTitle>
+      </CardHeader>
+      <form onSubmit={handleSubmit}>
+        <CardContent className="space-y-4">
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div className="grid gap-2">
+              <Label htmlFor="count">Number of Codes</Label>
+              <Input id="count" name="count" type="number" placeholder="e.g. 50" required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="points">Points per Code</Label>
+              <Input id="points" name="points" type="number" placeholder="e.g. 100" required />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="expiresAt">Expires On (Optional)</Label>
+              <Input id="expiresAt" name="expiresAt" type="date" />
+            </div>
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button type="submit"><PlusCircle className="mr-2" /> Generate Codes</Button>
+        </CardFooter>
+      </form>
+    </Card>
+  );
+}
+
+
+function ClaimCodesTable() {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
+    const codesQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'claimCodes'), orderBy('createdAt', 'desc'));
+    }, [firestore]);
+
+    const { data: codes, isLoading, forceRefetch } = useCollection<ClaimCode>(codesQuery);
+
+    const handleVoidCode = async (codeId: string) => {
+        try {
+            const result = await voidClaimCode(codeId);
+            if (result.success) {
+                toast({ title: "Code Voided", description: "The claim code has been successfully voided." });
+                forceRefetch();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+            toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        }
+    }
+
+    const getStatusVariant = (status: ClaimCode['status']) => {
+        switch (status) {
+            case 'active': return 'secondary';
+            case 'claimed': return 'default';
+            case 'voided': return 'destructive';
+            default: return 'outline';
+        }
+    };
+    
+    if (isLoading) {
+        return <div className="space-y-2">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+        </div>
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Existing Claim Codes</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Code</TableHead>
+                            <TableHead>Points</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Expires On</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {codes && codes.length > 0 ? codes.map(code => (
+                            <TableRow key={code.id}>
+                                <TableCell className="font-mono">{code.code}</TableCell>
+                                <TableCell>{code.points}</TableCell>
+                                <TableCell><Badge variant={getStatusVariant(code.status)}>{code.status}</Badge></TableCell>
+                                <TableCell>{code.expiresAt ? new Date(code.expiresAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
+                                <TableCell>
+                                    {code.status === 'active' && (
+                                        <Button variant="destructive" size="sm" onClick={() => handleVoidCode(code.id)}>Void</Button>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        )) : (
+                            <TableRow><TableCell colSpan={5} className="text-center h-24">No claim codes generated yet.</TableCell></TableRow>
+                        )}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+}
+
+
 
 export default function TradCoinAdminDashboard() {
   const [date, setDate] = React.useState<DateRange | undefined>();
@@ -178,118 +332,60 @@ export default function TradCoinAdminDashboard() {
         </CardHeader>
       </Card>
       
-      <div className="grid md:grid-cols-2 gap-6 items-start">
-        <Card>
-            <CardHeader>
-                <CardTitle>Award Points Manually</CardTitle>
-                <CardDescription>
-                    Grant points for promotions, competitions, or manual corrections.
-                </CardDescription>
-            </CardHeader>
-            <form onSubmit={handleAwardPoints}>
-                <CardContent className="space-y-4">
-                    <div className="grid gap-2">
-                        <Label htmlFor="award-user-id">User's Tradinta ID</Label>
-                        <Input id="award-user-id" placeholder="e.g. a8B2c3D4" value={awardUserId} onChange={e => setAwardUserId(e.target.value)} required />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                         <div className="grid gap-2">
-                            <Label htmlFor="award-points">Points to Award</Label>
-                            <Input id="award-points" type="number" placeholder="e.g. 500" value={awardPointsValue} onChange={e => setAwardPointsValue(e.target.value)} required />
-                        </div>
-                        <div className="grid gap-2">
-                            <Label htmlFor="award-reason">Reason</Label>
-                            <Select onValueChange={setAwardReason} value={awardReason} required>
-                                <SelectTrigger id="award-reason"><SelectValue placeholder="Select reason" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="PROMOTIONAL_GIFT">Promotional Gift</SelectItem>
-                                    <SelectItem value="MANUAL_CORRECTION">Manual Correction</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="award-note">Admin Note (Optional)</Label>
-                        <Input id="award-note" placeholder="e.g., Winner of Q4 Campaign" value={awardNote} onChange={e => setAwardNote(e.target.value)} />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button className="w-full" type="submit" disabled={isAwarding}>
-                        {isAwarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4" />}
-                        Award Points
-                    </Button>
-                </CardFooter>
-            </form>
-        </Card>
-
-        {/* Search Panel */}
-        <div className="space-y-6">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Search & Revoke Points</CardTitle>
-                    <CardDescription>
-                        Find points awarded by date and reason code to perform bulk reversals.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="grid gap-2">
-                        <Label htmlFor="date-range">Date Range</Label>
-                         <Popover>
-                            <PopoverTrigger asChild>
-                            <Button
-                                id="date-range"
-                                variant={"outline"}
-                                className={cn(
-                                "w-full justify-start text-left font-normal",
-                                !date && "text-muted-foreground"
-                                )}
-                            >
-                                <CalendarIcon className="mr-2 h-4 w-4" />
-                                {date?.from ? (
-                                date.to ? (
-                                    <>
-                                    {format(date.from, "LLL dd, y")} -{" "}
-                                    {format(date.to, "LLL dd, y")}
-                                    </>
-                                ) : (
-                                    format(date.from, "LLL dd, y")
-                                )
-                                ) : (
-                                <span>Pick a date range</span>
-                                )}
+        <Tabs defaultValue="manual-award">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="manual-award">Manual Point Adjustments</TabsTrigger>
+                <TabsTrigger value="claim-codes">Claim Codes</TabsTrigger>
+            </TabsList>
+            <TabsContent value="manual-award" className="mt-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Award Points Manually</CardTitle>
+                        <CardDescription>
+                            Grant points for promotions, competitions, or manual corrections.
+                        </CardDescription>
+                    </CardHeader>
+                    <form onSubmit={handleAwardPoints}>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="award-user-id">User's Tradinta ID</Label>
+                                <Input id="award-user-id" placeholder="e.g. a8B2c3D4" value={awardUserId} onChange={e => setAwardUserId(e.target.value)} required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="award-points">Points to Award</Label>
+                                    <Input id="award-points" type="number" placeholder="e.g. 500" value={awardPointsValue} onChange={e => setAwardPointsValue(e.target.value)} required />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="award-reason">Reason</Label>
+                                    <Select onValueChange={setAwardReason} value={awardReason} required>
+                                        <SelectTrigger id="award-reason"><SelectValue placeholder="Select reason" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="PROMOTIONAL_GIFT">Promotional Gift</SelectItem>
+                                            <SelectItem value="MANUAL_CORRECTION">Manual Correction</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="award-note">Admin Note (Optional)</Label>
+                                <Input id="award-note" placeholder="e.g., Winner of Q4 Campaign" value={awardNote} onChange={e => setAwardNote(e.target.value)} />
+                            </div>
+                        </CardContent>
+                        <CardFooter>
+                            <Button className="w-full" type="submit" disabled={isAwarding}>
+                                {isAwarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4" />}
+                                Award Points
                             </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                            <Calendar
-                                initialFocus
-                                mode="range"
-                                defaultMonth={date?.from}
-                                selected={date}
-                                onSelect={setDate}
-                                numberOfMonths={2}
-                            />
-                            </PopoverContent>
-                        </Popover>
-                    </div>
-                     <div className="grid gap-2">
-                        <Label htmlFor="reason-code">Reason Code</Label>
-                        <Input 
-                            id="reason-code" 
-                            placeholder="e.g., PROMO-2025-10-24" 
-                            value={reasonCode}
-                            onChange={(e) => setReasonCode(e.target.value)}
-                        />
-                    </div>
-                </CardContent>
-                <CardFooter>
-                    <Button className="w-full" onClick={handleSearch} disabled={isLoading}>
-                        {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Search className="mr-2 h-4 w-4" />}
-                        Search for Events
-                    </Button>
-                </CardFooter>
-            </Card>
-        </div>
-      </div>
+                        </CardFooter>
+                    </form>
+                </Card>
+            </TabsContent>
+            <TabsContent value="claim-codes" className="mt-6 space-y-6">
+                <GenerateCodesForm />
+                <ClaimCodesTable />
+            </TabsContent>
+      </Tabs>
     </div>
   );
 }

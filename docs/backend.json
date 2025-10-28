@@ -719,6 +719,22 @@
           "description": "If true, new sellers can upload products before being fully verified."
         }
       }
+    },
+    "ClaimCode": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ClaimCode",
+      "type": "object",
+      "description": "Represents a redeemable code for TradPoints.",
+      "properties": {
+        "code": { "type": "string", "description": "The unique 8-character claim code." },
+        "points": { "type": "number", "description": "The number of points this code is worth." },
+        "status": { "type": "string", "enum": ["active", "claimed", "voided"], "description": "The status of the code." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "When the code was created." },
+        "expiresAt": { "type": "string", "format": "date-time", "description": "Optional expiration date." },
+        "claimedAt": { "type": "string", "format": "date-time", "description": "When the code was claimed." },
+        "claimedBy": { "type": "string", "description": "The user ID of the user who claimed the code." }
+      },
+      "required": ["code", "points", "status", "createdAt"]
     }
   },
   "auth": {
@@ -905,6 +921,14 @@
           "entityName": "PlatformSettings",
           "schema": { "$ref": "#/backend/entities/PlatformSettings" },
           "description": "Stores global platform settings like points configuration."
+        }
+      },
+      {
+        "path": "/claimCodes/{code}",
+        "definition": {
+          "entityName": "ClaimCode",
+          "schema": { "$ref": "#/backend/entities/ClaimCode" },
+          "description": "Stores redeemable codes for TradPoints."
         }
       }
     ]
