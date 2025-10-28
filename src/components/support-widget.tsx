@@ -34,6 +34,10 @@ type SupportTicket = {
   subject: string;
   status: 'Open' | 'In Progress' | 'Resolved';
   createdAt: any;
+  // Fields for reports
+  isReport?: boolean;
+  reportType?: 'Product' | 'Review' | 'Shop';
+  referenceId?: string;
 };
 
 const NewTicketForm = ({ onTicketCreated }: { onTicketCreated: () => void }) => {
