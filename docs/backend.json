@@ -774,6 +774,46 @@
         "followedAt": { "type": "string", "format": "date-time", "description": "Timestamp of when the follow action occurred." }
       },
       "required": ["userId", "followedAt"]
+    },
+    "ForgingEvent": {
+      "title": "ForgingEvent",
+      "type": "object",
+      "description": "Represents a time-limited, tiered-discount promotional event.",
+      "properties": {
+        "id": { "type": "string" },
+        "productId": { "type": "string" },
+        "sellerId": { "type": "string" },
+        "partnerId": { "type": "string" },
+        "status": { "type": "string", "enum": ["proposed", "active", "finished", "declined"] },
+        "startTime": { "type": "string", "format": "date-time" },
+        "endTime": { "type": "string", "format": "date-time" },
+        "commissionRate": { "type": "number" },
+        "tiers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "buyerCount": { "type": "number" },
+              "discountPercentage": { "type": "number" }
+            },
+            "required": ["buyerCount", "discountPercentage"]
+          }
+        },
+        "finalDiscountTier": { "type": "number" }
+      },
+      "required": ["id", "productId", "sellerId", "partnerId", "status", "endTime", "commissionRate", "tiers"]
+    },
+    "Pledge": {
+      "title": "Pledge",
+      "type": "object",
+      "description": "Represents a buyer's commitment to purchase a product during a Forging Event.",
+      "properties": {
+        "id": { "type": "string" },
+        "forgingEventId": { "type": "string" },
+        "buyerId": { "type": "string" },
+        "pledgedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "forgingEventId", "buyerId", "pledgedAt"]
     }
   },
   "auth": {
@@ -992,6 +1032,22 @@
           "entityName": "Follower",
           "schema": { "$ref": "#/backend/entities/Follower" },
           "description": "Subcollection storing users who follow a growth partner."
+        }
+      },
+      {
+        "path": "/forgingEvents/{eventId}",
+        "definition": {
+          "entityName": "ForgingEvent",
+          "schema": { "$ref": "#/backend/entities/ForgingEvent" },
+          "description": "Stores all active and past forging events."
+        }
+      },
+      {
+        "path": "/pledges/{pledgeId}",
+        "definition": {
+          "entityName": "Pledge",
+          "schema": { "$ref": "#/backend/entities/Pledge" },
+          "description": "Stores all buyer pledges for forging events."
         }
       }
     ]

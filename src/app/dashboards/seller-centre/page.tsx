@@ -41,6 +41,7 @@ import {
   Factory,
   Send,
   Megaphone,
+  Sparkles,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -368,10 +369,10 @@ export default function SellerDashboardPage() {
                     Wallet & Payouts
                 </Link>
             </Button>
-             <Button variant="outline" className="flex-col h-24" asChild>
-                <Link href="/dashboards/seller-centre/quotations" onClick={() => handleFeatureClick('quick_access:quotations')}>
-                    <BookCopy className="w-6 h-6 mb-2" />
-                    Quotations
+            <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre/foundry" onClick={() => handleFeatureClick('quick_access:foundry')}>
+                    <Sparkles className="w-6 h-6 mb-2" />
+                    The Foundry
                 </Link>
             </Button>
              <Button variant="outline" className="flex-col h-24" asChild>

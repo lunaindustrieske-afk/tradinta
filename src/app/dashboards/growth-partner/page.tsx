@@ -31,6 +31,8 @@ import {
   Loader2,
   Wallet,
   ClipboardCheck,
+  CheckCircle,
+  XCircle,
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -38,8 +40,9 @@ import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { logFeatureUsage } from '@/lib/analytics';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 // Mock data until backend is fully integrated
 const mockMetrics = {
@@ -63,6 +66,16 @@ type UserProfile = {
   tradintaId?: string;
 };
 
+type ForgingEvent = {
+  id: string;
+  name: string;
+  sellerName: string;
+  commissionRate: number;
+  status: 'proposed' | 'active' | 'finished' | 'declined';
+  tiers: { buyers: number; discount: number }[];
+};
+
+
 export default function GrowthPartnerDashboard() {
   const { user, isUserLoading, role } = useUser();
   const firestore = useFirestore();
@@ -84,14 +97,24 @@ export default function GrowthPartnerDashboard() {
 
   const campaignsQuery = useMemoFirebase(() => {
     if (!user?.uid || !firestore) return null;
-    return query(collection(firestore, 'users', user.uid, 'growthPartnerCampaigns'));
+    // For now, we'll fetch all events for a partner. In a real app, you might paginate.
+    return query(collection(firestore, 'forgingEvents'), where('partnerId', '==', user.uid));
   }, [user, firestore]);
 
-  const { data: campaigns, isLoading: isLoadingCampaigns } = useCollection(campaignsQuery);
+  const { data: forgingEvents, isLoading: isLoadingCampaigns } = useCollection<ForgingEvent>(campaignsQuery);
+  
+  const handleProposal = (eventId: string, status: 'active' | 'declined') => {
+      const eventRef = doc(firestore, 'forgingEvents', eventId);
+      updateDocumentNonBlocking(eventRef, { status: status, respondedAt: serverTimestamp() });
+      toast({
+          title: `Proposal ${status === 'active' ? 'Accepted' : 'Declined'}!`,
+          description: `The seller has been notified.`
+      });
+  };
 
   const referralLink = React.useMemo(() => {
     if (typeof window === 'undefined' || !userProfile?.tradintaId) return '';
-    return `${window.location.origin}/signup?ref=${userProfile.tradintaId}`;
+    return `${window.location.origin}/signup?ref=${userProfile?.tradintaId}`;
   }, [userProfile]);
 
   const copyToClipboard = (link: string, type: 'general' | 'campaign', id?: string) => {
@@ -209,63 +232,74 @@ export default function GrowthPartnerDashboard() {
         </Card>
       </div>
 
-      <Tabs defaultValue="campaigns">
+      <Tabs defaultValue="deal-hub">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="campaigns">Your Campaigns</TabsTrigger>
+          <TabsTrigger value="deal-hub">Deal Hub</TabsTrigger>
           <TabsTrigger value="sales">Attributed Sales</TabsTrigger>
           <TabsTrigger value="payouts">Payout History</TabsTrigger>
         </TabsList>
-        <TabsContent value="campaigns">
+        <TabsContent value="deal-hub">
           <Card>
             <CardHeader>
-              <CardTitle>Your Active Campaigns</CardTitle>
+              <CardTitle>Deal Hub</CardTitle>
               <CardDescription>
-                Promote these specific sellers to earn a commission on sales.
+                Review proposals from sellers and manage your active Forging Events.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Seller</TableHead>
                     <TableHead>Campaign</TableHead>
                     <TableHead>Commission</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Your Tracking Link</TableHead>
+                    <TableHead className="text-right">Actions / Link</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                    {isLoadingCampaigns ? (
                         <TableRow>
-                            <TableCell colSpan={4} className="text-center">
+                            <TableCell colSpan={5} className="text-center">
                                 <Loader2 className="h-6 w-6 animate-spin mx-auto my-4" />
                             </TableCell>
                         </TableRow>
-                   ) : campaigns && campaigns.length > 0 ? (
-                        campaigns.map((campaign: any) => {
-                            const campaignLink = `${window.location.origin}/manufacturer/${campaign.seller?.toLowerCase().replace(/ /g, '-')}/?ref=${userProfile?.tradintaId}&campaign=${campaign.id}`;
+                   ) : forgingEvents && forgingEvents.length > 0 ? (
+                        forgingEvents.map((event: any) => {
+                            const campaignLink = `${window.location.origin}/foundry/${event.id}`;
                             return (
-                                <TableRow key={campaign.id}>
+                                <TableRow key={event.id}>
+                                    <TableCell>{event.sellerName}</TableCell>
+                                    <TableCell className="font-medium">{event.name}</TableCell>
+                                    <TableCell className="font-semibold">{event.commissionRate}%</TableCell>
                                     <TableCell>
-                                        <div className="font-medium">{campaign.name}</div>
-                                        <div className="text-sm text-muted-foreground">{campaign.seller}</div>
-                                    </TableCell>
-                                    <TableCell className="font-semibold">{campaign.commissionRate}%</TableCell>
-                                    <TableCell>
-                                    <Badge>{campaign.status}</Badge>
+                                        <Badge variant={event.status === 'active' ? 'default' : 'outline'}>{event.status}</Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
-                                        <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', campaign.id)} disabled={!userProfile?.tradintaId}>
-                                            {copiedCampaignLink === campaign.id ? <ClipboardCheck className="mr-2 h-4 w-4 text-green-500"/> : <LinkIcon className="mr-2 h-4 w-4" />}
-                                            {copiedCampaignLink === campaign.id ? 'Copied!' : 'Copy Link'}
-                                        </Button>
+                                        {event.status === 'proposed' && (
+                                            <div className="flex gap-2 justify-end">
+                                                <Button size="sm" variant="secondary" onClick={() => handleProposal(event.id, 'active')}>
+                                                    <CheckCircle className="mr-2 h-4 w-4"/> Accept
+                                                </Button>
+                                                <Button size="sm" variant="ghost" className="text-destructive" onClick={() => handleProposal(event.id, 'declined')}>
+                                                    <XCircle className="mr-2 h-4 w-4"/> Decline
+                                                </Button>
+                                            </div>
+                                        )}
+                                        {event.status === 'active' && (
+                                             <Button size="sm" variant="outline" onClick={() => copyToClipboard(campaignLink, 'campaign', event.id)} disabled={!userProfile?.tradintaId}>
+                                                {copiedCampaignLink === event.id ? <ClipboardCheck className="mr-2 h-4 w-4 text-green-500"/> : <LinkIcon className="mr-2 h-4 w-4" />}
+                                                {copiedCampaignLink === event.id ? 'Copied!' : 'Copy Link'}
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             )
                         })
                    ) : (
                     <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">
-                            No campaigns assigned to you yet.
+                        <TableCell colSpan={5} className="h-24 text-center">
+                            No deal proposals yet.
                         </TableCell>
                     </TableRow>
                    )}
