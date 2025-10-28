@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Query,
   onSnapshot,
@@ -10,9 +10,11 @@ import {
   QuerySnapshot,
   CollectionReference,
   collectionGroup,
+  query,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { useMemoFirebase } from '@/firebase/provider';
 
 /** Utility type to add an 'id' field to a given type T. */
 export type WithId<T> = T & { id: string };
@@ -28,18 +30,6 @@ export interface UseCollectionResult<T> {
   forceRefetch: () => void; // Function to manually trigger a refetch.
 }
 
-/* Internal implementation of Query:
-  https://github.com/firebase/firebase-js-sdk/blob/c5f08a9bc5da0d2b0207802c972d53724ccef055/packages/firestore/src/lite-api/reference.ts#L143
-*/
-export interface InternalQuery extends Query<DocumentData> {
-  _query: {
-    path: {
-      canonicalString(): string;
-      toString(): string;
-    }
-  }
-}
-
 /**
  * React hook to subscribe to a Firestore collection or query in real-time.
  * Handles nullable references/queries.
@@ -49,72 +39,105 @@ export interface InternalQuery extends Query<DocumentData> {
  * references
  *  
  * @template T Optional type for document data. Defaults to any.
- * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} targetRefOrQuery -
+ * @param {CollectionReference<DocumentData> | Query<DocumentData> | null | undefined} memoizedTargetRefOrQuery -
  * The Firestore CollectionReference or Query. Waits if null/undefined.
  * @returns {UseCollectionResult<T>} Object with data, isLoading, error, and forceRefetch.
  */
 export function useCollection<T = any>(
-    memoizedTargetRefOrQuery: ((CollectionReference<DocumentData> | Query<DocumentData>) & {__memo?: boolean})  | null | undefined,
+  memoizedTargetRefOrQuery:
+    | (CollectionReference<DocumentData> | Query<DocumentData>)
+    | null
+    | undefined
 ): UseCollectionResult<T> {
   type ResultItemType = WithId<T>;
   type StateDataType = ResultItemType[] | null;
 
   const [data, setData] = useState<StateDataType>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Start loading immediately
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<FirestoreError | Error | null>(null);
   const [refetchKey, setRefetchKey] = useState(0);
 
+  // Keep a stable string identifier for the query so dependency comparisons work
+  const queryKeyRef = useRef<string | null>(null);
   const forceRefetch = useCallback(() => {
     setRefetchKey(prev => prev + 1);
   }, []);
 
+  // Derive a stable string key for the query (once) per query change
   useEffect(() => {
-    // If the query/ref is not ready, do nothing and wait.
     if (!memoizedTargetRefOrQuery) {
-      setIsLoading(false); // Not loading if there's no query
+      queryKeyRef.current = null;
+      return;
+    }
+
+    try {
+      const key =
+        (memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString?.() ??
+        (memoizedTargetRefOrQuery as any)?.path ??
+        JSON.stringify(memoizedTargetRefOrQuery);
+      queryKeyRef.current = key;
+    } catch {
+      queryKeyRef.current = Math.random().toString(); // fallback
+    }
+  }, [memoizedTargetRefOrQuery]);
+
+  useEffect(() => {
+    if (!memoizedTargetRefOrQuery) {
+      setIsLoading(false);
       setData(null);
       setError(null);
       return;
     }
 
+    let isCancelled = false;
     setIsLoading(true);
     setError(null);
 
     const unsubscribe = onSnapshot(
       memoizedTargetRefOrQuery,
       (snapshot: QuerySnapshot<DocumentData>) => {
-        const results: ResultItemType[] = [];
-        for (const doc of snapshot.docs) {
-          results.push({ ...(doc.data() as T), id: doc.id });
-        }
+        if (isCancelled) return;
+
+        const results: ResultItemType[] = snapshot.docs.map(doc => ({
+          ...(doc.data() as T),
+          id: doc.id,
+        }));
+
         setData(results);
         setError(null);
         setIsLoading(false);
       },
       (error: FirestoreError) => {
+        if (isCancelled) return;
+
         if (error.code === 'permission-denied') {
-            const path: string = memoizedTargetRefOrQuery.type === 'collection'
-                ? (memoizedTargetRefOrQuery as CollectionReference).path
-                : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
-            const contextualError = new FirestorePermissionError({
-              operation: 'list',
-              path,
-            });
-            setError(contextualError);
-            errorEmitter.emit('permission-error', contextualError);
+          const path =
+            (memoizedTargetRefOrQuery as any)?.path ??
+            (memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString?.() ??
+            'unknown-path';
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          });
+          setError(contextualError);
+          errorEmitter.emit('permission-error', contextualError);
         } else {
-            console.error("Non-permission Firestore error in useCollection:", error);
-            setError(error);
+          console.error('Firestore error in useCollection:', error);
+          setError(error);
         }
-        
+
         setData(null);
         setIsLoading(false);
       }
     );
 
-    return () => unsubscribe();
-  }, [refetchKey, (memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString?.()]);
-  
+    return () => {
+      isCancelled = true;
+      unsubscribe();
+    };
+    // 🔑 Depend only on the *string key* and refetchKey, NOT the object itself
+  }, [queryKeyRef.current, refetchKey]);
+
   return { data, isLoading, error, forceRefetch };
 }
 
