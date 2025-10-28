@@ -1,12 +1,10 @@
 
 'use server';
 
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
 import { nanoid } from 'nanoid';
-
-// This file is being deprecated. Logic moved to /tradcoin-airdrop/actions.ts
-// It is kept for now to prevent breaking changes but should be removed in a future iteration.
+import { serverTimestamp } from 'firebase/firestore';
 
 customInitApp();
 const db = getFirestore();
@@ -35,7 +33,7 @@ export async function generateClaimCodes({
             points,
             status: 'active',
             expiresAt: expiresAt || null,
-            createdAt: FieldValue.serverTimestamp(),
+            createdAt: serverTimestamp(),
         });
     }
     await batch.commit();
