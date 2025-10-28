@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -26,6 +27,7 @@ import { useUser, useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp } from 'firebase/firestore';
 import { Loader2, Flag } from 'lucide-react';
 import { nanoid } from 'nanoid';
+import { createSystemAlert } from '@/lib/system-alerts';
 
 interface ReportModalProps {
   reportType: 'Product' | 'Review' | 'Shop';
@@ -76,26 +78,36 @@ export function ReportModal({
     }
 
     try {
-      const ticketData = {
-        userId: user.uid,
-        userName: user.displayName,
-        userEmail: user.email,
-        ticketId: nanoid(8).toUpperCase(),
-        subject: `[REPORT] New ${reportType} Report: ${referenceId}`,
-        message: `Reason: ${reason}\n\nDetails: ${details}`,
-        status: 'Open',
+      const reportData = {
+        id: nanoid(),
+        reporterId: user.uid,
+        reporterName: user.displayName || 'Anonymous',
+        reportType,
+        referenceId,
+        reason,
+        details,
+        status: 'new',
         createdAt: serverTimestamp(),
-        // Report-specific context
-        isReport: true,
-        reportType: reportType,
-        referenceId: referenceId,
       };
-      await addDocumentNonBlocking(collection(firestore, 'supportTickets'), ticketData);
+
+      // 1. Save the report to the dedicated 'reports' collection
+      await addDocumentNonBlocking(collection(firestore, 'reports'), reportData);
+
+      // 2. Create a system alert to notify admins
+      await createSystemAlert(
+          firestore,
+          'NEW_USER_REPORT',
+          'info',
+          `New ${reportType} report submitted for ID: ${referenceId}`,
+          { reportId: reportData.id, referenceId, reportType }
+      );
+      
       toast({
         title: 'Report Submitted',
         description: `Thank you. Our team will review your report regarding ${reportType} ID: ${referenceId}.`,
       });
       setOpen(false);
+
     } catch (error: any) {
       toast({
         title: 'Submission Failed',
@@ -161,3 +173,5 @@ export function ReportModal({
     </Dialog>
   );
 }
+
+    

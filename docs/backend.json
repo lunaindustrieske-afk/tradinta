@@ -655,6 +655,40 @@
         "metadata": { "type": "object" }
       },
       "required": ["id", "userId", "userRole", "feature", "timestamp"]
+    },
+    "Report": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Report",
+      "type": "object",
+      "description": "Represents a user-submitted report about content or behavior.",
+      "properties": {
+        "id": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "reportType": { "type": "string", "enum": ["Product", "Review", "Shop"] },
+        "referenceId": { "type": "string" },
+        "reason": { "type": "string" },
+        "details": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "under_review", "resolved"], "default": "new" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "reporterId", "reportType", "referenceId", "reason", "status", "createdAt"]
+    },
+    "SystemAlert": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SystemAlert",
+      "type": "object",
+      "description": "Represents a system-generated alert for admin attention.",
+      "properties": {
+        "id": { "type": "string" },
+        "type": { "type": "string", "description": "A machine-readable key for the alert type (e.g., 'NEW_USER_REPORT')." },
+        "severity": { "type": "string", "enum": ["critical", "warning", "info"] },
+        "message": { "type": "string", "description": "A human-readable summary of the alert." },
+        "status": { "type": "string", "enum": ["new", "acknowledged", "resolved"], "default": "new" },
+        "details": { "type": "object", "description": "Additional context, like a report ID or user ID." },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "type", "severity", "message", "status", "timestamp"]
     }
   },
   "auth": {
@@ -818,7 +852,25 @@
           "schema": { "$ref": "#/backend/entities/FeatureUsage" },
           "description": "Logs user interactions with specific platform features for analytics."
         }
+      },
+      {
+        "path": "/reports/{reportId}",
+        "definition": {
+          "entityName": "Report",
+          "schema": { "$ref": "#/backend/entities/Report" },
+          "description": "Stores user-submitted reports for moderation and analysis."
+        }
+      },
+      {
+        "path": "/systemAlerts/{alertId}",
+        "definition": {
+          "entityName": "SystemAlert",
+          "schema": { "$ref": "#/backend/entities/SystemAlert" },
+          "description": "Stores system-generated alerts for admin attention."
+        }
       }
     ]
   }
 }
+
+    
