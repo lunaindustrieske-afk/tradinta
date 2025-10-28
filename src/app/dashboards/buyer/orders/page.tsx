@@ -14,6 +14,7 @@ import { collection, query, where, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePaystackPayment } from 'react-paystack';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 type Order = {
     id: string;
@@ -54,6 +55,7 @@ const getStatusBadge = (status: string) => {
 
 const PayNowButton = ({ order }: { order: Order }) => {
     const { toast } = useToast();
+    const router = useRouter();
 
     const config = {
         reference: new Date().getTime().toString(),
@@ -80,9 +82,9 @@ const PayNowButton = ({ order }: { order: Order }) => {
             if (data.success) {
                 toast({
                     title: "Payment Successful!",
-                    description: "Your order is now being processed.",
+                    description: "Redirecting to your order confirmation...",
                 });
-                // The page will automatically update due to the real-time listener
+                router.push(`/orders/${order.id}`);
             } else {
                 throw new Error(data.error || 'Verification failed');
             }
@@ -195,9 +197,12 @@ export default function OrdersPage() {
                                             {order.status === 'Pending Payment' ? (
                                                 <PayNowButton order={order} />
                                             ) : (
-                                                <Button variant="outline" size="sm"><Truck className="mr-2 h-4 w-4"/>Track Order</Button>
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <Link href={`/orders/${order.id}`}>
+                                                        <Eye className="mr-2 h-4 w-4"/>View Order
+                                                    </Link>
+                                                </Button>
                                             )}
-                                            <Button variant="ghost" size="sm">View Invoice</Button>
                                         </TableCell>
                                     </TableRow>
                                 ))
@@ -278,3 +283,5 @@ export default function OrdersPage() {
     </div>
   );
 }
+
+    
