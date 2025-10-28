@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -44,7 +43,7 @@ import { Table, TableBody, TableCell, TableRow } from '@/components/ui/table';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, limit, getDocs, doc, collectionGroup } from 'firebase/firestore';
-import { type Manufacturer, type Review, type Product } from '@/lib/definitions';
+import { type Manufacturer, type Review, type Product } from '@/app/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
@@ -152,9 +151,17 @@ export default function ProductDetailPage() {
                  relatedSnapshot.forEach(doc => {
                     if (doc.id !== productData.id) { // Exclude current product
                          const data = doc.data();
-                         // The shopId is part of the document's path
-                         const shopId = doc.ref.parent.parent?.id;
-                         related.push({ ...data, id: doc.id, shopId: shopId } as ProductWithVariants);
+                         // The shopId is part of the document's path, but we need to fetch the manufacturer doc to get the slug/shopId for the URL
+                         const manufacturerId = doc.ref.parent.parent?.id;
+                         if (manufacturerId) {
+                            // This part is inefficient and should be optimized in a real app (e.g., by denormalizing shopId/slug on product)
+                            getDoc(doc.ref.parent.parent).then(manufDoc => {
+                                if(manufDoc.exists()){
+                                    const manufData = manufDoc.data();
+                                    related.push({ ...data, id: doc.id, shopId: manufData.shopId, slug: data.slug } as ProductWithVariants);
+                                }
+                            });
+                         }
                     }
                 });
                 setRelatedProducts(related.slice(0, 4)); // Ensure we only have 4
@@ -500,4 +507,3 @@ export default function ProductDetailPage() {
 
     </div>
   );
-}
