@@ -113,7 +113,7 @@ export function useCollection<T = any>(
     );
 
     return () => unsubscribe();
-  }, [memoizedTargetRefOrQuery, refetchKey]);
+  }, [refetchKey, (memoizedTargetRefOrQuery as any)?._query?.path?.canonicalString?.()]);
   
   return { data, isLoading, error, forceRefetch };
 }
