@@ -42,46 +42,51 @@ const plans = [
         goal: "Scale visibility, dominate key categories, and expand audience reach.",
         channels: "Google + Meta + TikTok + Tradinta Premium Boosts",
         includes: [
-            "Up to 5 campaigns across platforms.",
-            "Outdoor & print media support.",
-            "Sponsored Slot on Tradinta Search Results.",
-            "Tradinta Boost Points for internal promotions.",
-            "Dedicated creative testing and video strategy.",
-            "Weekly optimization with a dedicated account manager.",
+            "Up to 5 campaigns across Google, Meta & TikTok.",
+            "Street pole banners, magazine adverts.",
+            "Sponsored Slot on Tradinta Search Results (higher ranking visibility).",
+            "Tradinta Boost Points (internal promotion currency).",
+            "Dedicated creative testing and video strategy (TikTok/Meta).",
+            "Weekly performance optimization.",
+            "Dedicated account manager."
         ],
-        metricFocus: "Cost per Acquisition (CPA) and Funnel Retention.",
+        metricFocus: "Cost per Acquisition (CPA), Funnel Retention.",
     },
     {
         name: "Tradinta Apex",
         subtitle: "Strategic Partner",
         fee: "KES 120,000 – 200,000/month",
-        goal: "Achieve full-market penetration and continuous creative evolution.",
+        goal: "Full-market penetration & continuous creative optimization.",
         channels: "Google, Meta, TikTok + Tradinta Internal Domination Pack",
         includes: [
-            "Omnichannel advertising with premium formats.",
-            "Mass media & out-of-home (billboards, newspapers).",
-            "Homepage or Category Page banner takeovers.",
-            "Influencer boost collaboration with verified ambassadors.",
-            "Advanced analytics & competitor benchmarking.",
-            "Bi-weekly strategy & creative reviews.",
+            "All external platforms with advanced formats (YouTube, Reels, Performance Max).",
+            "Billboard ads, street pole banners, newspaper ads.",
+            "Banner Takeover on Tradinta Homepage or Category Page.",
+            "Influencer Boost Collaboration via verified Tradinta Ambassadors.",
+            "Advanced data tracking + analytics dashboard.",
+            "Competitor benchmark analysis.",
+            "Bi-weekly strategy review and creative direction."
         ],
-        metricFocus: "Lifetime Customer Value (LTV), Market Share, and Creative ROI.",
+        metricFocus: "Lifetime Customer Value (LTV), Market Share, Creative ROI.",
     },
     {
         name: "Tradinta Infinity",
         subtitle: "Enterprise Tier",
         fee: "Custom (starting KES 250,000+ or 10–12% of Ad Spend)",
-        goal: "Integrate marketing end-to-end and dominate your category.",
-        channels: "All platforms + Tradinta VIP Marketing Suite",
+        goal: "Integrate, automate, and dominate your category — internal + external.",
+        channels: "All Platforms + Tradinta VIP Marketing Suite",
         includes: [
-            "CRM & Sales Data Integration for full attribution.",
-            "High-impact media (TV spots, high-traffic billboards).",
-            "Custom enterprise analytics dashboard with quarterly reports.",
-            "Guaranteed site dominance with homepage takeovers.",
-            "Dedicated 'Influencer Fleet' for continuous promotion.",
-            "Performance-based bonus options and priority support.",
+            "CRM & sales data integration with ad performance.",
+            "High traffic Billboards and street pole lamps.",
+            "Prime time TV adverts, magazine/ newspaper adverts.",
+            "Custom Tradinta dashboard with cross-channel reporting.",
+            "Guaranteed visibility on home, category & search pages.",
+            "Dedicated Influencer Fleet (multiple creators pushing your products).",
+            "Quarterly executive report (ROI, forecasts, category trends).",
+            "Performance-based bonus options.",
+            "Priority support from senior ad strategists."
         ],
-        metricFocus: "Profit Margin, Forecast Accuracy, and End-to-End ROI.",
+        metricFocus: "Profit Margin, Forecast Accuracy, End-to-End ROI.",
     }
 ];
 
@@ -97,7 +102,7 @@ export default function MarketingPlansPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start">
                 {plans.map((plan, index) => (
-                    <Card key={plan.name} className={`flex flex-col h-full ${index === 2 ? 'lg:scale-105 lg:shadow-2xl z-10' : ''}`}>
+                    <Card key={plan.name} className={`flex flex-col h-full ${index === 1 ? 'lg:scale-105 lg:shadow-2xl z-10 border-primary' : ''}`}>
                         <CardHeader>
                             <CardTitle className="font-headline text-2xl">{plan.name}</CardTitle>
                             <CardDescription className="font-semibold text-primary">{plan.subtitle}</CardDescription>
