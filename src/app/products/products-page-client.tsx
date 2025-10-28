@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -60,11 +61,14 @@ import {
   RefreshCw,
   ShieldCheck,
   Building,
+  MapPin,
+  Clock,
+  Package,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { type Product, type Manufacturer } from '@/lib/definitions';
+import { type Product, type Manufacturer } from '@/app/lib/definitions';
 import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
@@ -79,6 +83,9 @@ type ProductWithShopId = Product & {
   shopId: string;
   slug: string;
   manufacturerName?: string;
+  manufacturerLocation?: string;
+  leadTime?: string;
+  moq?: number;
   variants: { price: number }[];
   isVerified?: boolean;
   isSponsored?: boolean; // Added for marketing
@@ -243,29 +250,46 @@ export function ProductsPageClient({
                       )}
                     </div>
                     <div className="p-4 space-y-2">
-                       <div className="flex items-center gap-2">
-                            <span className="text-xs font-semibold text-muted-foreground">{product.manufacturerName || "Tradinta Seller"}</span>
-                            {product.isVerified && <ShieldCheck className="h-4 w-4 text-green-600" />}
+                       <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <div className="flex items-center gap-1.5">
+                                <Building className="w-3 h-3"/>
+                                <span className="font-semibold">{product.manufacturerName || "Tradinta Seller"}</span>
+                                {product.isVerified && <ShieldCheck className="h-3.5 w-3.5 text-green-600" />}
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                                <MapPin className="w-3 h-3"/>
+                                <span>{product.manufacturerLocation || 'Kenya'}</span>
+                            </div>
                         </div>
                       <CardTitle className="text-lg leading-tight h-10">
                         {product.name}
                       </CardTitle>
-                      <div className="flex items-baseline justify-between">
-                        <p className="text-xl font-bold text-foreground">
+                      
+                       <div className="flex items-baseline justify-between">
+                        <p className="text-2xl font-bold text-foreground">
                           {price > 0
                             ? `KES ${price.toLocaleString()}`
                             : 'Inquire for Price'}
                         </p>
                         <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                          <span className="text-sm font-medium">
-                            {product.rating}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
+                          <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
+                          <span className="font-bold">{product.rating.toFixed(1)}</span>
+                          <span className="text-sm text-muted-foreground">
                             ({product.reviewCount})
                           </span>
                         </div>
                       </div>
+
+                       <div className="grid grid-cols-2 gap-2 text-xs pt-2">
+                           <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Package className="w-3 h-3" />
+                                <span>MOQ: {product.moq || 1} units</span>
+                           </div>
+                           <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Clock className="w-3 h-3" />
+                                <span>Lead Time: {product.leadTime || '3-5 days'}</span>
+                           </div>
+                       </div>
                     </div>
                   </CardContent>
                 </Link>
