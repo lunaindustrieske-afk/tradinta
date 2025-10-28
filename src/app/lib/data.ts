@@ -105,6 +105,7 @@ type ProductWithShopId = Product & { shopId: string; slug: string; };
 type ManufacturerInfo = {
   slug: string;
   shopId: string;
+  shopName: string;
   isVerified: boolean;
   suspensionDetails?: { isSuspended?: boolean };
 };
@@ -126,6 +127,7 @@ export async function getAllProducts(): Promise<any[]> {
       manufMap.set(doc.id, { 
         slug: data.slug,
         shopId: data.shopId,
+        shopName: data.shopName || 'Tradinta Seller',
         isVerified: data.verificationStatus === 'Verified',
         suspensionDetails: data.suspensionDetails 
       });
@@ -164,6 +166,7 @@ export async function getAllProducts(): Promise<any[]> {
       return {
         ...sanitizedData,
         id: doc.id,
+        manufacturerName: manufInfo?.shopName,
         manufacturerSlug: manufInfo?.slug,
         shopId: manufInfo?.shopId,
         isVerified: manufInfo?.isVerified,
