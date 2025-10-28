@@ -111,7 +111,7 @@ export function ProductsPageClient({
     useState<ProductWithShopId[]>(initialProducts);
   const [allManufacturers, setAllManufacturers] =
     useState<Manufacturer[]>(mockManufacturers);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(!initialProducts.length);
 
   const [filters, setFilters] = useState({
     category: 'all',
@@ -119,12 +119,18 @@ export function ProductsPageClient({
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('wholesale');
 
-  const fetchProducts = async () => {
-    setIsLoading(true);
-    const products = await getAllProducts();
-    setAllProducts(products);
-    setIsLoading(false);
-  };
+  useEffect(() => {
+    // If initial products are empty, fetch them on the client.
+    if (!initialProducts.length) {
+      async function fetchInitialData() {
+        const products = await getAllProducts();
+        setAllProducts(products);
+        setIsLoading(false);
+      }
+      fetchInitialData();
+    }
+  }, [initialProducts]);
+
 
   const { filteredProducts, filteredManufacturers, promoSlides } =
     useMemo(() => {
@@ -168,9 +174,8 @@ export function ProductsPageClient({
         return 0;
       });
 
-      // Create dynamic promo slides from random products if no ads exist
-      const dynamicPromoSlides = [...allProducts]
-        .sort(() => 0.5 - Math.random())
+      // Create dynamic promo slides from the start of the product list for consistency
+      const dynamicPromoSlides = allProducts
         .slice(0, 5)
         .map((p) => ({
           id: p.id,
