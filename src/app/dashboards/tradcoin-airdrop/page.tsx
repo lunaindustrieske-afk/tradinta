@@ -3,10 +3,8 @@
 
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight, PlusCircle, Ticket, User, Search, AlertTriangle } from "lucide-react";
+import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight, PlusCircle, Ticket, User, Search, AlertTriangle, Copy } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { awardPoints } from '@/app/(auth)/actions';
 import { useAuth } from '@/firebase';
 import { Separator } from '@/components/ui/separator';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger, Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/alert-dialog';
 import { Textarea } from '@/components/ui/textarea';
 
 
@@ -253,11 +251,12 @@ type FoundUser = {
 }
 
 function ClaimCodesManager() {
-    const firestore = useFirestore();
     const auth = useAuth();
     const { toast } = useToast();
+    const firestore = useFirestore();
     const [isGenerating, setIsGenerating] = React.useState(false);
-
+    const [generatedCodes, setGeneratedCodes] = React.useState<string[]>([]);
+    
     // Search state
     const [searchIdentifier, setSearchIdentifier] = React.useState('');
     const [isSearching, setIsSearching] = React.useState(false);
@@ -274,14 +273,6 @@ function ClaimCodesManager() {
     const [isBanModalOpen, setIsBanModalOpen] = React.useState(false);
     const [banReason, setBanReason] = React.useState('');
     const [isProcessingBan, setIsProcessingBan] = React.useState(false);
-
-
-    const codesQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return query(collection(firestore, 'claimCodes'), orderBy('createdAt', 'desc'));
-    }, [firestore]);
-
-    const { data: codes, isLoading, forceRefetch } = useCollection<ClaimCode>(codesQuery);
 
     const handleUserSearch = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -305,6 +296,8 @@ function ClaimCodesManager() {
     const handleGenerateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         setIsGenerating(true);
+        setGeneratedCodes([]);
+
         const formData = new FormData(event.currentTarget);
         const count = Number(formData.get('count'));
         const points = Number(formData.get('points'));
@@ -318,17 +311,22 @@ function ClaimCodesManager() {
 
         try {
             const result = await generateClaimCodes({ count, points, expiresAt });
-            if(result.success) {
-                toast({ title: "Success!", description: `${result.count} claim codes have been generated.`});
-                if (forceRefetch) forceRefetch();
+            if(result.success && result.codes) {
+                toast({ title: "Success!", description: `${result.codes.length} claim codes have been generated.`});
+                setGeneratedCodes(result.codes);
             } else {
-                throw new Error(result.message);
+                throw new Error(result.message || 'Failed to generate codes.');
             }
         } catch (error: any) {
             toast({ title: 'Error', description: error.message, variant: 'destructive' });
         } finally {
             setIsGenerating(false);
         }
+    };
+
+    const copyGeneratedCodes = () => {
+        navigator.clipboard.writeText(generatedCodes.join('\n'));
+        toast({ title: 'Copied!', description: 'All generated codes copied to clipboard.' });
     };
     
     const handleAwardPoints = async (e: React.FormEvent) => {
@@ -368,20 +366,6 @@ function ClaimCodesManager() {
             toast({ title: 'Error Awarding Points', description: error.message, variant: 'destructive' });
         } finally {
             setIsAwarding(false);
-        }
-    };
-
-    const handleVoidCode = async (codeId: string) => {
-        try {
-            const result = await voidClaimCode(codeId);
-            if (result.success) {
-                toast({ title: "Code Voided", description: "The claim code has been successfully voided." });
-                if (forceRefetch) forceRefetch();
-            } else {
-                throw new Error(result.message);
-            }
-        } catch (error: any) {
-            toast({ title: 'Error', description: error.message, variant: 'destructive' });
         }
     };
     
@@ -433,16 +417,6 @@ function ClaimCodesManager() {
              toast({ title: 'Error', description: `Failed to reinstate user: ${error.message}`, variant: 'destructive' });
         } finally {
             setIsProcessingBan(false);
-        }
-    };
-
-
-    const getStatusVariant = (status: ClaimCode['status']) => {
-        switch (status) {
-            case 'active': return 'secondary';
-            case 'claimed': return 'default';
-            case 'voided': return 'destructive';
-            default: return 'outline';
         }
     };
 
@@ -544,7 +518,7 @@ function ClaimCodesManager() {
                             </Card>
                             <Separator />
                             <form onSubmit={handleAwardPoints}>
-                                <CardContent className="space-y-4">
+                                <CardContent className="space-y-4 pt-6">
                                     <h4 className="font-semibold">Grant Points</h4>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="grid gap-2"><Label htmlFor="award-points">Points to Award</Label><Input id="award-points" type="number" placeholder="e.g. 500" value={awardPointsValue} onChange={e => setAwardPointsValue(e.target.value)} required /></div>
@@ -579,27 +553,21 @@ function ClaimCodesManager() {
                         </Button>
                     </CardFooter>
                 </form>
-            </Card>
-
-            <Card>
-                <CardHeader><CardTitle>Existing Claim Codes</CardTitle></CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Code</TableHead><TableHead>Points</TableHead><TableHead>Status</TableHead><TableHead>Expires On</TableHead><TableHead>Actions</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {isLoading ? Array.from({length: 3}).map((_, i) => <TableRow key={i}><TableCell colSpan={5}><Skeleton className="h-8 w-full" /></TableCell></TableRow>) 
-                            : codes && codes.length > 0 ? codes.map(code => (
-                                <TableRow key={code.id}>
-                                    <TableCell className="font-mono">{code.code}</TableCell>
-                                    <TableCell>{code.points}</TableCell>
-                                    <TableCell><Badge variant={getStatusVariant(code.status)}>{code.status}</Badge></TableCell>
-                                    <TableCell>{code.expiresAt ? new Date(code.expiresAt.seconds * 1000).toLocaleDateString() : 'N/A'}</TableCell>
-                                    <TableCell>{code.status === 'active' && <Button variant="destructive" size="sm" onClick={() => handleVoidCode(code.id)}>Void</Button>}</TableCell>
-                                </TableRow>
-                            )) : <TableRow><TableCell colSpan={5} className="text-center h-24">No claim codes found.</TableCell></TableRow>}
-                        </TableBody>
-                    </Table>
-                </CardContent>
+                {generatedCodes.length > 0 && (
+                    <CardContent>
+                         <Separator className="my-4" />
+                         <div className="space-y-2">
+                             <h4 className="font-semibold text-destructive">New Codes Generated</h4>
+                             <p className="text-xs text-muted-foreground">
+                                 The following codes have been created. Copy them now, as you will not be able to see them again.
+                             </p>
+                             <Textarea readOnly value={generatedCodes.join('\n')} className="h-48 font-mono text-xs" />
+                             <Button onClick={copyGeneratedCodes} variant="outline" size="sm">
+                                 <Copy className="mr-2 h-4 w-4" /> Copy Codes
+                             </Button>
+                         </div>
+                    </CardContent>
+                )}
             </Card>
         </div>
     );
@@ -643,7 +611,7 @@ export default function TradCoinAirdropDashboard() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Coins className="w-6 h-6 text-primary" />TradCoin &amp; Points Management</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Coins className="w-6 h-6 text-primary" />TradCoin & Points Management</CardTitle>
                     <CardDescription>Oversee the TradCoin airdrop, define points earning rules, and manage the overall rewards economy.</CardDescription>
                 </CardHeader>
             </Card>

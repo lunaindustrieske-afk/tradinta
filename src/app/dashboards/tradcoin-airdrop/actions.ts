@@ -18,14 +18,16 @@ export async function generateClaimCodes({
   count,
   points,
   expiresAt,
-}: GenerateCodesParams): Promise<{ success: boolean; message: string; count: number }> {
+}: GenerateCodesParams): Promise<{ success: boolean; message: string; codes?: string[] }> {
   try {
     if (count > 1000) {
         throw new Error("Cannot generate more than 1000 codes at a time.");
     }
     const batch = db.batch();
+    const newCodes: string[] = [];
     for (let i = 0; i < count; i++) {
         const code = nanoid(8).toUpperCase();
+        newCodes.push(code);
         const codeRef = db.collection('claimCodes').doc(code);
         batch.set(codeRef, {
             code,
@@ -33,13 +35,15 @@ export async function generateClaimCodes({
             status: 'active',
             expiresAt: expiresAt || null,
             createdAt: FieldValue.serverTimestamp(),
+            claimedBy: null,
+            claimedAt: null,
         });
     }
     await batch.commit();
-    return { success: true, message: 'Codes generated successfully.', count };
+    return { success: true, message: 'Codes generated successfully.', codes: newCodes };
   } catch (error: any) {
     console.error("Error generating claim codes:", error);
-    return { success: false, message: error.message, count: 0 };
+    return { success: false, message: error.message };
   }
 }
 
