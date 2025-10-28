@@ -4,11 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-
-// This is a simplified placeholder for a real Cloud Function trigger.
-// In a real Firebase app, you would use functions.firestore.document('reviews/{reviewId}').onCreate()
-// to trigger this logic automatically and securely.
-// For the purpose of this prototype, we'll simulate it with an API route that would need to be called.
+import { awardPoints } from '@/app/(auth)/actions'; // Import the awardPoints function
 
 export async function POST(request: NextRequest) {
   const { reviewId, productId, manufacturerId, rating } = await request.json();
@@ -23,7 +19,6 @@ export async function POST(request: NextRequest) {
 
   try {
     // ---- Part 1: Update Product's Average Rating ----
-    // In a transaction to ensure atomicity
     await db.runTransaction(async (transaction) => {
       const productDoc = await transaction.get(productRef);
       if (!productDoc.exists) {
@@ -44,9 +39,18 @@ export async function POST(request: NextRequest) {
     });
     console.log(`Updated product ${productId} rating to ${await (await productRef.get()).data()?.rating}`);
 
+    // ---- Part 2: Award points to seller for 5-star review (if applicable) ----
+    if (rating === 5) {
+        const pointsConfigSnap = await db.collection('platformSettings').doc('pointsConfig').get();
+        const pointsConfig = pointsConfigSnap.data() || {};
+        const seller5StarPoints = pointsConfig.sellerFiveStarReviewPoints || 10;
+        if (seller5StarPoints > 0) {
+            await awardPoints(db, manufacturerId, seller5StarPoints, 'FIVE_STAR_REVIEW_RECEIVED', { productId, reviewId });
+        }
+    }
 
-    // ---- Part 2: Update Manufacturer's Overall Average Rating ----
-    // This is more complex and can be expensive. In a real app, this might be a separate, less frequent job.
+
+    // ---- Part 3: Update Manufacturer's Overall Average Rating ----
     const allProductsSnapshot = await db.collection('manufacturers').doc(manufacturerId).collection('products').get();
     
     let totalRating = 0;
@@ -75,5 +79,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update ratings.', details: error.message }, { status: 500 });
   }
 }
-
     

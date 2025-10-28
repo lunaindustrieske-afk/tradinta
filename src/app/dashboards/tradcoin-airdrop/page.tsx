@@ -23,32 +23,18 @@ const airdropPhases = [
     { id: 'phase3', name: 'Phase 3: Public Launch', status: 'Upcoming', claimed: '0 / 5.0M' },
 ];
 
-const initialBuyerRules = {
-  'SIGNUP_VERIFY': 50,
-  'PURCHASE_KES': 1, // 1 point per 10 KES
-  'WRITE_REVIEW': 15,
-  'REFERRAL_SUCCESS': 100,
-};
-
-const initialSellerRules = {
-    'VERIFY_PROFILE': 150,
-    'SALE_KES': 1, // 1 point per 10 KES
-    'FIRST_PRODUCT_PUBLISH': 25,
-    'FIVE_STAR_REVIEW': 10,
-};
-
 const buyerEarningRuleDefs = [
-  { id: 'SIGNUP_VERIFY', action: 'Sign Up & Verify Email', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "One-time reward for joining the platform." },
-  { id: 'PURCHASE_KES', action: 'Make a Purchase', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: "Points earned per KES 10 spent." },
-  { id: 'WRITE_REVIEW', action: 'Write a Product Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for reviewing a purchased product." },
+  { id: 'SIGNUP_BONUS', action: 'Sign Up & Verify Email', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "One-time reward for joining the platform." },
+  { id: 'PURCHASE_COMPLETE', action: 'Make a Purchase', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: "Points earned per KES 10 spent." },
+  { id: 'REVIEW_SUBMITTED', action: 'Write a Product Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for reviewing a purchased product." },
   { id: 'REFERRAL_SUCCESS', action: 'Refer a New User', icon: <UserPlus className="w-5 h-5 text-primary" />, description: "Awarded when your referral verifies their account." },
 ];
 
 const sellerEarningRuleDefs = [
     { id: 'VERIFY_PROFILE', action: 'Complete Profile Verification', icon: <ShieldCheck className="w-5 h-5 text-primary" />, description: 'One-time reward for becoming a "Verified" seller.' },
-    { id: 'SALE_KES', action: 'Make a Sale', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: 'Points earned per KES 10 of sale value.' },
+    { id: 'SALE_COMPLETE', action: 'Make a Sale', icon: <ShoppingCart className="w-5 h-5 text-primary" />, description: 'Points earned per KES 10 of sale value.' },
     { id: 'FIRST_PRODUCT_PUBLISH', action: 'Publish First Product', icon: <UploadCloud className="w-5 h-5 text-primary" />, description: "Awarded when the first product goes live." },
-    { id: 'FIVE_STAR_REVIEW', action: 'Receive a 5-Star Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for each 5-star review received from a verified buyer." },
+    { id: 'FIVE_STAR_REVIEW_RECEIVED', action: 'Receive a 5-Star Review', icon: <Star className="w-5 h-5 text-primary" />, description: "Reward for each 5-star review received from a verified buyer." },
 ];
 
 type PointsConfig = {
@@ -62,17 +48,6 @@ type PointsConfig = {
     sellerFiveStarReviewPoints?: number;
 }
 
-const ruleToDbFieldMapping: Record<string, keyof PointsConfig> = {
-    'SIGNUP_VERIFY': 'buyerSignupPoints',
-    'PURCHASE_KES': 'buyerPurchasePointsPer10',
-    'WRITE_REVIEW': 'buyerReviewPoints',
-    'REFERRAL_SUCCESS': 'buyerReferralPoints',
-    'VERIFY_PROFILE': 'sellerVerificationPoints',
-    'SALE_KES': 'sellerSalePointsPer10',
-    'FIRST_PRODUCT_PUBLISH': 'sellerFirstProductPoints',
-    'FIVE_STAR_REVIEW': 'sellerFiveStarReviewPoints',
-};
-
 export default function TradCoinAirdropDashboard() {
     const [isEditing, setIsEditing] = React.useState(false);
     const [isSaving, setIsSaving] = React.useState(false);
@@ -85,31 +60,25 @@ export default function TradCoinAirdropDashboard() {
     const pointsConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'platformSettings', 'pointsConfig') : null, [firestore]);
     const { data: pointsConfig, isLoading } = useDoc<PointsConfig>(pointsConfigRef);
     
-    const [buyerRules, setBuyerRules] = React.useState(initialBuyerRules);
-    const [sellerRules, setSellerRules] = React.useState(initialSellerRules);
+    const [rules, setRules] = React.useState<Record<string, number>>({});
     
     React.useEffect(() => {
         if (pointsConfig) {
-            setBuyerRules({
-                'SIGNUP_VERIFY': pointsConfig.buyerSignupPoints || 50,
-                'PURCHASE_KES': pointsConfig.buyerPurchasePointsPer10 || 1,
-                'WRITE_REVIEW': pointsConfig.buyerReviewPoints || 15,
+            setRules({
+                'SIGNUP_BONUS': pointsConfig.buyerSignupPoints || 50,
+                'PURCHASE_COMPLETE': pointsConfig.buyerPurchasePointsPer10 || 1,
+                'REVIEW_SUBMITTED': pointsConfig.buyerReviewPoints || 15,
                 'REFERRAL_SUCCESS': pointsConfig.buyerReferralPoints || 100,
-            });
-            setSellerRules({
                 'VERIFY_PROFILE': pointsConfig.sellerVerificationPoints || 150,
-                'SALE_KES': pointsConfig.sellerSalePointsPer10 || 1,
+                'SALE_COMPLETE': pointsConfig.sellerSalePointsPer10 || 1,
                 'FIRST_PRODUCT_PUBLISH': pointsConfig.sellerFirstProductPoints || 25,
-                'FIVE_STAR_REVIEW': pointsConfig.sellerFiveStarReviewPoints || 10,
+                'FIVE_STAR_REVIEW_RECEIVED': pointsConfig.sellerFiveStarReviewPoints || 10,
             });
         }
     }, [pointsConfig]);
     
-    const handleBuyerRuleChange = (id: string, value: string) => {
-        setBuyerRules(prev => ({ ...prev, [id]: Number(value) }));
-    };
-    const handleSellerRuleChange = (id: string, value: string) => {
-        setSellerRules(prev => ({ ...prev, [id]: Number(value) }));
+    const handleRuleChange = (id: string, value: string) => {
+        setRules(prev => ({ ...prev, [id]: Number(value) }));
     };
     
     const handleSaveRules = async () => {
@@ -117,14 +86,14 @@ export default function TradCoinAirdropDashboard() {
         setIsSaving(true);
         try {
             const dataToSave: PointsConfig = {
-                buyerSignupPoints: buyerRules.SIGNUP_VERIFY,
-                buyerPurchasePointsPer10: buyerRules.PURCHASE_KES,
-                buyerReviewPoints: buyerRules.WRITE_REVIEW,
-                buyerReferralPoints: buyerRules.REFERRAL_SUCCESS,
-                sellerVerificationPoints: sellerRules.VERIFY_PROFILE,
-                sellerSalePointsPer10: sellerRules.SALE_KES,
-                sellerFirstProductPoints: sellerRules.FIRST_PRODUCT_PUBLISH,
-                sellerFiveStarReviewPoints: sellerRules.FIVE_STAR_REVIEW,
+                buyerSignupPoints: rules.SIGNUP_BONUS,
+                buyerPurchasePointsPer10: rules.PURCHASE_COMPLETE,
+                buyerReviewPoints: rules.REVIEW_SUBMITTED,
+                buyerReferralPoints: rules.REFERRAL_SUCCESS,
+                sellerVerificationPoints: rules.VERIFY_PROFILE,
+                sellerSalePointsPer10: rules.SALE_COMPLETE,
+                sellerFirstProductPoints: rules.FIRST_PRODUCT_PUBLISH,
+                sellerFiveStarReviewPoints: rules.FIVE_STAR_REVIEW_RECEIVED,
             };
             await setDocumentNonBlocking(pointsConfigRef, dataToSave);
             toast({ title: "Success", description: "Points earning rules have been updated." });
@@ -230,9 +199,9 @@ export default function TradCoinAirdropDashboard() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isEditing ? (
-                                                <Input type="number" value={buyerRules[rule.id as keyof typeof buyerRules]} onChange={(e) => handleBuyerRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
+                                                <Input type="number" value={rules[rule.id] || 0} onChange={(e) => handleRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
                                             ) : (
-                                                <p className="font-bold text-lg">{buyerRules[rule.id as keyof typeof buyerRules]}</p>
+                                                <p className="font-bold text-lg">{rules[rule.id] || 0}</p>
                                             )}
                                             <span className="text-muted-foreground">Points</span>
                                         </div>
@@ -265,9 +234,9 @@ export default function TradCoinAirdropDashboard() {
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {isEditing ? (
-                                                <Input type="number" value={sellerRules[rule.id as keyof typeof sellerRules]} onChange={(e) => handleSellerRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
+                                                <Input type="number" value={rules[rule.id] || 0} onChange={(e) => handleRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
                                             ) : (
-                                                <p className="font-bold text-lg">{sellerRules[rule.id as keyof typeof sellerRules]}</p>
+                                                <p className="font-bold text-lg">{rules[rule.id] || 0}</p>
                                             )}
                                             <span className="text-muted-foreground">Points</span>
                                         </div>

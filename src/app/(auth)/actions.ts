@@ -409,7 +409,7 @@ export async function sendVerificationEmail(userId: string, email: string, name:
   }
 }
 
-async function awardPoints(firestore: FirebaseFirestore.Firestore, userId: string, points: number, reasonCode: string, metadata: object = {}) {
+export async function awardPoints(firestore: FirebaseFirestore.Firestore, userId: string, points: number, reasonCode: string, metadata: object = {}) {
     const eventRef = firestore.collection('pointsLedgerEvents').doc();
     
     // Create a deterministic payload for hashing
@@ -430,6 +430,7 @@ async function awardPoints(firestore: FirebaseFirestore.Firestore, userId: strin
         ...payload,
         created_at: FieldValue.serverTimestamp(), // Use server timestamp for actual storage
         event_hash: hash,
+        issued_by: 'system', // Indicate this was a system-generated event
     };
     
     // We don't want to block the user flow, so we don't await this.
@@ -457,6 +458,9 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
         const userRecord = await auth.getUser(userId); // Get user record from Auth
         const userDocRef = firestore.collection('users').doc(userId);
         const userDoc = await userDocRef.get(); // Get user profile from Firestore
+        
+        const pointsConfigSnap = await firestore.collection('platformSettings').doc('pointsConfig').get();
+        const pointsConfig = pointsConfigSnap.data() || {};
 
         // --- Start of new logic ---
         // Only proceed if the email has not been verified yet
@@ -468,7 +472,10 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
             await userDocRef.update({ emailVerified: true });
 
             // 1. Award sign-up bonus to the new user
-            await awardPoints(firestore, userId, 50, 'SIGNUP_BONUS');
+            const signupBonus = pointsConfig.buyerSignupPoints || 50;
+            if(signupBonus > 0) {
+              await awardPoints(firestore, userId, signupBonus, 'SIGNUP_BONUS');
+            }
 
             // 2. Award referral bonus to the referrer, if applicable
             if (userProfile?.referredBy) {
@@ -480,7 +487,10 @@ export async function verifyEmailToken(token: string): Promise<{ success: boolea
                 const referrerSnapshot = await getDocs(referrerQuery);
                 if (!referrerSnapshot.empty) {
                     const referrerDoc = referrerSnapshot.docs[0];
-                    await awardPoints(firestore, referrerDoc.id, 100, 'REFERRAL_SUCCESS', { referredUserId: userId });
+                    const referralBonus = pointsConfig.buyerReferralPoints || 100;
+                    if(referralBonus > 0) {
+                      await awardPoints(firestore, referrerDoc.id, referralBonus, 'REFERRAL_SUCCESS', { referredUserId: userId });
+                    }
                 }
             }
 
