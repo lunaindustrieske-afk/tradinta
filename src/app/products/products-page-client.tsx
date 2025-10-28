@@ -75,6 +75,8 @@ import { Separator } from '@/components/ui/separator';
 import { PlaceHolderImages } from '@/app/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
 
 type ProductWithShopId = Product & {
   shopId: string;
@@ -113,9 +115,9 @@ export function ProductsPageClient({
 
   const [filters, setFilters] = useState({
     category: 'all',
-    view: 'all', // 'all', 'b2b', 'b2c'
   });
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('wholesale');
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -140,16 +142,14 @@ export function ProductsPageClient({
           searchQuery === '' ||
           product.name.toLowerCase().includes(searchQuery.toLowerCase());
         
-        let matchesView = true;
-        if (filters.view === 'b2c') {
-            matchesView = product.listOnTradintaDirect === true;
-        }
-        // B2B products are those not exclusively on Tradinta Direct
-        if (filters.view === 'b2b') {
-             matchesView = true; // Assuming all products are B2B for now
+        let matchesTab = true;
+        if (activeTab === 'tradinta-direct') {
+            matchesTab = product.listOnTradintaDirect === true;
+        } else if (activeTab === 'wholesale') {
+            matchesTab = true; // Assuming all products are available for wholesale for now
         }
 
-        return matchesCategory && matchesSearch && matchesView;
+        return matchesCategory && matchesSearch && matchesTab;
       });
 
       let manufacturers = allManufacturers.filter((mfg) => {
@@ -187,7 +187,7 @@ export function ProductsPageClient({
         filteredManufacturers: manufacturers,
         promoSlides: dynamicPromoSlides,
       };
-    }, [allProducts, allManufacturers, filters, searchQuery]);
+    }, [allProducts, allManufacturers, filters, searchQuery, activeTab]);
 
   const FilterSidebar = () => (
     <Card className="p-4 lg:p-6">
@@ -528,48 +528,49 @@ export function ProductsPageClient({
                 </Sheet>
               </div>
             </div>
-             <div className="flex items-center gap-2 mt-4">
-                <Button 
-                    variant={filters.view === 'all' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilters(prev => ({...prev, view: 'all'}))}>
-                        All Products
-                </Button>
-                 <Button 
-                    variant={filters.view === 'b2b' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilters(prev => ({...prev, view: 'b2b'}))}>
-                        Wholesale Only
-                </Button>
-                 <Button 
-                    variant={filters.view === 'b2c' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    onClick={() => setFilters(prev => ({...prev, view: 'b2c'}))}>
-                        Tradinta Direct
-                </Button>
-            </div>
           </div>
+          
+           <Tabs defaultValue="wholesale" className="w-full" onValueChange={setActiveTab}>
+                <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="wholesale">Wholesale</TabsTrigger>
+                    <TabsTrigger value="tradinta-direct">Tradinta Direct</TabsTrigger>
+                    <TabsTrigger value="following">Following</TabsTrigger>
+                </TabsList>
+                <TabsContent value="wholesale" className="mt-6">
+                     <div className="space-y-12">
+                        <div>
+                          <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
+                             Product Results
+                          </h2>
+                          <ProductGrid />
+                        </div>
 
-          <div className="space-y-12">
-            <div>
-              <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
-                <Search className="w-6 h-6" /> Product Results
-              </h2>
-              <ProductGrid />
-            </div>
+                        <Separator />
 
-            <Separator />
+                        <div>
+                          <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
+                            <Building className="w-6 h-6" /> Manufacturer Results
+                          </h2>
+                          <ManufacturerList />
+                        </div>
+                      </div>
+                </TabsContent>
+                <TabsContent value="tradinta-direct" className="mt-6">
+                     <ProductGrid />
+                </TabsContent>
+                <TabsContent value="following" className="mt-6">
+                     <div className="col-span-full text-center py-16 bg-muted/50 rounded-lg">
+                        <h3 className="text-lg font-semibold">Coming Soon</h3>
+                        <p className="text-muted-foreground mt-2">
+                            Follow your favorite shops to see their updates here.
+                        </p>
+                    </div>
+                </TabsContent>
+            </Tabs>
 
-            <div>
-              <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
-                <Building className="w-6 h-6" /> Manufacturer Results
-              </h2>
-              <ManufacturerList />
-            </div>
-          </div>
 
           {filteredProducts.length === 0 &&
-            filteredManufacturers.length === 0 && (
+            filteredManufacturers.length === 0 && activeTab !== 'following' && (
               <div className="col-span-full text-center py-12 bg-muted/50 rounded-lg">
                 <h3 className="text-lg font-semibold">No Results Found</h3>
                 <p className="text-muted-foreground mt-2">
