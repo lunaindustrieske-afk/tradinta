@@ -1,11 +1,12 @@
+
 'use client';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { BarChart, Users, ShoppingCart, DollarSign, LineChart as LineChartIcon, Activity } from "lucide-react";
 import { Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, ComposedChart } from 'recharts';
-import { useCollection, useCollectionGroup, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, query, where, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 
