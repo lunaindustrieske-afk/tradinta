@@ -14,6 +14,7 @@ import {
   Book,
   RefreshCcw,
   ExternalLink,
+  Store,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -53,6 +54,7 @@ import { Separator } from '@/components/ui/separator';
 import { useLocalStorageState } from '@/hooks/use-local-storage-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logFeatureUsage } from '@/lib/analytics';
+import { Switch } from '@/components/ui/switch';
 
 type Variant = {
   id: string;
@@ -62,6 +64,7 @@ type Variant = {
   weight: { value: string; unit: string };
   dimensions: { length: string; width: string; height: string; unit: string };
   attributes: Record<string, string>;
+  retailPrice?: string;
 };
 
 type ProductFormState = {
@@ -77,6 +80,7 @@ type ProductFormState = {
   material: string;
   certifications: string;
   packagingDetails: string;
+  listOnTradintaDirect: boolean;
 };
 
 type ManufacturerData = {
@@ -96,6 +100,7 @@ const initialFormState: ProductFormState = {
   material: '',
   certifications: '',
   packagingDetails: '',
+  listOnTradintaDirect: false,
 };
 
 export default function NewProductPage() {
@@ -159,6 +164,7 @@ export default function NewProductPage() {
         if (option) acc[option] = '';
         return acc;
       }, {} as Record<string, string>),
+      retailPrice: '',
     };
     handleFormChange('variants', [...formState.variants, newVariant]);
   };
@@ -255,6 +261,7 @@ export default function NewProductPage() {
                 ...v,
                 price: Number(v.price) || 0,
                 stock: Number(v.stock) || 0,
+                retailPrice: formState.listOnTradintaDirect ? (Number(v.retailPrice) || 0) : null,
                 weight: {
                     ...v.weight,
                     value: Number(v.weight.value) || 0,
@@ -270,6 +277,7 @@ export default function NewProductPage() {
             material: formState.material,
             certifications: formState.certifications,
             packagingDetails: formState.packagingDetails,
+            listOnTradintaDirect: formState.listOnTradintaDirect,
             createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
         });
@@ -477,6 +485,13 @@ export default function NewProductPage() {
                 <CardDescription>Add options like size or color to create different versions of this product.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
+                <div className="flex items-center space-x-2 border p-3 rounded-md bg-muted/20">
+                  <Switch id="tradinta-direct-switch" checked={formState.listOnTradintaDirect} onCheckedChange={(checked) => handleFormChange('listOnTradintaDirect', checked)} />
+                  <Label htmlFor="tradinta-direct-switch" className="flex flex-col">
+                    <span className="font-semibold flex items-center gap-2"><Store className="w-4 h-4 text-primary"/>List this product on Tradinta Direct</span>
+                    <span className="text-xs text-muted-foreground">Make this product available for direct-to-consumer purchase.</span>
+                  </Label>
+                </div>
                 <div>
                     <Label>Variant Options</Label>
                     <div className="space-y-2 mt-2">
@@ -511,9 +526,20 @@ export default function NewProductPage() {
                                         ))}
                                     </div>
                                     <div className="grid sm:grid-cols-2 gap-4 mt-4">
-                                        <div className="grid gap-2"><Label className="text-xs">Price (KES)</Label><Input type="number" placeholder="0.00" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} /></div>
+                                        <div className="grid gap-2"><Label className="text-xs">B2B Price (KES)</Label><Input type="number" placeholder="0.00" value={variant.price} onChange={e => handleVariantChange(variant.id, 'price', e.target.value)} /></div>
                                         <div className="grid gap-2"><Label className="text-xs">Stock</Label><Input type="number" placeholder="0" value={variant.stock} onChange={e => handleVariantChange(variant.id, 'stock', e.target.value)} /></div>
                                     </div>
+                                    {formState.listOnTradintaDirect && (
+                                        <div className="mt-4 pt-4 border-t border-dashed">
+                                            <Label className="text-xs font-semibold text-primary">Tradinta Direct (B2C)</Label>
+                                            <div className="grid sm:grid-cols-2 gap-4 mt-2">
+                                                <div className="grid gap-2">
+                                                    <Label htmlFor={`rrp-${variant.id}`} className="text-xs">Retail Price (RRP)</Label>
+                                                    <Input id={`rrp-${variant.id}`} type="number" placeholder="e.g. 800.00" value={variant.retailPrice} onChange={e => handleVariantChange(variant.id, 'retailPrice', e.target.value)} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
                                      <div className="grid grid-cols-1 gap-4 mt-4">
                                         <div className="grid gap-2"><Label className="text-xs">SKU</Label><Input placeholder="SKU-VAR-01" value={variant.sku} onChange={e => handleVariantChange(variant.id, 'sku', e.target.value)} /></div>
                                     </div>
