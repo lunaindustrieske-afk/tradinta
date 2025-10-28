@@ -340,11 +340,14 @@ export default function SellerProductsPage() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setEditingStock(product.id)}>
+              <DropdownMenuItem onClick={() => {
+                  setEditingStock(product.id);
+                  handleFeatureClick('products:quick_edit_stock_clicked', { productId: product.id });
+                }}>
                 <Pencil className="mr-2 h-4 w-4" /> Quick Edit Stock
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`}>
+                <Link href={`/dashboards/seller-centre/products/analytics/${product.id}`} onClick={() => handleFeatureClick('products:view_analytics', { productId: product.id })}>
                   <BarChart2 className="mr-2 h-4 w-4" /> View Analytics
                 </Link>
               </DropdownMenuItem>
@@ -478,3 +481,5 @@ export default function SellerProductsPage() {
     </div>
   );
 }
+
+    
