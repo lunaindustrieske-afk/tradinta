@@ -64,7 +64,7 @@ import { getAllProducts } from '@/app/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { manufacturers as mockManufacturers } from '@/app/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Separator } from '../ui/separator';
+import { Separator } from '@/components/ui/separator';
 
 type ProductWithShopId = Product & {
   shopId: string;
