@@ -238,6 +238,12 @@ export default function SellerDashboardPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
+  React.useEffect(() => {
+    if (user && role) {
+      logFeatureUsage({ feature: 'page:view', userId: user.uid, userRole: role, metadata: { page: '/dashboards/seller-centre' } });
+    }
+  }, [user, role]);
+
   const manufacturerDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
     return doc(firestore, 'manufacturers', user.uid);
@@ -273,7 +279,7 @@ export default function SellerDashboardPage() {
     
   const handleFeatureClick = (feature: string, metadata?: Record<string, any>) => {
     if (user && role) {
-      logFeatureUsage({ feature, userId: user.uid, userRole: role, metadata });
+      logFeatureUsage({ feature, userId: user.uid, userRole: role, metadata: { page: '/dashboards/seller-centre', ...metadata } });
     }
   };
   
@@ -685,5 +691,3 @@ export default function SellerDashboardPage() {
     </div>
   );
 }
-
-    

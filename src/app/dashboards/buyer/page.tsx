@@ -226,10 +226,16 @@ const ProfileCard = () => {
 
 
 export default function BuyerDashboard() {
-    const { user } = useUser();
+    const { user, role } = useUser();
     const { toast } = useToast();
     const [copied, setCopied] = React.useState(false);
     
+    React.useEffect(() => {
+        if (user && role) {
+          logFeatureUsage({ feature: 'page:view', userId: user.uid, userRole: role, metadata: { page: '/dashboards/buyer' } });
+        }
+    }, [user, role]);
+
     const firestore = useFirestore();
     const userDocRef = useMemoFirebase(() => {
         if (!user || !firestore) return null;

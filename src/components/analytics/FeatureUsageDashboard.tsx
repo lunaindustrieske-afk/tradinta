@@ -3,7 +3,6 @@
 
 import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, Timestamp } from "firebase/firestore";
@@ -11,76 +10,118 @@ import { subDays, startOfDay } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '../ui/accordion';
 
 type FeatureUsage = {
     feature: string;
     timestamp: any;
     userRole: 'manufacturer' | 'buyer' | 'partner' | string;
+    metadata?: {
+        page?: string; // e.g., 'products', 'dashboard'
+    }
 };
 
-const FeatureUsageTable = ({ events, isLoading }: { events: FeatureUsage[], isLoading: boolean }) => {
-    const aggregatedFeatures = React.useMemo(() => {
-        if (!events) return [];
+const PORTAL_PAGES: Record<string, {name: string, path: string}[]> = {
+    'manufacturer': [
+        { name: 'Seller Centre', path: '/dashboards/seller-centre' },
+        { name: 'Products List', path: '/dashboards/seller-centre/products' },
+        { name: 'New Product', path: '/dashboards/seller-centre/products/new' },
+        { name: 'Edit Product', path: '/dashboards/seller-centre/products/edit/[id]' },
+        { name: 'Product Analytics', path: '/dashboards/seller-centre/products/analytics/[id]' },
+        { name: 'Quotations', path: '/dashboards/seller-centre/quotations' },
+        { name: 'Profile', path: '/dashboards/seller-centre/profile' },
+        { name: 'Verification', path: '/dashboards/seller-centre/verification' },
+        { name: 'Messages', path: '/dashboards/seller-centre/messages' },
+    ],
+    'buyer': [
+        { name: 'Buyer Dashboard', path: '/dashboards/buyer' },
+        { name: 'Orders & RFQs', path: '/dashboards/buyer/orders' },
+        { name: 'RFQ Details', path: '/dashboards/buyer/quotations/[id]' },
+        { name: 'Messages', path: '/dashboards/buyer/messages' },
+        { name: 'TradPoints', path: '/dashboards/buyer/tradpoints' },
+        { name: 'Wishlist', path: '/dashboards/buyer/wishlist' },
+    ],
+    'partner': [
+        { name: 'Growth Partner Dashboard', path: '/dashboards/growth-partner' },
+    ]
+};
 
-        const counts: Record<string, { feature: string; page: string; dashboard: string; count: number }> = {};
-        
-        events.forEach(event => {
-            const [resource, action] = event.feature.split(':');
-            const page = resource.replace(/_/g, ' ');
-            const dashboard = 'Seller Centre'; // This is hardcoded for now, can be derived later
-            
-            if (!counts[event.feature]) {
-                counts[event.feature] = {
-                    feature: action,
-                    page: page,
-                    dashboard: dashboard,
-                    count: 0
-                };
-            }
-            counts[event.feature].count++;
+
+const FeatureUsageByRole = ({ role, events, isLoading }: { role: 'manufacturer' | 'buyer' | 'partner', events: FeatureUsage[], isLoading: boolean }) => {
+    
+    const pages = PORTAL_PAGES[role] || [];
+
+    const pageData = React.useMemo(() => {
+        if (!events) return {};
+
+        const data: Record<string, { visits: number, features: Record<string, number> }> = {};
+
+        pages.forEach(page => {
+            const pageKey = page.path;
+            data[pageKey] = { visits: 0, features: {} };
         });
 
-        return Object.values(counts).sort((a,b) => b.count - a.count);
+        events.forEach(event => {
+            const pageKey = event.metadata?.page;
+            if (pageKey && data[pageKey]) {
+                const [resource, action] = event.feature.split(':');
+                if (action === 'view_page') {
+                    data[pageKey].visits++;
+                } else {
+                    if (!data[pageKey].features[event.feature]) {
+                        data[pageKey].features[event.feature] = 0;
+                    }
+                    data[pageKey].features[event.feature]++;
+                }
+            }
+        });
+        
+        return data;
 
-    }, [events]);
+    }, [events, pages]);
+
+
+    if (isLoading) {
+         return <div className="space-y-2">{Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}</div>
+    }
 
     return (
-        <Table>
-            <TableHeader>
-                <TableRow>
-                    <TableHead>Feature</TableHead>
-                    <TableHead>Page</TableHead>
-                    <TableHead>Dashboard</TableHead>
-                    <TableHead className="text-right">Usage Count</TableHead>
-                </TableRow>
-            </TableHeader>
-            <TableBody>
-                {isLoading ? (
-                    Array.from({length: 4}).map((_, i) => (
-                        <TableRow key={i}>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                            <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                        </TableRow>
-                    ))
-                ) : aggregatedFeatures.length > 0 ? (
-                    aggregatedFeatures.map(feature => (
-                        <TableRow key={feature.feature + feature.page}>
-                            <TableCell className="font-medium capitalize">{feature.feature.replace(/_/g, ' ')}</TableCell>
-                            <TableCell className="capitalize">{feature.page}</TableCell>
-                            <TableCell>{feature.dashboard}</TableCell>
-                            <TableCell className="text-right font-bold">{feature.count}</TableCell>
-                        </TableRow>
-                    ))
-                ) : (
-                    <TableRow>
-                        <TableCell colSpan={4} className="h-24 text-center">No feature usage data for this role and period.</TableCell>
-                    </TableRow>
-                )}
-            </TableBody>
-        </Table>
-    );
+        <Accordion type="multiple" className="w-full">
+            {pages.map(page => {
+                const data = pageData[page.path];
+                const totalPageInteractions = (data?.visits || 0) + Object.values(data?.features || {}).reduce((a, b) => a + b, 0);
+
+                if (totalPageInteractions === 0) return null;
+
+                return (
+                    <AccordionItem key={page.path} value={page.path}>
+                        <AccordionTrigger>
+                            <div className="flex justify-between w-full pr-4">
+                                <span className="font-mono text-sm">{page.path}</span>
+                                <span className="font-bold">{data?.visits || 0} Visits</span>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                           {data && Object.keys(data.features).length > 0 ? (
+                             <Table>
+                               <TableBody>
+                                 {Object.entries(data.features).map(([feature, count]) => (
+                                     <TableRow key={feature}>
+                                         <TableCell className="text-muted-foreground pl-8">{feature}</TableCell>
+                                         <TableCell className="text-right font-medium">{count}</TableCell>
+                                     </TableRow>
+                                 ))}
+                               </TableBody>
+                            </Table>
+                           ) : (
+                               <p className="text-xs text-muted-foreground text-center py-4">No specific feature interactions recorded for this page.</p>
+                           )}
+                        </AccordionContent>
+                    </AccordionItem>
+                )
+            })}
+        </Accordion>
+    )
 };
 
 export default function FeatureUsageDashboard() {
@@ -132,18 +173,18 @@ export default function FeatureUsageDashboard() {
             <CardContent>
                 <Tabs defaultValue="sellers">
                     <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="sellers">Sellers</TabsTrigger>
-                        <TabsTrigger value="buyers">Buyers</TabsTrigger>
-                        <TabsTrigger value="partners">Growth Partners</TabsTrigger>
+                        <TabsTrigger value="sellers">Sellers ({sellerEvents.length})</TabsTrigger>
+                        <TabsTrigger value="buyers">Buyers ({buyerEvents.length})</TabsTrigger>
+                        <TabsTrigger value="partners">Growth Partners ({partnerEvents.length})</TabsTrigger>
                     </TabsList>
                     <TabsContent value="sellers" className="mt-4">
-                       <FeatureUsageTable events={sellerEvents} isLoading={isLoading} />
+                       <FeatureUsageByRole role="manufacturer" events={sellerEvents} isLoading={isLoading} />
                     </TabsContent>
                     <TabsContent value="buyers" className="mt-4">
-                       <FeatureUsageTable events={buyerEvents} isLoading={isLoading} />
+                       <FeatureUsageByRole role="buyer" events={buyerEvents} isLoading={isLoading} />
                     </TabsContent>
                     <TabsContent value="partners" className="mt-4">
-                        <FeatureUsageTable events={partnerEvents} isLoading={isLoading} />
+                        <FeatureUsageByRole role="partner" events={partnerEvents} isLoading={isLoading} />
                     </TabsContent>
                 </Tabs>
             </CardContent>

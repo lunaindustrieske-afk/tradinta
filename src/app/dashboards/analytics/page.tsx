@@ -5,7 +5,7 @@ import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Users, ShoppingCart, DollarSign, Activity, BarChart as BarChartIcon } from "lucide-react";
-import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";

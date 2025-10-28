@@ -39,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { collection, query, where, doc } from 'firebase/firestore';
+import { logFeatureUsage } from '@/lib/analytics';
 
 // Mock data until backend is fully integrated
 const mockMetrics = {
@@ -63,11 +64,17 @@ type UserProfile = {
 };
 
 export default function GrowthPartnerDashboard() {
-  const { user, isUserLoading } = useUser();
+  const { user, isUserLoading, role } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [copiedCampaignLink, setCopiedCampaignLink] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (user && role) {
+      logFeatureUsage({ feature: 'page:view', userId: user.uid, userRole: role, metadata: { page: '/dashboards/growth-partner' } });
+    }
+  }, [user, role]);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
