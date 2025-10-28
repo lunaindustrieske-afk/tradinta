@@ -14,7 +14,7 @@ import { nanoid } from 'nanoid';
 
 interface LeaveReviewFormProps {
   product: Product;
-  onReviewSubmit: () => void;
+  onReviewSubmit?: () => void;
 }
 
 export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProps) {
@@ -86,9 +86,9 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
       setRating(0);
       setComment('');
       
-      // FIX: Call onReviewSubmit here, AFTER the submission is complete.
       if (onReviewSubmit) {
-          onReviewSubmit();
+          // Defer the execution to the next event loop cycle to prevent recursion
+          setTimeout(() => onReviewSubmit(), 0);
       }
 
     } catch (error: any) {

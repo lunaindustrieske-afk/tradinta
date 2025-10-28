@@ -105,6 +105,12 @@ export function ProductReviews({ product }: ProductReviewsProps) {
         if (!user || !reviews) return false;
         return reviews.some(review => review.buyerId === user.uid);
     }, [user, reviews]);
+    
+    const handleRefetch = React.useCallback(() => {
+        if (typeof forceRefetch === 'function') {
+            forceRefetch();
+        }
+    }, [forceRefetch]);
 
     const handleDeleteReview = async (review: Review) => {
         if (!firestore || !user || !role) return;
@@ -116,7 +122,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                 title: 'Review Deleted',
                 description: 'The review has been permanently removed.',
             });
-            forceRefetch(); // Refresh the list
+            handleRefetch(); // Refresh the list
         } catch (error: any) {
             toast({
                 title: 'Error',
@@ -139,7 +145,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                         <p className="text-sm text-muted-foreground">Your feedback is now live.</p>
                     </div>
                 ) : (
-                    <LeaveReviewForm product={product} onReviewSubmit={forceRefetch} />
+                    <LeaveReviewForm product={product} onReviewSubmit={handleRefetch} />
                 )}
             </div>
             <Separator />
@@ -217,7 +223,7 @@ export function ProductReviews({ product }: ProductReviewsProps) {
                                         ) : null
                                      )}
                                 </div>
-                                {replyingTo === review.id && <ReplyForm review={review} onReplySuccess={() => { setReplyingTo(null); forceRefetch(); }} />}
+                                {replyingTo === review.id && <ReplyForm review={review} onReplySuccess={() => { setReplyingTo(null); handleRefetch(); }} />}
                             </div>
                         ))
                     ) : (
