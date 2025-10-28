@@ -65,13 +65,15 @@ import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { type Product, type Manufacturer } from '@/lib/definitions';
-import { categories } from '@/app/lib/categories';
+import { categories } from '@/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { manufacturers as mockManufacturers } from '@/app/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { cn } from '@/lib/utils';
 
 type ProductWithShopId = Product & {
   shopId: string;
@@ -82,21 +84,14 @@ type ProductWithShopId = Product & {
 };
 
 const categoryIcons: Record<string, React.ReactNode> = {
-  'Industrial & Manufacturing Supplies': <Factory className="w-5 h-5" />,
-  'Construction & Building Materials': <Building2 className="w-5 h-5" />,
-  'Food & Beverage': <UtensilsCrossed className="w-5 h-5" />,
-  'Beauty, Hygiene & Personal Care': <Sparkles className="w-5 h-5" />,
-  'Cleaning & Home Care': <Home className="w-5 h-5" />,
-  'Packaging, Printing & Branding': <Printer className="w-5 h-5" />,
-  'Automotive & Transport Supplies': <Car className="w-5 h-5" />,
-  'Office, School & Stationery Supplies': <BookOpen className="w-5 h-5" />,
-  'Fashion, Textiles & Apparel': <Shirt className="w-5 h-5" />,
-  'Furniture & Home Goods': <Armchair className="w-5 h-5" />,
-  'Agriculture & Agri-Processing': <Sprout className="w-5 h-5" />,
-  'Medical, Health & Safety': <HeartPulse className="w-5 h-5" />,
-  'Energy & Utilities': <Bolt className="w-5 h-5" />,
-  'Local & Small Manufacturers (Made in Kenya)': <Award className="w-5 h-5" />,
-  'Services & Trade Support': <Handshake className="w-5 h-5" />,
+  'industrial': <Factory className="w-8 h-8" />,
+  'construction': <Building2 className="w-8 h-8" />,
+  'food-beverage': <UtensilsCrossed className="w-8 h-8" />,
+  'beauty-hygiene': <Sparkles className="w-8 h-8" />,
+  'packaging-printing': <Printer className="w-8 h-8" />,
+  'automotive': <Car className="w-8 h-8" />,
+  'agriculture': <Sprout className="w-8 h-8" />,
+  'fashion-textiles': <Shirt className="w-8 h-8" />,
 };
 
 const promoSlides = [
@@ -341,9 +336,7 @@ export function ProductsPageClient({
   return (
     <div className="container mx-auto py-8">
         <section className="relative h-[40vh] lg:h-[50vh] rounded-lg overflow-hidden -mt-8 -mx-4 mb-8">
-            <Carousel className="w-full h-full" opts={{ loop: true }} plugins={[
-                // Autoplay({ delay: 5000 }),
-            ]}>
+            <Carousel className="w-full h-full" opts={{ loop: true }}>
                 <CarouselContent className="h-full">
                     {promoSlides.map((slide) => (
                         <CarouselItem key={slide.title}>
@@ -384,31 +377,35 @@ export function ProductsPageClient({
         </p>
       </div>
 
-      <div className="sticky top-14 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-4 px-4 border-b">
-        <ScrollArea className="w-full whitespace-nowrap">
-          <div className="flex w-max space-x-2">
-            <Button
-              variant={filters.category === 'all' ? 'default' : 'outline'}
-              className="rounded-full"
-              onClick={() => setFilters({ ...filters, category: 'all' })}
-            >
-              All Categories
-            </Button>
-            {categories.map((cat) => (
-              <Button
-                key={cat.name}
-                variant={filters.category === cat.name ? 'default' : 'outline'}
-                className="rounded-full"
+       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
+          {categories.map((cat) => {
+            const image = PlaceHolderImages.find(img => img.id === cat.imageId);
+            return (
+              <button
+                key={cat.id}
                 onClick={() => setFilters({ ...filters, category: cat.name })}
+                className={cn(
+                  "group relative aspect-video w-full overflow-hidden rounded-lg border-2",
+                  filters.category === cat.name ? "border-primary ring-2 ring-primary ring-offset-2" : "border-transparent"
+                )}
               >
-                {categoryIcons[cat.name]}
-                <span className="ml-2">{cat.name}</span>
-              </Button>
-            ))}
-          </div>
-          <ScrollBar orientation="horizontal" />
-        </ScrollArea>
-      </div>
+                <Image
+                  src={image?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300'}
+                  alt={cat.name}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                  data-ai-hint={image?.imageHint}
+                />
+                <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition-colors" />
+                <div className="absolute bottom-2 left-3 right-3 text-left text-white">
+                  <div className="text-lg text-primary-foreground">{categoryIcons[cat.id]}</div>
+                  <h3 className="font-bold text-sm mt-1">{cat.name}</h3>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
 
       <div className="grid lg:grid-cols-4 gap-8 mt-6">
         <div className="hidden lg:block lg:col-span-1">

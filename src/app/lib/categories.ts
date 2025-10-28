@@ -1,10 +1,14 @@
 export type Category = {
+    id: string;
     name: string;
     subcategories: string[];
+    icon?: React.ReactNode;
+    imageId: string;
 }
 
 export const categories: Category[] = [
     {
+        id: "industrial",
         name: "Industrial & Manufacturing Supplies",
         subcategories: [
             "Machinery & Equipment",
@@ -14,9 +18,11 @@ export const categories: Category[] = [
             "Lubricants & Oils",
             "Welding & Construction Tools",
             "Industrial Safety Gear"
-        ]
+        ],
+        imageId: "cat-industrial"
     },
     {
+        id: "construction",
         name: "Construction & Building Materials",
         subcategories: [
             "Cement, Sand & Aggregates",
@@ -26,9 +32,11 @@ export const categories: Category[] = [
             "Plumbing & Electrical Fittings",
             "Doors, Windows & Accessories",
             "Glass & Ceramics"
-        ]
+        ],
+        imageId: "cat-construction"
     },
     {
+        id: "food-beverage",
         name: "Food & Beverage",
         subcategories: [
             "Processed Foods (snacks, cereals, sauces)",
@@ -37,9 +45,11 @@ export const categories: Category[] = [
             "Spices & Condiments",
             "Packaging for Food & Beverage Manufacturers",
             "Frozen Foods (for B2B bulk supply)"
-        ]
+        ],
+        imageId: "cat-food"
     },
     {
+        id: "beauty-hygiene",
         name: "Beauty, Hygiene & Personal Care",
         subcategories: [
             "Soaps & Detergents",
@@ -49,19 +59,11 @@ export const categories: Category[] = [
             "Feminine Hygiene Products",
             "Oral & Dental Care",
             "Sanitizers & Disinfectants"
-        ]
+        ],
+        imageId: "cat-beauty"
     },
     {
-        name: "Cleaning & Home Care",
-        subcategories: [
-            "Detergents, Bleach, and Surface Cleaners",
-            "Cleaning Tools & Equipment",
-            "Paper Products (tissue, napkins, towels)",
-            "Pest Control Supplies",
-            "Air Fresheners & Home Fragrance"
-        ]
-    },
-    {
+        id: "packaging-printing",
         name: "Packaging, Printing & Branding",
         subcategories: [
             "Plastic Containers & Bottles",
@@ -70,9 +72,11 @@ export const categories: Category[] = [
             "Industrial Packaging Films",
             "Printing & Branding Services",
             "Recyclable / Eco Packaging"
-        ]
+        ],
+        imageId: "cat-packaging"
     },
-    {
+     {
+        id: "automotive",
         name: "Automotive & Transport Supplies",
         subcategories: [
             "Car Care Products (cleaners, wax, polish)",
@@ -80,39 +84,11 @@ export const categories: Category[] = [
             "Tires & Batteries",
             "Motor Oils & Fluids",
             "Safety & Maintenance Equipment"
-        ]
+        ],
+        imageId: "cat-automotive"
     },
     {
-        name: "Office, School & Stationery Supplies",
-        subcategories: [
-            "Paper & Notebooks (bulk)",
-            "Office Equipment & Furniture",
-            "Printers, Ink, & Toners",
-            "School Supplies",
-            "Art & Design Materials"
-        ]
-    },
-    {
-        name: "Fashion, Textiles & Apparel",
-        subcategories: [
-            "Fabrics & Raw Materials",
-            "Workwear & Uniforms",
-            "Footwear (safety, industrial, casual)",
-            "Bags & Accessories",
-            "Sewing Machines & Tailoring Tools"
-        ]
-    },
-    {
-        name: "Furniture & Home Goods",
-        subcategories: [
-            "Office & Industrial Furniture",
-            "Kitchen & Dining Supplies",
-            "Plastic & Wooden Furniture",
-            "Lighting & Electricals",
-            "Decor & Home Accessories"
-        ]
-    },
-    {
+        id: "agriculture",
         name: "Agriculture & Agri-Processing",
         subcategories: [
             "Seeds, Fertilizers & Pesticides",
@@ -121,44 +97,19 @@ export const categories: Category[] = [
             "Food Processing Machinery",
             "Agro Chemicals",
             "Packaging for Agricultural Products"
-        ]
+        ],
+        imageId: "cat-agriculture"
     },
     {
-        name: "Medical, Health & Safety",
+        id: "fashion-textiles",
+        name: "Fashion, Textiles & Apparel",
         subcategories: [
-            "PPE & Safety Gear",
-            "Medical Equipment & Consumables",
-            "First Aid Supplies",
-            "Health Supplements & Nutraceuticals",
-            "Sanitization Supplies"
-        ]
-    },
-    {
-        name: "Energy & Utilities",
-        subcategories: [
-            "Solar Panels & Batteries",
-            "Electrical Components",
-            "Gas & Fuel Equipment",
-            "Renewable Energy Systems",
-            "Power Tools"
-        ]
-    },
-    {
-        name: "Local & Small Manufacturers (Made in Kenya)",
-        subcategories: [
-            "Local Food Producers",
-            "Local Cosmetics & Care Brands",
-            "Craft & Handmade Goods",
-            "Eco & Sustainable Products"
-        ]
-    },
-    {
-        name: "Services & Trade Support",
-        subcategories: [
-            "Logistics & Courier Services",
-            "Branding & Marketing Services",
-            "Industrial Maintenance & Repairs",
-            "Business Support (Legal, Accounting, Consulting)"
-        ]
+            "Fabrics & Raw Materials",
+            "Workwear & Uniforms",
+            "Footwear (safety, industrial, casual)",
+            "Bags & Accessories",
+            "Sewing Machines & Tailoring Tools"
+        ],
+        imageId: "cat-textiles"
     }
 ];
