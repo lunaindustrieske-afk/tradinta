@@ -15,7 +15,7 @@ import { useAuth, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2 } from "lucide-react";
+import { Eye, EyeOff, User, Mail, KeyRound, Building, Loader2, Info } from "lucide-react";
 import { nanoid } from "nanoid";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { sendVerificationEmail, setUserRoleClaim } from "@/app/(auth)/actions";
@@ -307,6 +307,15 @@ export default function SignUpPage() {
                     </div>
                 </div>
             )}
+             {country && country !== 'kenya' && (
+                <Alert variant="default" className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+                    <Info className="h-4 w-4 text-blue-600" />
+                    <AlertTitle>Expanding Soon!</AlertTitle>
+                    <AlertDescription>
+                        Tradinta's full seller services are currently optimized for Kenya. You can still create an account, and we'll notify you as soon as we launch full support in your country.
+                    </AlertDescription>
+                </Alert>
+             )}
              <div className="flex items-center">
                 <Checkbox id="terms" name="terms" required/>
                 <Label htmlFor="terms" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
