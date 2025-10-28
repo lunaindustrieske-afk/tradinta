@@ -80,9 +80,11 @@ const mockSearchResults = [
 
 function GenerateCodesForm() {
   const { toast } = useToast();
+  const [isGenerating, setIsGenerating] = React.useState(false);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setIsGenerating(true);
     const formData = new FormData(event.currentTarget);
     const count = Number(formData.get('count'));
     const points = Number(formData.get('points'));
@@ -90,6 +92,7 @@ function GenerateCodesForm() {
     
     if (isNaN(count) || count <= 0 || isNaN(points) || points <= 0) {
         toast({ title: 'Invalid input', description: 'Please enter valid numbers for count and points.', variant: 'destructive' });
+        setIsGenerating(false);
         return;
     }
 
@@ -97,11 +100,14 @@ function GenerateCodesForm() {
         const result = await generateClaimCodes({ count, points, expiresAt });
         if(result.success) {
             toast({ title: "Success!", description: `${result.count} claim codes have been generated.`});
+             // Consider triggering a refetch of the table data here
         } else {
             throw new Error(result.message);
         }
     } catch (error: any) {
         toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+        setIsGenerating(false);
     }
   };
 
@@ -128,7 +134,10 @@ function GenerateCodesForm() {
           </div>
         </CardContent>
         <CardFooter>
-          <Button type="submit"><PlusCircle className="mr-2" /> Generate Codes</Button>
+          <Button type="submit" disabled={isGenerating}>
+            {isGenerating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlusCircle className="mr-2" />}
+            {isGenerating ? 'Generating...' : 'Generate Codes'}
+          </Button>
         </CardFooter>
       </form>
     </Card>
@@ -152,7 +161,7 @@ function ClaimCodesTable() {
             const result = await voidClaimCode(codeId);
             if (result.success) {
                 toast({ title: "Code Voided", description: "The claim code has been successfully voided." });
-                forceRefetch();
+                if (forceRefetch) forceRefetch();
             } else {
                 throw new Error(result.message);
             }
