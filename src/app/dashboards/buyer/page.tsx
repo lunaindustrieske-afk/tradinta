@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -46,7 +47,9 @@ import {
   Sparkles,
   User,
   Copy,
-  Check
+  Check,
+  Users,
+  Percent
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -138,6 +141,24 @@ type UserProfile = {
     fullName: string;
 };
 
+type Pledge = {
+    id: string;
+    forgingEventId: string;
+}
+
+type ForgingEvent = {
+    id: string;
+    productName: string;
+    productImageUrl: string;
+    sellerName: string;
+    status: 'active' | 'finished';
+    endTime: any;
+    tiers: { buyerCount: number; discountPercentage: number }[];
+    currentBuyerCount: number;
+    finalDiscountTier?: number;
+};
+
+
 const ProfileCard = () => {
     const { user, isUserLoading } = useUser();
     const firestore = useFirestore();
@@ -222,6 +243,119 @@ const ProfileCard = () => {
         </Card>
     );
 };
+
+const MyPledges = () => {
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const pledgesQuery = useMemoFirebase(() => {
+        if (!user || !firestore) return null;
+        return query(collection(firestore, 'pledges'), where('buyerId', '==', user.uid));
+    }, [user, firestore]);
+
+    const { data: pledges, isLoading: isLoadingPledges } = useCollection<Pledge>(pledgesQuery);
+    
+    const [events, setEvents] = React.useState<Record<string, ForgingEvent>>({});
+    const [isLoadingEvents, setIsLoadingEvents] = React.useState(false);
+
+    React.useEffect(() => {
+        if (pledges && pledges.length > 0 && firestore) {
+            setIsLoadingEvents(true);
+            const eventIds = [...new Set(pledges.map(p => p.forgingEventId))];
+            
+            const fetchEvents = async () => {
+                const eventPromises = eventIds.map(id => getDoc(doc(firestore, 'forgingEvents', id)));
+                const eventSnaps = await Promise.all(eventPromises);
+                const fetchedEvents: Record<string, ForgingEvent> = {};
+                eventSnaps.forEach(snap => {
+                    if (snap.exists()) {
+                        fetchedEvents[snap.id] = snap.data() as ForgingEvent;
+                    }
+                });
+                setEvents(fetchedEvents);
+                setIsLoadingEvents(false);
+            };
+            fetchEvents();
+        }
+    }, [pledges, firestore]);
+
+    const isLoading = isLoadingPledges || isLoadingEvents;
+    
+    const PledgeItem = ({ pledge }: { pledge: Pledge }) => {
+        const event = events[pledge.forgingEventId];
+        if (!event) return <Skeleton className="h-24 w-full" />;
+
+        if (event.status === 'active') {
+            const { nextTier, progress } = React.useMemo(() => {
+                const sortedTiers = [...event.tiers].sort((a, b) => a.buyerCount - b.buyerCount);
+                const nextTier = sortedTiers.find(t => t.buyerCount > event.currentBuyerCount);
+                const progress = nextTier ? (event.currentBuyerCount / nextTier.buyerCount) * 100 : 100;
+                return { nextTier, progress };
+            }, [event.tiers, event.currentBuyerCount]);
+
+            return (
+                <div className="border p-3 rounded-md space-y-2">
+                    <div className="flex gap-3">
+                         <Image src={event.productImageUrl || ''} width={64} height={64} alt={event.productName} className="rounded-md aspect-square object-cover" />
+                        <div>
+                            <p className="font-semibold text-sm">{event.productName}</p>
+                            <p className="text-xs text-muted-foreground">by {event.sellerName}</p>
+                        </div>
+                    </div>
+                    <Progress value={progress} className="h-2" />
+                    <p className="text-xs text-muted-foreground text-center">
+                        {nextTier ? `${nextTier.buyerCount - event.currentBuyerCount} more pledges to unlock ${nextTier.discountPercentage}% OFF!` : "Highest discount unlocked!"}
+                    </p>
+                </div>
+            );
+        }
+        
+        if (event.status === 'finished') {
+             return (
+                <div className="border p-3 rounded-md space-y-2 bg-green-50 dark:bg-green-900/20">
+                    <div className="flex gap-3 items-center">
+                         <Image src={event.productImageUrl || ''} width={64} height={64} alt={event.productName} className="rounded-md aspect-square object-cover" />
+                        <div className="flex-grow">
+                            <p className="font-semibold text-sm">{event.productName}</p>
+                            <div className="flex items-center gap-2">
+                                <Badge className="bg-green-100 text-green-800 text-lg"><Percent className="w-4 h-4 mr-1"/>{event.finalDiscountTier}% OFF</Badge>
+                                <p className="text-xs text-muted-foreground">Deal Ended!</p>
+                            </div>
+                        </div>
+                        <Button size="sm">Complete Purchase</Button>
+                    </div>
+                </div>
+             );
+        }
+        
+        return null;
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>My Pledges</CardTitle>
+                <CardDescription>Track your active and completed Forging Events.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                     <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                     </div>
+                ) : !pledges || pledges.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                        You have not pledged to any Forging Events yet.
+                        <Button variant="link" asChild><Link href="/foundry">Explore active deals</Link></Button>
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {pledges.map(pledge => <PledgeItem key={pledge.id} pledge={pledge} />)}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    )
+}
 
 
 export default function BuyerDashboard() {
@@ -319,18 +453,8 @@ export default function BuyerDashboard() {
                         ))}
                     </div>
 
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>My Pledges</CardTitle>
-                            <CardDescription>Track your active and completed Forging Events.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground text-center py-8">
-                                You have not pledged to any Forging Events yet.
-                                <Button variant="link" asChild><Link href="/foundry">Explore active deals</Link></Button>
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <MyPledges />
+
                 </div>
                  {/* Right Column */}
                 <div className="lg:col-span-1 space-y-6">
