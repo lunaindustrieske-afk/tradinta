@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -6,21 +5,21 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight, PlusCircle, Ticket } from "lucide-react";
+import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight, PlusCircle, Ticket, User, Search } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking, useCollection } from '@/firebase';
-import { doc, collection, query, orderBy } from 'firebase/firestore';
+import { doc, collection, query, orderBy, getDocs, where, limit } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { generateClaimCodes, voidClaimCode } from './actions';
+import { generateClaimCodes, voidClaimCode, findUserAndTheirPoints } from './actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { awardPoints } from '@/app/(auth)/actions';
 import { useAuth } from '@/firebase';
-import { getDocs, where, limit } from 'firebase/firestore';
+import { Separator } from '@/components/ui/separator';
 
 const airdropPhases = [
     { id: 'phase1', name: 'Phase 1: Early Adopters', status: 'Completed', claimed: '1.2M / 1.2M' },
@@ -43,15 +42,17 @@ const sellerEarningRuleDefs = [
 ];
 
 type PointsConfig = {
-    buyerSignupPoints?: number;
-    buyerPurchasePointsPer10?: number;
-    buyerReviewPoints?: number;
-    buyerReferralPoints?: number;
-    sellerVerificationPoints?: number;
-    sellerSalePointsPer10?: number;
-    sellerFirstProductPoints?: number;
-    sellerFiveStarReviewPoints?: number;
-    globalSellerPointMultiplier?: number;
+    pointsConfig?: {
+        buyerSignupPoints?: number;
+        buyerPurchasePointsPer10?: number;
+        buyerReviewPoints?: number;
+        buyerReferralPoints?: number;
+        sellerVerificationPoints?: number;
+        sellerSalePointsPer10?: number;
+        sellerFirstProductPoints?: number;
+        sellerFiveStarReviewPoints?: number;
+        globalSellerPointMultiplier?: number;
+    }
 }
 
 type ClaimCode = {
@@ -61,6 +62,15 @@ type ClaimCode = {
   status: 'active' | 'claimed' | 'voided';
   expiresAt?: any;
   createdAt: any;
+};
+
+type PointsLedgerEvent = {
+    id: string;
+    points: number;
+    action: string;
+    reason_code: string;
+    created_at: any;
+    metadata?: Record<string, any>;
 };
 
 const NavLink = ({ active, onClick, children }: { active: boolean, onClick: () => void, children: React.ReactNode }) => (
@@ -89,7 +99,7 @@ const PointsRulesManager = () => {
     
     React.useEffect(() => {
         if (pointsConfig?.pointsConfig) {
-            const pc = pointsConfig.pointsConfig as PointsConfig;
+            const pc = pointsConfig.pointsConfig;
             setRules({
                 buyerSignupPoints: pc.buyerSignupPoints || 50,
                 buyerPurchasePointsPer10: pc.buyerPurchasePointsPer10 || 1,
@@ -226,14 +236,26 @@ const PointsRulesManager = () => {
     );
 };
 
+type FoundUser = {
+  id: string;
+  fullName: string;
+  totalPoints: number;
+  ledger: PointsLedgerEvent[];
+}
+
 function ClaimCodesManager() {
     const firestore = useFirestore();
     const auth = useAuth();
     const { toast } = useToast();
     const [isGenerating, setIsGenerating] = React.useState(false);
 
+    // Search state
+    const [searchIdentifier, setSearchIdentifier] = React.useState('');
+    const [isSearching, setIsSearching] = React.useState(false);
+    const [foundUser, setFoundUser] = React.useState<FoundUser | null>(null);
+    const [notFound, setNotFound] = React.useState(false);
+
     // Manual Award state
-    const [awardUserId, setAwardUserId] = React.useState('');
     const [awardPointsValue, setAwardPointsValue] = React.useState('');
     const [awardReason, setAwardReason] = React.useState('');
     const [awardNote, setAwardNote] = React.useState('');
@@ -245,6 +267,25 @@ function ClaimCodesManager() {
     }, [firestore]);
 
     const { data: codes, isLoading, forceRefetch } = useCollection<ClaimCode>(codesQuery);
+
+    const handleUserSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSearching(true);
+        setFoundUser(null);
+        setNotFound(false);
+        try {
+            const result = await findUserAndTheirPoints(searchIdentifier);
+            if(result.success) {
+                setFoundUser(result.user);
+            } else {
+                setNotFound(true);
+            }
+        } catch (error: any) {
+            toast({ title: "Search Error", description: error.message, variant: "destructive" });
+        } finally {
+            setIsSearching(false);
+        }
+    }
 
     const handleGenerateSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -277,30 +318,20 @@ function ClaimCodesManager() {
     
     const handleAwardPoints = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!firestore || !auth?.currentUser) {
-            toast({ title: 'Admin not authenticated', variant: 'destructive' });
+        if (!firestore || !auth?.currentUser || !foundUser) {
+            toast({ title: 'User not found or admin not authenticated', variant: 'destructive' });
             return;
         }
-        if (!awardUserId || !awardPointsValue || !awardReason) {
+        if (!awardPointsValue || !awardReason) {
             toast({ title: 'All fields are required', variant: 'destructive' });
             return;
         }
         setIsAwarding(true);
 
         try {
-            const usersRef = collection(firestore, 'users');
-            const q = query(usersRef, where('tradintaId', '==', awardUserId), limit(1));
-            const userSnapshot = await getDocs(q);
-
-            if (userSnapshot.empty) {
-                throw new Error(`User with Tradinta ID "${awardUserId}" not found.`);
-            }
-            
-            const targetUser = userSnapshot.docs[0];
-
             await awardPoints(
                 firestore,
-                targetUser.id,
+                foundUser.id,
                 Number(awardPointsValue),
                 awardReason,
                 { admin_note: awardNote, issued_by: auth.currentUser.email }
@@ -308,10 +339,12 @@ function ClaimCodesManager() {
 
             toast({
                 title: 'Points Awarded!',
-                description: `${awardPointsValue} points awarded to ${targetUser.data().fullName}.`
+                description: `${awardPointsValue} points awarded to ${foundUser.fullName}.`
             });
             
-            setAwardUserId('');
+            // Refetch user data
+            handleUserSearch(e);
+            
             setAwardPointsValue('');
             setAwardReason('');
             setAwardNote('');
@@ -349,26 +382,68 @@ function ClaimCodesManager() {
 
     return (
         <div className="space-y-6">
-             <Card>
-                <CardHeader>
-                    <CardTitle>Manual Point Adjustments</CardTitle>
-                    <CardDescription>Grant points for promotions, competitions, or manual corrections.</CardDescription>
-                </CardHeader>
-                <form onSubmit={handleAwardPoints}>
-                    <CardContent className="space-y-4">
-                        <div className="grid gap-2"><Label htmlFor="award-user-id">User's Tradinta ID</Label><Input id="award-user-id" placeholder="e.g. a8B2c3D4" value={awardUserId} onChange={e => setAwardUserId(e.target.value)} required /></div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="grid gap-2"><Label htmlFor="award-points">Points to Award</Label><Input id="award-points" type="number" placeholder="e.g. 500" value={awardPointsValue} onChange={e => setAwardPointsValue(e.target.value)} required /></div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="award-reason">Reason</Label>
-                                <Select onValueChange={setAwardReason} value={awardReason} required><SelectTrigger id="award-reason"><SelectValue placeholder="Select reason" /></SelectTrigger><SelectContent><SelectItem value="PROMOTIONAL_GIFT">Promotional Gift</SelectItem><SelectItem value="MANUAL_CORRECTION">Manual Correction</SelectItem></SelectContent></Select>
-                            </div>
+            <Card>
+                <CardHeader><CardTitle>Manual Point Adjustments</CardTitle><CardDescription>Search for a user by email or Tradinta ID to view their points ledger and make adjustments.</CardDescription></CardHeader>
+                <CardContent>
+                    <form onSubmit={handleUserSearch} className="flex items-center gap-2 mb-4">
+                        <Input placeholder="Search by Email or Tradinta ID..." value={searchIdentifier} onChange={e => setSearchIdentifier(e.target.value)} />
+                        <Button type="submit" disabled={isSearching}>
+                            {isSearching ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Search className="mr-2 h-4 w-4" />}
+                            Search
+                        </Button>
+                    </form>
+                    {isSearching && <div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin text-primary"/></div>}
+                    {notFound && <div className="text-center p-8 text-muted-foreground">User not found.</div>}
+                    {foundUser && (
+                        <div className="mt-6 space-y-6">
+                            <Card className="bg-muted/50">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center justify-between">
+                                        <span>{foundUser.fullName}</span>
+                                        <Badge>{foundUser.totalPoints.toLocaleString()} Points</Badge>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <h4 className="font-semibold mb-2 text-sm">Points History</h4>
+                                     <ScrollArea className="h-64 pr-4">
+                                        <Table>
+                                            <TableBody>
+                                                {foundUser.ledger.length > 0 ? foundUser.ledger.map(event => (
+                                                    <TableRow key={event.id}>
+                                                        <TableCell>
+                                                            <p className="font-medium text-xs capitalize">{event.reason_code.replace(/_/g, ' ')}</p>
+                                                            <p className="text-xs text-muted-foreground">{event.created_at ? new Date(event.created_at.seconds * 1000).toLocaleString() : ''}</p>
+                                                        </TableCell>
+                                                        <TableCell className={`font-semibold text-right ${event.points >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                                                            {event.points >= 0 ? `+${event.points}` : event.points}
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )) : <TableRow><TableCell colSpan={2} className="text-center h-24 text-muted-foreground">No transaction history.</TableCell></TableRow>}
+                                            </TableBody>
+                                        </Table>
+                                     </ScrollArea>
+                                </CardContent>
+                            </Card>
+                            <Separator />
+                            <form onSubmit={handleAwardPoints}>
+                                <CardContent className="space-y-4">
+                                    <h4 className="font-semibold">Grant Points</h4>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="grid gap-2"><Label htmlFor="award-points">Points to Award</Label><Input id="award-points" type="number" placeholder="e.g. 500" value={awardPointsValue} onChange={e => setAwardPointsValue(e.target.value)} required /></div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="award-reason">Reason</Label>
+                                            <Select onValueChange={setAwardReason} value={awardReason} required><SelectTrigger id="award-reason"><SelectValue placeholder="Select reason" /></SelectTrigger><SelectContent><SelectItem value="PROMOTIONAL_GIFT">Promotional Gift</SelectItem><SelectItem value="MANUAL_CORRECTION">Manual Correction</SelectItem></SelectContent></Select>
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2"><Label htmlFor="award-note">Admin Note (Optional)</Label><Input id="award-note" placeholder="e.g., Winner of Q4 Campaign" value={awardNote} onChange={e => setAwardNote(e.target.value)} /></div>
+                                </CardContent>
+                                <CardFooter><Button className="w-full" type="submit" disabled={isAwarding}>{isAwarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4" />}Award Points</Button></CardFooter>
+                            </form>
                         </div>
-                        <div className="grid gap-2"><Label htmlFor="award-note">Admin Note (Optional)</Label><Input id="award-note" placeholder="e.g., Winner of Q4 Campaign" value={awardNote} onChange={e => setAwardNote(e.target.value)} /></div>
-                    </CardContent>
-                    <CardFooter><Button className="w-full" type="submit" disabled={isAwarding}>{isAwarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4" />}Award Points</Button></CardFooter>
-                </form>
+                    )}
+                </CardContent>
             </Card>
+
             <Card>
                 <CardHeader><CardTitle>Generate New Claim Codes</CardTitle></CardHeader>
                 <form onSubmit={handleGenerateSubmit}>
@@ -387,6 +462,7 @@ function ClaimCodesManager() {
                     </CardFooter>
                 </form>
             </Card>
+
             <Card>
                 <CardHeader><CardTitle>Existing Claim Codes</CardTitle></CardHeader>
                 <CardContent>
@@ -476,5 +552,3 @@ export default function TradCoinAirdropDashboard() {
         </div>
     );
 }
-
-    
