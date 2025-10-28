@@ -58,6 +58,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { logFeatureUsage } from '@/lib/analytics';
 
 type Product = {
   id: string;
@@ -80,20 +81,21 @@ type PlatformSettings = {
 }
 
 const StockEditor = ({ productId, currentStock, onSave }: { productId: string, currentStock: number, onSave: () => void }) => {
-    const { user } = useUser();
+    const { user, role } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
     const [newStock, setNewStock] = React.useState(currentStock);
     const [isSaving, setIsSaving] = React.useState(false);
 
     const handleSave = async () => {
-        if (!user || !firestore) return;
+        if (!user || !firestore || !role) return;
         if (isNaN(newStock) || newStock < 0) {
             toast({ title: "Invalid stock value", variant: "destructive" });
             return;
         }
 
         setIsSaving(true);
+        logFeatureUsage({ feature: 'products:quick_edit_stock', userId: user.uid, userRole: role, metadata: { productId, newStock } });
         const productRef = doc(firestore, 'manufacturers', user.uid, 'products', productId);
         
         try {
@@ -125,7 +127,7 @@ const StockEditor = ({ productId, currentStock, onSave }: { productId: string, c
 
 
 export default function SellerProductsPage() {
-  const { user } = useUser();
+  const { user, role } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -166,7 +168,8 @@ export default function SellerProductsPage() {
 
   // --- Handlers ---
   const handleArchive = (productId: string) => {
-    if (!user) return;
+    if (!user || !role) return;
+    logFeatureUsage({ feature: 'products:archive', userId: user.uid, userRole: role, metadata: { productId } });
     const productRef = doc(
       firestore,
       'manufacturers',
@@ -211,6 +214,12 @@ export default function SellerProductsPage() {
         return true;
       });
   }, [products, activeTab, searchQuery, stockFilter]);
+  
+  const handleFeatureClick = (feature: string, metadata?: Record<string, any>) => {
+    if (user && role) {
+      logFeatureUsage({ feature, userId: user.uid, userRole: role, metadata });
+    }
+  };
   
   // --- Render Logic ---
   const renderAlerts = () => {
@@ -340,7 +349,7 @@ export default function SellerProductsPage() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link href={`/dashboards/seller-centre/products/edit/${product.id}`}>
+                <Link href={`/dashboards/seller-centre/products/edit/${product.id}`} onClick={() => handleFeatureClick('products:full_edit', { productId: product.id })}>
                   <Edit className="mr-2 h-4 w-4" /> Full Edit
                 </Link>
               </DropdownMenuItem>
@@ -388,11 +397,11 @@ export default function SellerProductsPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" onClick={() => handleFeatureClick('products:export')}>
                 <File className="mr-2 h-4 w-4" />
                 Export
               </Button>
-              <Button asChild>
+              <Button asChild onClick={() => handleFeatureClick('products:add_new_clicked')}>
                 <Link href="/dashboards/seller-centre/products/new">
                   <PlusCircle className="mr-2 h-4 w-4" />
                   Add Product
@@ -417,11 +426,14 @@ export default function SellerProductsPage() {
               <div className="flex items-center gap-2">
                 <div className="relative">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Search products..." className="pl-8" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                  <Input placeholder="Search products..." className="pl-8" value={searchQuery} onChange={e => {
+                      setSearchQuery(e.target.value);
+                      handleFeatureClick('products:search', { query: e.target.value });
+                    }} />
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="gap-1">
+                    <Button variant="outline" size="sm" className="gap-1" onClick={() => handleFeatureClick('products:filter_menu_opened')}>
                       <ListFilter className="h-3.5 w-3.5" />
                       <span>Filter</span>
                     </Button>

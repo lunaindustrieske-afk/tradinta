@@ -63,6 +63,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import type { Review } from '@/app/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { logFeatureUsage } from '@/lib/analytics';
 
 
 const orders = [
@@ -229,7 +230,7 @@ const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => 
 }
 
 export default function SellerDashboardPage() {
-  const { user } = useUser();
+  const { user, role } = useUser();
   const firestore = useFirestore();
 
   const manufacturerDocRef = useMemoFirebase(() => {
@@ -264,6 +265,13 @@ export default function SellerDashboardPage() {
     
   const { data: recentProducts, isLoading: isLoadingRecentProducts } = 
     useCollection<Product>(recentProductsQuery);
+    
+  const handleFeatureClick = (feature: string, metadata?: Record<string, any>) => {
+    if (user && role) {
+      logFeatureUsage({ feature, userId: user.uid, userRole: role, metadata });
+    }
+  };
+
 
   const shopName = manufacturer?.shopName;
   const isSuspended = manufacturer?.suspensionDetails?.isSuspended === true;
@@ -306,31 +314,31 @@ export default function SellerDashboardPage() {
         </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <Button variant="outline" className="flex-col h-24" asChild>
-                <Link href="/dashboards/seller-centre/products">
+                <Link href="/dashboards/seller-centre/products" onClick={() => handleFeatureClick('quick_access:manage_products')}>
                     <Package className="w-6 h-6 mb-2" />
                     Manage Products
                 </Link>
             </Button>
              <Button variant="outline" className="flex-col h-24" asChild>
-                <Link href="/dashboards/seller-centre/orders">
+                <Link href="/dashboards/seller-centre/orders" onClick={() => handleFeatureClick('quick_access:view_orders')}>
                     <ShoppingCart className="w-6 h-6 mb-2" />
                     View Orders
                 </Link>
             </Button>
              <Button variant="outline" className="flex-col h-24" asChild>
-                <Link href="/dashboards/seller-centre#wallet">
+                <Link href="/dashboards/seller-centre#wallet" onClick={() => handleFeatureClick('quick_access:wallet')}>
                     <Wallet className="w-6 h-6 mb-2" />
                     Wallet & Payouts
                 </Link>
             </Button>
              <Button variant="outline" className="flex-col h-24" asChild>
-                <Link href="/dashboards/seller-centre/quotations">
+                <Link href="/dashboards/seller-centre/quotations" onClick={() => handleFeatureClick('quick_access:quotations')}>
                     <BookCopy className="w-6 h-6 mb-2" />
                     Quotations
                 </Link>
             </Button>
              <Button variant="outline" className="flex-col h-24" asChild>
-                <Link href="/dashboards/seller-centre/messages">
+                <Link href="/dashboards/seller-centre/messages" onClick={() => handleFeatureClick('quick_access:messages')}>
                     <MessageSquare className="w-6 h-6 mb-2" />
                     Messages
                 </Link>
@@ -392,8 +400,8 @@ export default function SellerDashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Recent Orders</CardTitle>
-              <Button variant="ghost" size="sm">
-                View All
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/dashboards/seller-centre/orders" onClick={() => handleFeatureClick('recent_orders:view_all')}>View All</Link>
               </Button>
             </CardHeader>
             <CardContent>
@@ -425,7 +433,7 @@ export default function SellerDashboardPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button size="sm">View Order</Button>
+                        <Button size="sm" onClick={() => handleFeatureClick('recent_orders:view_order', { orderId: order.id })}>View Order</Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -495,10 +503,10 @@ export default function SellerDashboardPage() {
                       "{review.comment}"
                     </p>
                     <div className="flex items-center gap-2 pl-11 pt-1">
-                      <Button size="sm" variant="outline">
+                      <Button size="sm" variant="outline" onClick={() => handleFeatureClick('reviews:reply', { reviewId: review.id })}>
                         <MessageSquare className="mr-2 h-4 w-4" /> Reply
                       </Button>
-                      <Button size="sm" variant="ghost">
+                      <Button size="sm" variant="ghost" onClick={() => handleFeatureClick('reviews:report', { reviewId: review.id })}>
                         Report
                       </Button>
                     </div>
@@ -531,7 +539,7 @@ export default function SellerDashboardPage() {
                 <Progress value={profileCompleteness} className="h-2" />
             </CardContent>
             <CardFooter>
-                <Button asChild variant="secondary" className="w-full">
+                <Button asChild variant="secondary" className="w-full" onClick={() => handleFeatureClick('profile:edit_shop')}>
                     <Link href="/dashboards/seller-centre/profile">
                         Edit Shop Profile <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
@@ -568,10 +576,10 @@ export default function SellerDashboardPage() {
               </div>
             </CardContent>
             <CardFooter className="flex-col items-stretch space-y-2">
-              <Button>
+              <Button onClick={() => handleFeatureClick('wallet:request_payout')}>
                 <Banknote className="mr-2 h-4 w-4" /> Request Payout
               </Button>
-              <Button variant="outline">View Statement</Button>
+              <Button variant="outline" onClick={() => handleFeatureClick('wallet:view_statement')}>View Statement</Button>
             </CardFooter>
           </Card>
 
@@ -619,7 +627,7 @@ export default function SellerDashboardPage() {
               )}
             </CardContent>
             <CardFooter>
-              <Button asChild variant="outline" className="w-full">
+              <Button asChild variant="outline" className="w-full" onClick={() => handleFeatureClick('products_glance:manage_all')}>
                 <Link href="/dashboards/seller-centre/products">
                   Manage All Products <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -631,5 +639,3 @@ export default function SellerDashboardPage() {
     </div>
   );
 }
-
-    

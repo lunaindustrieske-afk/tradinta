@@ -640,6 +640,21 @@
         "created_at": { "type": "string", "format": "date-time", "description": "The timestamp when the block was created." }
       },
       "required": ["block_number", "block_hash", "prev_hash", "merkle_root", "event_ids", "created_at"]
+    },
+    "FeatureUsage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FeatureUsage",
+      "type": "object",
+      "description": "Logs a specific feature usage event by a user.",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "userRole": { "type": "string" },
+        "feature": { "type": "string", "description": "e.g., 'products:search', 'reviews:reply'" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["id", "userId", "userRole", "feature", "timestamp"]
     }
   },
   "auth": {
@@ -795,9 +810,15 @@
           "schema": { "$ref": "#/backend/entities/LedgerBlock" },
           "description": "Immutable blocks containing batches of ledger events."
         }
+      },
+      {
+        "path": "/featureUsage/{usageId}",
+        "definition": {
+          "entityName": "FeatureUsage",
+          "schema": { "$ref": "#/backend/entities/FeatureUsage" },
+          "description": "Logs user interactions with specific platform features for analytics."
+        }
       }
     ]
   }
 }
-
-    

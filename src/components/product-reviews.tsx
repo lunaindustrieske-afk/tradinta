@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { logFeatureUsage } from '@/lib/analytics';
 
 
 interface ProductReviewsProps {
@@ -55,9 +56,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         return reviews.some(review => review.buyerId === user.uid);
     }, [user, reviews]);
 
-    const handleDeleteReview = async (reviewId: string) => {
-        if (!firestore) return;
-        const reviewRef = doc(firestore, 'reviews', reviewId);
+    const handleDeleteReview = async (review: Review) => {
+        if (!firestore || !user || !role) return;
+        logFeatureUsage({ feature: 'reviews:delete', userId: user.uid, userRole: role, metadata: { reviewId: review.id, productId: review.productId } });
+        const reviewRef = doc(firestore, 'reviews', review.id);
         try {
             await deleteDocumentNonBlocking(reviewRef);
             toast({
@@ -137,7 +139,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                                     </AlertDialogHeader>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteReview(review.id)}>
+                                                        <AlertDialogAction onClick={() => handleDeleteReview(review)}>
                                                             Delete
                                                         </AlertDialogAction>
                                                     </AlertDialogFooter>

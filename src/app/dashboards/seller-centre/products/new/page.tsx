@@ -52,6 +52,7 @@ import { nanoid } from 'nanoid';
 import { Separator } from '@/components/ui/separator';
 import { useLocalStorageState } from '@/hooks/use-local-storage-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { logFeatureUsage } from '@/lib/analytics';
 
 type Variant = {
   id: string;
@@ -100,7 +101,7 @@ const initialFormState: ProductFormState = {
 export default function NewProductPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user } = useUser();
+  const { user, role } = useUser();
   const firestore = useFirestore();
 
   const [formState, setFormState, clearFormState] = useLocalStorageState<ProductFormState>(
@@ -218,20 +219,24 @@ export default function NewProductPage() {
         });
       }
     }
-  }, [aiState, toast, isGenerating, handleFormChange]);
+  }, [aiState, toast, isGenerating]);
 
   const handleGenerate = (formData: FormData) => {
+    if (user && role) {
+      logFeatureUsage({ feature: 'product:generate_ai_metadata', userId: user.uid, userRole: role });
+    }
     setIsGenerating(true);
     dispatch(formData);
   };
 
   const handleSaveProduct = async (status: 'draft' | 'published') => {
-    if (!user?.uid || !firestore) {
+    if (!user?.uid || !firestore || !role) {
         toast({ title: 'Error', description: 'User not authenticated or Firestore not available.', variant: 'destructive' });
         return;
     }
 
     setIsSaving(true);
+    logFeatureUsage({ feature: `product:save_${status}`, userId: user.uid, userRole: role });
     try {
         const productsCollectionRef = collection(firestore, 'manufacturers', user.uid, 'products');
         
@@ -288,6 +293,14 @@ export default function NewProductPage() {
     }
   }
   
+  const handleClearDraft = () => {
+    if (user && role) {
+      logFeatureUsage({ feature: 'product:clear_draft', userId: user.uid, userRole: role });
+    }
+    clearFormState();
+    toast({ title: 'Draft Cleared', description: 'The new product form has been reset.' });
+  }
+
   const isSaveDisabled = isSaving || isUploading;
   const productUrl = manufacturerData?.shopId && formState.name ? `/products/${manufacturerData.shopId}/${generateSlug(formState.name)}` : '';
 
@@ -311,7 +324,7 @@ export default function NewProductPage() {
           Add New Product
         </h1>
         <div className="hidden items-center gap-2 md:ml-auto md:flex">
-          <Button variant="ghost" size="sm" onClick={clearFormState} disabled={isSaveDisabled}>
+          <Button variant="ghost" size="sm" onClick={handleClearDraft} disabled={isSaveDisabled}>
             <RefreshCcw className="mr-2 h-4 w-4" />
             Clear Draft
           </Button>
@@ -673,5 +686,3 @@ export default function NewProductPage() {
     </div>
   );
 }
-
-    

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useMemo } from 'react';
@@ -33,6 +34,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNo
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { logFeatureUsage } from '@/lib/analytics';
 
 type Quotation = {
     id: string;
@@ -64,6 +66,13 @@ const QuotationTable = ({ filterStatus, quotations, isLoading, onUpdate }: {
     isLoading: boolean,
     onUpdate: (id: string, status: 'Archived') => void
 }) => {
+  const { user, role } = useUser();
+  const handleFeatureClick = (feature: string, metadata?: Record<string, any>) => {
+    if (user && role) {
+      logFeatureUsage({ feature, userId: user.uid, userRole: role, metadata });
+    }
+  };
+  
   const filteredQuotes =
     filterStatus === 'all'
       ? quotations
@@ -123,12 +132,15 @@ const QuotationTable = ({ filterStatus, quotations, isLoading, onUpdate }: {
               <TableCell>{getStatusBadge(quote.status)}</TableCell>
               <TableCell className="space-x-2">
                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/dashboards/seller-centre/quotations/${quote.id}`}>
+                    <Link href={`/dashboards/seller-centre/quotations/${quote.id}`} onClick={() => handleFeatureClick('quotations:view_details', { quotationId: quote.id })}>
                         <Eye className="mr-2 h-4 w-4" /> View Details
                     </Link>
                 </Button>
                 {quote.status !== 'Archived' && (
-                    <Button variant="ghost" size="sm" onClick={() => onUpdate(quote.id, 'Archived')}>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                        onUpdate(quote.id, 'Archived');
+                        handleFeatureClick('quotations:archive', { quotationId: quote.id });
+                    }}>
                         <Archive className="mr-2 h-4 w-4" /> Archive
                     </Button>
                 )}
