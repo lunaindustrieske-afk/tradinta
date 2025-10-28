@@ -664,4 +664,73 @@ export async function sendNewInquiryEmail(
   }
 }
 
+export async function reconcileUserPoints(userId: string): Promise<{ success: boolean; message: string; pointsAwarded: number; }> {
+  const firestore = getFirestore();
+  let pointsAwarded = 0;
+
+  try {
+    const userDoc = await firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+      throw new Error('User not found.');
+    }
+    const userData = userDoc.data()!;
+
+    // --- 1. Reconcile Sign-up Bonus ---
+    const signupQuery = query(
+      collection(firestore, 'pointsLedgerEvents'),
+      where('user_id', '==', userId),
+      where('reason_code', '==', 'SIGNUP_BONUS'),
+      limit(1)
+    );
+    const signupSnapshot = await getDocs(signupQuery);
+    if (signupSnapshot.empty && userData.emailVerified) {
+      const pointsConfigSnap = await firestore.collection('platformSettings').doc('pointsConfig').get();
+      const signupBonus = pointsConfigSnap.data()?.buyerSignupPoints || 50;
+      if (signupBonus > 0) {
+        await awardPoints(firestore, userId, signupBonus, 'SIGNUP_BONUS');
+        pointsAwarded += signupBonus;
+      }
+    }
+
+    // --- 2. Reconcile Referral Bonuses (for this user as a referrer) ---
+    if (userData.tradintaId) {
+        const referredUsersQuery = query(
+            collection(firestore, 'users'),
+            where('referredBy', '==', userData.tradintaId),
+            where('emailVerified', '==', true)
+        );
+        const referredUsersSnapshot = await getDocs(referredUsersQuery);
+
+        const awardedReferralsQuery = query(
+            collection(firestore, 'pointsLedgerEvents'),
+            where('user_id', '==', userId),
+            where('reason_code', '==', 'REFERRAL_SUCCESS')
+        );
+        const awardedReferralsSnapshot = await getDocs(awardedReferralsQuery);
+        const awardedUserIds = new Set(awardedReferralsSnapshot.docs.map(doc => doc.data().metadata.referredUserId));
+
+        const pointsConfigSnap = await firestore.collection('platformSettings').doc('pointsConfig').get();
+        const referralBonus = pointsConfigSnap.data()?.buyerReferralPoints || 100;
+
+        for (const referredUserDoc of referredUsersSnapshot.docs) {
+            if (!awardedUserIds.has(referredUserDoc.id)) {
+                 if (referralBonus > 0) {
+                    await awardPoints(firestore, userId, referralBonus, 'REFERRAL_SUCCESS', { referredUserId: referredUserDoc.id });
+                    pointsAwarded += referralBonus;
+                }
+            }
+        }
+    }
+
+    if (pointsAwarded > 0) {
+      return { success: true, message: `Successfully reconciled and awarded ${pointsAwarded} missing points.`, pointsAwarded };
+    } else {
+      return { success: true, message: 'Points ledger is up to date.', pointsAwarded: 0 };
+    }
+
+  } catch (error: any) {
+    console.error('Error during points reconciliation:', error);
+    return { success: false, message: `Reconciliation failed: ${error.message}`, pointsAwarded: 0 };
+  }
+}
     

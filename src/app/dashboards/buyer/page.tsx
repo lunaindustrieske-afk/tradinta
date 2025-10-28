@@ -285,8 +285,10 @@ export default function BuyerDashboard() {
                                 <div className="text-2xl font-bold">1,850 Points</div>
                                 <Progress value={85} className="mt-2 h-2" />
                             </CardContent>
-                            <CardFooter>
-                                <p className="text-xs text-muted-foreground">150 points to next reward</p>
+                             <CardFooter>
+                                <Button size="sm" variant="link" asChild className="p-0 h-auto">
+                                    <Link href="/dashboards/buyer/tradpoints">View Details</Link>
+                                </Button>
                             </CardFooter>
                         </Card>
                         <Card className="bg-muted/50 border-dashed">

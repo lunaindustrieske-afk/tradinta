@@ -8,6 +8,7 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   Table,
@@ -18,11 +19,15 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Coins, Star, UserPlus, ShoppingCart, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { Coins, Star, UserPlus, ShoppingCart, Loader2, RefreshCw, Sparkles, Gift, Check, Ticket, Hash } from 'lucide-react';
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Separator } from '@/components/ui/separator';
+import { reconcileUserPoints } from '@/app/(auth)/actions';
+import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 type PointsLedgerEvent = {
     id: string;
@@ -31,6 +36,10 @@ type PointsLedgerEvent = {
     reason_code: string;
     created_at: any;
     metadata?: Record<string, any>;
+};
+
+type ReferredUser = {
+  emailVerified: boolean;
 };
 
 const waysToEarn = [
@@ -43,7 +52,18 @@ const waysToEarn = [
 export default function TradPointsDashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isReconciling, setIsReconciling] = React.useState(false);
 
+  // Fetch current user's full profile to get tradintaId
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc(userDocRef);
+
+
+  // Fetch points ledger
   const ledgerQuery = useMemoFirebase(() => {
     if (!user) return null;
     return query(
@@ -53,16 +73,52 @@ export default function TradPointsDashboardPage() {
         limit(50)
     );
   }, [user, firestore]);
-  
   const { data: ledgerEvents, isLoading: isLoadingLedger } = useCollection<PointsLedgerEvent>(ledgerQuery);
 
+  // Fetch users referred by the current user
+  const referralsQuery = useMemoFirebase(() => {
+    if (!userProfile?.tradintaId) return null;
+    return query(collection(firestore, 'users'), where('referredBy', '==', userProfile.tradintaId));
+  }, [userProfile, firestore]);
+  const { data: referrals, isLoading: isLoadingReferrals } = useCollection<ReferredUser>(referralsQuery);
+  
   const totalPoints = React.useMemo(() => {
     if (!ledgerEvents) return 0;
     return ledgerEvents.reduce((sum, event) => sum + event.points, 0);
   }, [ledgerEvents]);
+
+  const referralStats = React.useMemo(() => {
+    if (!referrals) return { verified: 0, unverified: 0 };
+    return {
+      verified: referrals.filter(r => r.emailVerified).length,
+      unverified: referrals.filter(r => !r.emailVerified).length,
+    };
+  }, [referrals]);
+  
+  const handleReconcile = async () => {
+    if (!user) return;
+    setIsReconciling(true);
+    try {
+        const result = await reconcileUserPoints(user.uid);
+        if(result.success) {
+            toast({
+                title: result.pointsAwarded > 0 ? "Reconciliation Complete!" : "All Good!",
+                description: result.message,
+            });
+        } else {
+            throw new Error(result.message);
+        }
+    } catch (error: any) {
+        toast({ title: 'Error Reconciling Points', description: error.message, variant: 'destructive' });
+    } finally {
+        setIsReconciling(false);
+    }
+  };
+
   
   const renderLedgerRows = () => {
-      if (isLoadingLedger) {
+      const isLoading = isLoadingLedger || isLoadingProfile;
+      if (isLoading) {
           return Array.from({length: 4}).map((_, i) => (
               <TableRow key={`skel-row-${i}`}>
                   <TableCell><Skeleton className="h-5 w-40" /></TableCell>
@@ -97,24 +153,58 @@ export default function TradPointsDashboardPage() {
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Coins className="w-6 h-6 text-primary" />
-            My TradPoints
-          </CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="flex items-center gap-2">
+                <Coins className="w-6 h-6 text-primary" />
+                My TradPoints
+            </CardTitle>
+            <Button variant="outline" size="sm" onClick={handleReconcile} disabled={isReconciling}>
+                {isReconciling ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Sync My Points
+            </Button>
+          </div>
           <CardDescription>
             Your rewards hub. Earn points for your activity on Tradinta.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-            <Card className="w-fit">
+        <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+             <Card className="col-span-1">
                 <CardHeader>
-                    <CardTitle className="text-sm font-medium">Your Total Balance</CardTitle>
+                    <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {isUserLoading || isLoadingLedger ? <Skeleton className="h-8 w-32" /> : (
+                    {(isLoadingLedger || isLoadingProfile) ? <Skeleton className="h-8 w-32" /> : (
                         <div className="text-3xl font-bold flex items-center gap-2">
                            {totalPoints.toLocaleString()} <span className="text-lg text-muted-foreground">Points</span>
                         </div>
+                    )}
+                </CardContent>
+            </Card>
+            <Card className="col-span-1">
+                <CardHeader>
+                    <CardTitle className="text-sm font-medium">Total Transactions</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {(isLoadingLedger || isLoadingProfile) ? <Skeleton className="h-8 w-16" /> : (
+                        <div className="text-3xl font-bold flex items-center gap-2">
+                           {ledgerEvents?.length || 0}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+             <Card className="col-span-1">
+                <CardHeader>
+                    <CardTitle className="text-sm font-medium">Total Referrals</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {(isLoadingReferrals || isLoadingProfile) ? <Skeleton className="h-8 w-24" /> : (
+                       <div className="flex items-end gap-4">
+                            <div className="text-3xl font-bold">{referralStats.verified + referralStats.unverified}</div>
+                            <div className="text-sm space-x-2">
+                                <Badge className="bg-green-100 text-green-800">{referralStats.verified} Verified</Badge>
+                                <Badge className="bg-yellow-100 text-yellow-800">{referralStats.unverified} Pending</Badge>
+                            </div>
+                       </div>
                     )}
                 </CardContent>
             </Card>
@@ -139,6 +229,18 @@ export default function TradPointsDashboardPage() {
                             </div>
                         </div>
                     ))}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Ticket /> Redeem a Claim Code</CardTitle>
+                    <CardDescription>Enter an 8-digit code from a promotion to claim your points.</CardDescription>
+                </CardHeader>
+                 <CardContent>
+                    <div className="flex gap-2">
+                        <Input placeholder="ABC-1234" />
+                        <Button>Claim</Button>
+                    </div>
                 </CardContent>
             </Card>
         </div>
