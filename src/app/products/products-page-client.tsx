@@ -173,6 +173,7 @@ export function ProductsPageClient({
         .sort(() => 0.5 - Math.random())
         .slice(0, 5)
         .map((p) => ({
+          id: p.id,
           title: p.name,
           description: p.description,
           imageUrl:
@@ -403,7 +404,7 @@ export function ProductsPageClient({
           <CarouselContent className="h-full">
             {promoSlides.length > 0 ? (
               promoSlides.map((slide) => (
-                <CarouselItem key={slide.title}>
+                <CarouselItem key={slide.id}>
                   <div className="relative w-full h-full">
                     <Image
                       src={slide.imageUrl}
