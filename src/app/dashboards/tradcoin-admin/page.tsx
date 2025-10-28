@@ -28,6 +28,8 @@ import {
   FileWarning,
   Loader2,
   Calendar as CalendarIcon,
+  Gift,
+  PlusCircle,
 } from 'lucide-react';
 import { DateRange } from 'react-day-picker';
 import {
@@ -50,6 +52,11 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useFirestore, useAuth } from '@/firebase';
+import { getDocs, collection, query, where, limit } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
+import { awardPoints } from '@/app/(auth)/actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Mock data based on the user's design
 const mockSearchResults = [
@@ -65,6 +72,16 @@ export default function TradCoinAdminDashboard() {
   const [searchResults, setSearchResults] = React.useState<typeof mockSearchResults>([]);
   const [selectedUsers, setSelectedUsers] = React.useState<Set<string>>(new Set());
 
+  // State for awarding points
+  const firestore = useFirestore();
+  const auth = useAuth();
+  const { toast } = useToast();
+  const [awardUserId, setAwardUserId] = React.useState('');
+  const [awardPointsValue, setAwardPointsValue] = React.useState('');
+  const [awardReason, setAwardReason] = React.useState('');
+  const [awardNote, setAwardNote] = React.useState('');
+  const [isAwarding, setIsAwarding] = React.useState(false);
+
   const handleSearch = () => {
     setIsLoading(true);
     // Simulate API call
@@ -73,6 +90,55 @@ export default function TradCoinAdminDashboard() {
       setIsLoading(false);
     }, 1000);
   };
+
+  const handleAwardPoints = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!firestore || !auth?.currentUser) {
+        toast({ title: 'Admin not authenticated', variant: 'destructive' });
+        return;
+    }
+    if (!awardUserId || !awardPointsValue || !awardReason) {
+        toast({ title: 'All fields are required', variant: 'destructive' });
+        return;
+    }
+    setIsAwarding(true);
+
+    try {
+        const usersRef = collection(firestore, 'users');
+        const q = query(usersRef, where('tradintaId', '==', awardUserId), limit(1));
+        const userSnapshot = await getDocs(q);
+
+        if (userSnapshot.empty) {
+            throw new Error(`User with Tradinta ID "${awardUserId}" not found.`);
+        }
+        
+        const targetUser = userSnapshot.docs[0];
+
+        await awardPoints(
+            firestore,
+            targetUser.id,
+            Number(awardPointsValue),
+            awardReason,
+            { admin_note: awardNote, issued_by: auth.currentUser.email }
+        );
+
+        toast({
+            title: 'Points Awarded!',
+            description: `${awardPointsValue} points awarded to ${targetUser.data().fullName}.`
+        });
+        
+        setAwardUserId('');
+        setAwardPointsValue('');
+        setAwardReason('');
+        setAwardNote('');
+
+    } catch (error: any) {
+        toast({ title: 'Error Awarding Points', description: error.message, variant: 'destructive' });
+    } finally {
+        setIsAwarding(false);
+    }
+  };
+
 
   const handleSelectUser = (userId: string, isSelected: boolean) => {
     setSelectedUsers(prev => {
@@ -107,14 +173,57 @@ export default function TradCoinAdminDashboard() {
             TradCoin Admin Console
           </CardTitle>
           <CardDescription>
-            Tools for auditing the points ledger and revoking points.
+            Tools for auditing the points ledger and managing points transactions.
           </CardDescription>
         </CardHeader>
       </Card>
       
-      <div className="grid md:grid-cols-3 gap-6 items-start">
+      <div className="grid md:grid-cols-2 gap-6 items-start">
+        <Card>
+            <CardHeader>
+                <CardTitle>Award Points Manually</CardTitle>
+                <CardDescription>
+                    Grant points for promotions, competitions, or manual corrections.
+                </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleAwardPoints}>
+                <CardContent className="space-y-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="award-user-id">User's Tradinta ID</Label>
+                        <Input id="award-user-id" placeholder="e.g. a8B2c3D4" value={awardUserId} onChange={e => setAwardUserId(e.target.value)} required />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                         <div className="grid gap-2">
+                            <Label htmlFor="award-points">Points to Award</Label>
+                            <Input id="award-points" type="number" placeholder="e.g. 500" value={awardPointsValue} onChange={e => setAwardPointsValue(e.target.value)} required />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="award-reason">Reason</Label>
+                            <Select onValueChange={setAwardReason} value={awardReason} required>
+                                <SelectTrigger id="award-reason"><SelectValue placeholder="Select reason" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="PROMOTIONAL_GIFT">Promotional Gift</SelectItem>
+                                    <SelectItem value="MANUAL_CORRECTION">Manual Correction</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="award-note">Admin Note (Optional)</Label>
+                        <Input id="award-note" placeholder="e.g., Winner of Q4 Campaign" value={awardNote} onChange={e => setAwardNote(e.target.value)} />
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button className="w-full" type="submit" disabled={isAwarding}>
+                        {isAwarding ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <PlusCircle className="mr-2 h-4 w-4" />}
+                        Award Points
+                    </Button>
+                </CardFooter>
+            </form>
+        </Card>
+
         {/* Search Panel */}
-        <div className="md:col-span-1 space-y-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle>Search & Revoke Points</CardTitle>
@@ -179,115 +288,8 @@ export default function TradCoinAdminDashboard() {
                     </Button>
                 </CardFooter>
             </Card>
-            
-             <Card>
-                <CardHeader>
-                    <CardTitle>Reversal Summary</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div>
-                        <p className="text-sm text-muted-foreground">Users Selected</p>
-                        <p className="text-2xl font-bold">{selectedUsers.size}</p>
-                    </div>
-                     <div>
-                        <p className="text-sm text-muted-foreground">Total Points to Revoke</p>
-                        <p className="text-2xl font-bold text-destructive">{totalPointsToRevoke.toLocaleString()}</p>
-                    </div>
-                </CardContent>
-                <CardFooter>
-                     <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="w-full" disabled={selectedUsers.size === 0}>
-                                <FileWarning className="mr-2 h-4 w-4" /> Preview & Revoke Points
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Confirm Point Reversal</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    You are about to permanently revoke <strong className="text-destructive">{totalPointsToRevoke.toLocaleString()}</strong> points from <strong className="text-destructive">{selectedUsers.size}</strong> user(s). This action is irreversible and will be logged.
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <div className="grid gap-2">
-                                <Label htmlFor="admin-note">Reason for Reversal (Admin Note)</Label>
-                                <Input id="admin-note" placeholder="e.g., Correcting promo error" required />
-                            </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="2fa-code">2FA Code</Label>
-                                <Input id="2fa-code" placeholder="Enter your 6-digit code" required />
-                            </div>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction>Confirm & Execute Reversal</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </CardFooter>
-            </Card>
-        </div>
-
-        {/* Search Results */}
-        <div className="md:col-span-2">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Search Results</CardTitle>
-                     <CardDescription>
-                        Users who received points matching the specified criteria.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[50px]">
-                                     <Checkbox
-                                        checked={searchResults.length > 0 && selectedUsers.size === searchResults.length}
-                                        onCheckedChange={(checked) => handleSelectAll(!!checked)}
-                                        aria-label="Select all"
-                                    />
-                                </TableHead>
-                                <TableHead>User</TableHead>
-                                <TableHead>Points Awarded</TableHead>
-                                <TableHead>KYC Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {isLoading ? (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        <Loader2 className="mx-auto h-6 w-6 animate-spin" />
-                                    </TableCell>
-                                </TableRow>
-                            ) : searchResults.length > 0 ? (
-                                searchResults.map((result) => (
-                                    <TableRow key={result.userId} data-state={selectedUsers.has(result.userId) && "selected"}>
-                                         <TableCell>
-                                            <Checkbox
-                                                checked={selectedUsers.has(result.userId)}
-                                                onCheckedChange={(checked) => handleSelectUser(result.userId, !!checked)}
-                                                aria-label={`Select user ${result.fullName}`}
-                                            />
-                                        </TableCell>
-                                        <TableCell className="font-medium">{result.fullName} <span className="text-xs text-muted-foreground font-mono ml-2">{result.userId}</span></TableCell>
-                                        <TableCell>{result.totalPoints}</TableCell>
-                                        <TableCell><Badge variant={result.kycStatus === 'Verified' ? 'secondary' : 'outline'}>{result.kycStatus}</Badge></TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="h-24 text-center">
-                                        No results found. Please start a search.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </CardContent>
-            </Card>
         </div>
       </div>
     </div>
   );
 }
-
-    

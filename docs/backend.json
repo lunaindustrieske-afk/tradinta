@@ -618,7 +618,7 @@
         "user_id": { "type": "string", "description": "The user ID this event applies to." },
         "points": { "type": "number", "description": "The number of points awarded or revoked (can be negative)." },
         "action": { "type": "string", "enum": ["award", "reversal", "adjustment"], "description": "The type of transaction." },
-        "reason_code": { "type": "string", "description": "A machine-readable code for why the points were issued (e.g., 'PROMO-2025-10-24')." },
+        "reason_code": { "type": "string", "description": "A machine-readable code for why the points were issued (e.g., 'PROMO-2025-10-24', 'MANUAL_CORRECTION')." },
         "metadata": { "type": "object", "description": "Additional data, like order ID or referenced event IDs." },
         "issued_by": { "type": "string", "description": "Identifier for the system or admin that issued the event." },
         "created_at": { "type": "string", "format": "date-time", "description": "The timestamp of the event." },
@@ -872,5 +872,3 @@
     ]
   }
 }
-
-    
