@@ -12,6 +12,7 @@ import { useEffect } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { ThemeProvider } from '@/components/theme-provider';
 import { SupportWidget } from '@/components/support-widget';
+import { SuperAdminSidebar } from '@/components/super-admin-sidebar';
 
 
 export default function RootLayout({
@@ -57,6 +58,7 @@ export default function RootLayout({
             enableSystem
           >
           <FirebaseClientProvider>
+            <SuperAdminSidebar />
             <TopNav />
               <main>{children}</main>
             <Toaster />

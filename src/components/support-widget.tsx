@@ -166,7 +166,7 @@ export function SupportWidget() {
     <Sheet>
       <SheetTrigger asChild>
         <Button
-          className="fixed bottom-5 right-5 h-14 w-14 rounded-full shadow-lg opacity-30 hover:opacity-100 focus:opacity-100 transition-opacity"
+          className="fixed bottom-5 right-5 h-14 w-14 rounded-full shadow-lg z-40"
           size="icon"
         >
           <MessageSquare className="h-6 w-6" />
