@@ -379,7 +379,12 @@ export function ProductsPageClient({
 
        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
           {categories.map((cat) => {
-            const image = PlaceHolderImages.find(img => img.id === cat.imageId);
+            // New logic to find the best image for the category
+            const sponsoredProduct = allProducts.find(p => p.isSponsored && p.category === cat.name);
+            const adminImage = PlaceHolderImages.find(img => img.id === cat.imageId);
+            const imageUrl = sponsoredProduct?.imageUrl || adminImage?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300';
+            const imageHint = sponsoredProduct?.imageHint || adminImage?.imageHint || 'industrial';
+            
             return (
               <button
                 key={cat.id}
@@ -390,11 +395,11 @@ export function ProductsPageClient({
                 )}
               >
                 <Image
-                  src={image?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300'}
+                  src={imageUrl}
                   alt={cat.name}
                   fill
                   className="object-cover transition-transform group-hover:scale-105"
-                  data-ai-hint={image?.imageHint}
+                  data-ai-hint={imageHint}
                 />
                 <div className="absolute inset-0 bg-black/50 group-hover:bg-black/60 transition-colors" />
                 <div className="absolute bottom-2 left-3 right-3 text-left text-white">
