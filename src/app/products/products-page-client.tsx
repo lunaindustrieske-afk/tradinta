@@ -78,6 +78,7 @@ import { cn } from '@/lib/utils';
 type ProductWithShopId = Product & {
   shopId: string;
   slug: string;
+  manufacturerName?: string;
   variants: { price: number }[];
   isVerified?: boolean;
   isSponsored?: boolean; // Added for marketing
@@ -93,12 +94,6 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'agriculture': <Sprout className="w-8 h-8" />,
   'fashion-textiles': <Shirt className="w-8 h-8" />,
 };
-
-const promoSlides = [
-  { title: "Heavy Duty Construction", description: "Top grade cement, steel, and building supplies.", imageUrl: "https://picsum.photos/seed/promo1/1600/900", imageHint: "construction site crane", link: "/products?category=Construction+%26+Building+Materials" },
-  { title: "Packaging Solutions", description: "Boxes, plastics, and branding materials for your products.", imageUrl: "https://picsum.photos/seed/promo2/1600/900", imageHint: "packaging warehouse", link: "/products?category=Packaging%2C+Printing+%26+Branding" },
-  { title: "Food & Beverage Ingredients", description: "Bulk flour, oils, and processing supplies.", imageUrl: "https://picsum.photos/seed/promo3/1600/900", imageHint: "wheat field", link: "/products?category=Food+%26+Beverage" },
-];
 
 export function ProductsPageClient({
   initialProducts,
@@ -123,9 +118,9 @@ export function ProductsPageClient({
     setIsLoading(false);
   };
 
-  const { filteredProducts, filteredManufacturers } = useMemo(() => {
+  const { filteredProducts, filteredManufacturers, promoSlides } = useMemo(() => {
     if (!allProducts || !allManufacturers)
-      return { filteredProducts: [], filteredManufacturers: [] };
+      return { filteredProducts: [], filteredManufacturers: [], promoSlides: [] };
 
     let products = allProducts.filter((product) => {
       const matchesCategory =
@@ -152,10 +147,23 @@ export function ProductsPageClient({
       return 0;
     });
     
-    // Similarly, you can add `isSponsored` to manufacturers later
-    // manufacturers.sort((a, b) => ...);
+    // Create dynamic promo slides from random products if no ads exist
+    const dynamicPromoSlides = [...allProducts]
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 5)
+        .map(p => ({
+            title: p.name,
+            description: p.description,
+            imageUrl: p.imageUrl || 'https://picsum.photos/seed/promo-fallback/1600/900',
+            imageHint: p.imageHint,
+            link: `/products/${p.shopId}/${p.slug}`
+        }));
 
-    return { filteredProducts: products.slice(0, 10), filteredManufacturers: manufacturers };
+    return { 
+        filteredProducts: products.slice(0, 10), 
+        filteredManufacturers: manufacturers,
+        promoSlides: dynamicPromoSlides,
+    };
   }, [allProducts, allManufacturers, filters, searchQuery]);
 
   const FilterSidebar = () => (
@@ -233,26 +241,15 @@ export function ProductsPageClient({
                           Sponsored
                         </Badge>
                       )}
-                      {product.isVerified && !product.isSponsored && (
-                        <Badge
-                          variant="secondary"
-                          className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm flex items-center gap-1"
-                        >
-                          <ShieldCheck className="h-4 w-4 text-green-600" />
-                          Verified
-                        </Badge>
-                      )}
                     </div>
                     <div className="p-4 space-y-2">
+                       <div className="flex items-center gap-2">
+                            <span className="text-xs font-semibold text-muted-foreground">{product.manufacturerName || "Tradinta Seller"}</span>
+                            {product.isVerified && <ShieldCheck className="h-4 w-4 text-green-600" />}
+                        </div>
                       <CardTitle className="text-lg leading-tight h-10">
                         {product.name}
                       </CardTitle>
-                      <CardDescription className="text-sm">
-                        From a trusted supplier in{' '}
-                        <span className="font-semibold text-primary">
-                          {product.category}
-                        </span>
-                      </CardDescription>
                       <div className="flex items-baseline justify-between">
                         <p className="text-xl font-bold text-foreground">
                           {price > 0
@@ -338,7 +335,7 @@ export function ProductsPageClient({
         <section className="relative h-[40vh] lg:h-[50vh] rounded-lg overflow-hidden -mt-8 -mx-4 mb-8">
             <Carousel className="w-full h-full" opts={{ loop: true }}>
                 <CarouselContent className="h-full">
-                    {promoSlides.map((slide) => (
+                    {promoSlides.length > 0 ? promoSlides.map((slide) => (
                         <CarouselItem key={slide.title}>
                             <div className="relative w-full h-full">
                                 <Image
@@ -352,7 +349,7 @@ export function ProductsPageClient({
                                     <h2 className="text-3xl md:text-5xl font-bold text-white mb-3 font-headline">
                                         {slide.title}
                                     </h2>
-                                    <p className="text-md md:text-lg text-primary-foreground max-w-2xl mb-6">
+                                    <p className="text-md md:text-lg text-primary-foreground max-w-2xl mb-6 line-clamp-2">
                                         {slide.description}
                                     </p>
                                     <Button size="lg" asChild>
@@ -361,7 +358,13 @@ export function ProductsPageClient({
                                 </div>
                             </div>
                         </CarouselItem>
-                    ))}
+                    )) : (
+                         <CarouselItem>
+                            <div className="flex items-center justify-center h-full bg-muted">
+                                <Loader2 className="h-12 w-12 text-muted-foreground animate-spin" />
+                            </div>
+                        </CarouselItem>
+                    )}
                 </CarouselContent>
                 <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
                 <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white border-white hover:bg-white/20 hover:text-white" />
@@ -379,7 +382,6 @@ export function ProductsPageClient({
 
        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
           {categories.map((cat) => {
-            // New logic to find the best image for the category
             const sponsoredProduct = allProducts.find(p => p.isSponsored && p.category === cat.name);
             const adminImage = PlaceHolderImages.find(img => img.id === cat.imageId);
             const imageUrl = sponsoredProduct?.imageUrl || adminImage?.imageUrl || 'https://picsum.photos/seed/placeholder/400/300';
