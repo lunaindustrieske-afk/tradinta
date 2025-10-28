@@ -6,7 +6,7 @@ import { getAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue, query, collection, where, getDocs, limit } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
 import { sendTransactionalEmail } from '@/lib/email';
-import { randomBytes } from 'crypto';
+import { randomBytes, createHash } from 'crypto';
 import { nanoid } from 'nanoid';
 
 // Initialize Firebase Admin SDK
@@ -409,18 +409,29 @@ export async function sendVerificationEmail(userId: string, email: string, name:
   }
 }
 
-async function awardPoints(firestore: FirebaseFirestore, userId: string, points: number, reasonCode: string, metadata: object = {}) {
+async function awardPoints(firestore: FirebaseFirestore.Firestore, userId: string, points: number, reasonCode: string, metadata: object = {}) {
     const eventRef = firestore.collection('pointsLedgerEvents').doc();
-    const eventData = {
+    
+    // Create a deterministic payload for hashing
+    const payload = {
         event_id: eventRef.id,
         user_id: userId,
         points: points,
         action: 'award',
         reason_code: reasonCode,
         metadata: metadata,
-        created_at: FieldValue.serverTimestamp(),
-        event_hash: '' // Placeholder, could be generated for integrity
+        timestamp: new Date().toISOString(), // Use a consistent timestamp format for hashing
     };
+
+    // Generate a hash of the payload
+    const hash = createHash('sha256').update(JSON.stringify(payload)).digest('hex');
+
+    const eventData = {
+        ...payload,
+        created_at: FieldValue.serverTimestamp(), // Use server timestamp for actual storage
+        event_hash: hash,
+    };
+    
     // We don't want to block the user flow, so we don't await this.
     eventRef.set(eventData).catch(err => console.error(`Failed to award points for ${reasonCode}:`, err));
 }
@@ -642,3 +653,5 @@ export async function sendNewInquiryEmail(
     };
   }
 }
+
+    
