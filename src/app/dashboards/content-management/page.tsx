@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, MoreHorizontal } from "lucide-react";
+import { PlusCircle, MoreHorizontal, Edit } from "lucide-react";
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -18,6 +18,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { categories } from '@/app/lib/categories';
+import Image from 'next/image';
+import { PlaceHolderImages } from '@/app/lib/placeholder-images';
 
 type HomepageBanner = {
   id: string;
@@ -63,10 +66,11 @@ export default function ContentManagementDashboard() {
 
     return (
         <Tabs defaultValue="banners">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="banners">Homepage Banners</TabsTrigger>
                 <TabsTrigger value="blog">Blog & Insights</TabsTrigger>
                 <TabsTrigger value="static-pages">Static Pages</TabsTrigger>
+                <TabsTrigger value="categories">Categories</TabsTrigger>
             </TabsList>
 
             <TabsContent value="banners">
@@ -211,6 +215,49 @@ export default function ContentManagementDashboard() {
                     </CardContent>
                 </Card>
             </TabsContent>
+
+            <TabsContent value="categories">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Category Management</CardTitle>
+                        <CardDescription>Manage the images and details for product categories.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Image</TableHead>
+                                    <TableHead>Category Name</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {categories.map((category) => {
+                                    const image = PlaceHolderImages.find(img => img.id === category.imageId);
+                                    return (
+                                        <TableRow key={category.id}>
+                                            <TableCell>
+                                                <div className="relative h-16 w-24 rounded-md overflow-hidden">
+                                                    <Image src={image?.imageUrl || 'https://placehold.co/100x75'} alt={category.name} layout="fill" objectFit="cover" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell className="font-medium">{category.name}</TableCell>
+                                            <TableCell>
+                                                <Button variant="outline" size="sm" asChild>
+                                                    <Link href={`/dashboards/content-management/categories/edit/${category.id}`}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Edit Image
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    )
+                                })}
+                            </TableBody>
+                        </Table>
+                    </CardContent>
+                </Card>
+            </TabsContent>
+
         </Tabs>
     );
 }
