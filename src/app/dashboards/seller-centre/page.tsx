@@ -39,6 +39,7 @@ import {
   Wallet,
   BookCopy,
   Factory,
+  Send,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -64,6 +65,9 @@ import type { Review } from '@/app/lib/definitions';
 import { formatDistanceToNow } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { logFeatureUsage } from '@/lib/analytics';
+import { ReportModal } from '@/components/report-modal';
+import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/hooks/use-toast';
 
 
 const orders = [
@@ -232,6 +236,7 @@ const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => 
 export default function SellerDashboardPage() {
   const { user, role } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const manufacturerDocRef = useMemoFirebase(() => {
     if (!user || !firestore) return null;
@@ -271,6 +276,25 @@ export default function SellerDashboardPage() {
       logFeatureUsage({ feature, userId: user.uid, userRole: role, metadata });
     }
   };
+  
+  const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
+  const [replyText, setReplyText] = React.useState('');
+  const [isReplying, setIsReplying] = React.useState(false);
+
+  const handlePostReply = async (reviewId: string) => {
+      if (!replyText.trim()) {
+          toast({ title: "Reply cannot be empty.", variant: "destructive"});
+          return;
+      }
+      setIsReplying(true);
+      // In a real app, you would save this to a 'replies' subcollection
+      // on the review document. For now, we simulate success.
+      await new Promise(res => setTimeout(res, 1000));
+      toast({ title: "Reply Posted!", description: "Your reply is now visible." });
+      setReplyingTo(null);
+      setReplyText('');
+      setIsReplying(false);
+  }
 
 
   const shopName = manufacturer?.shopName;
@@ -503,13 +527,35 @@ export default function SellerDashboardPage() {
                       "{review.comment}"
                     </p>
                     <div className="flex items-center gap-2 pl-11 pt-1">
-                      <Button size="sm" variant="outline" onClick={() => handleFeatureClick('reviews:reply', { reviewId: review.id })}>
-                        <MessageSquare className="mr-2 h-4 w-4" /> Reply
+                      <Button size="sm" variant="outline" onClick={() => {
+                          handleFeatureClick('reviews:reply', { reviewId: review.id });
+                          setReplyingTo(replyingTo === review.id ? null : review.id);
+                          setReplyText('');
+                        }}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        {replyingTo === review.id ? 'Cancel' : 'Reply'}
                       </Button>
-                      <Button size="sm" variant="ghost" onClick={() => handleFeatureClick('reviews:report', { reviewId: review.id })}>
-                        Report
-                      </Button>
+                       <ReportModal reportType="Review" referenceId={review.id} productName={review.productName}>
+                        <Button size="sm" variant="ghost" onClick={() => handleFeatureClick('reviews:report', { reviewId: review.id })}>
+                          Report
+                        </Button>
+                      </ReportModal>
                     </div>
+                    {replyingTo === review.id && (
+                        <div className="pl-11 pt-2 space-y-2">
+                            <Textarea 
+                                placeholder={`Replying to ${review.buyerName}...`}
+                                value={replyText}
+                                onChange={e => setReplyText(e.target.value)}
+                            />
+                            <div className="flex justify-end">
+                                <Button size="sm" disabled={isReplying} onClick={() => handlePostReply(review.id)}>
+                                    {isReplying && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    <Send className="mr-2 h-4 w-4" /> Post Reply
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                   </div>
                 ))
               ) : (
