@@ -50,7 +50,7 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
 
     setIsSubmitting(true);
     try {
-      await addDocumentNonBlocking(collection(firestore, 'reviews'), {
+      const reviewData = {
         id: nanoid(),
         productId: product.id,
         productName: product.name,
@@ -61,8 +61,23 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
         rating,
         comment,
         createdAt: serverTimestamp(),
-        status: 'approved', // Set status to 'approved' by default
+        status: 'approved',
+      };
+      
+      await addDocumentNonBlocking(collection(firestore, 'reviews'), reviewData);
+      
+      // Trigger the ratings recalculation API
+      fetch('/api/reviews', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            reviewId: reviewData.id,
+            productId: product.id,
+            manufacturerId: product.manufacturerId,
+            rating: rating
+        })
       });
+
 
       toast({
         title: 'Review Submitted!',
@@ -70,7 +85,12 @@ export function LeaveReviewForm({ product, onReviewSubmit }: LeaveReviewFormProp
       });
       setRating(0);
       setComment('');
-      onReviewSubmit();
+      
+      // FIX: Call onReviewSubmit here, AFTER the submission is complete.
+      if (onReviewSubmit) {
+          onReviewSubmit();
+      }
+
     } catch (error: any) {
       toast({
         title: 'Submission Failed',
