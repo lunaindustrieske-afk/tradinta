@@ -26,7 +26,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { FollowButton } from '@/components/follow-button';
@@ -37,6 +37,7 @@ type UserProfile = {
   fullName: string;
   bio?: string;
   photoURL?: string;
+  role: string;
 };
 
 export default function PartnerProfilePage() {
@@ -44,25 +45,12 @@ export default function PartnerProfilePage() {
   const partnerId = params.id as string;
   const firestore = useFirestore();
 
-  const [partner, setPartner] = React.useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  React.useEffect(() => {
-    if (!firestore || !partnerId) return;
-    const fetchPartner = async () => {
-      setIsLoading(true);
-      const userRef = doc(firestore, 'users', partnerId);
-      const docSnap = await getDoc(userRef);
-      
-      if (docSnap.exists() && docSnap.data().role === 'partner') {
-        setPartner({ id: docSnap.id, ...docSnap.data() } as UserProfile);
-      } else {
-        setPartner(null);
-      }
-      setIsLoading(false);
-    };
-    fetchPartner();
+  const partnerDocRef = useMemoFirebase(() => {
+    if (!firestore || !partnerId) return null;
+    return doc(firestore, 'users', partnerId);
   }, [firestore, partnerId]);
+
+  const { data: partner, isLoading } = useDoc<UserProfile>(partnerDocRef);
 
   if (isLoading) {
     return (
@@ -82,7 +70,7 @@ export default function PartnerProfilePage() {
     )
   }
 
-  if (!partner) {
+  if (!partner || partner.role !== 'partner') {
     return notFound();
   }
 
@@ -92,8 +80,6 @@ export default function PartnerProfilePage() {
         <Breadcrumb className="mb-6">
           <BreadcrumbList>
             <BreadcrumbItem><BreadcrumbLink asChild><Link href="/">Home</Link></BreadcrumbLink></BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem><BreadcrumbLink asChild><Link href="/partners">Partners</Link></BreadcrumbLink></BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem><BreadcrumbPage>{partner.fullName}</BreadcrumbPage></BreadcrumbItem>
           </BreadcrumbList>
