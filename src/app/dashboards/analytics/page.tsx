@@ -5,10 +5,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, ShoppingCart, DollarSign, LineChart as LineChartIcon, Activity, MousePointerClick, BarChart as BarChartIcon } from "lucide-react";
-import { Bar, BarChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, ComposedChart } from 'recharts';
+import { Users, ShoppingCart, DollarSign, Activity, MousePointerClick } from "lucide-react";
+import { BarChart, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar } from 'recharts';
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, collectionGroup, orderBy, Timestamp, startOfDay, endOfDay, subDays } from "firebase/firestore";
+import { collection, query, where, collectionGroup, orderBy, Timestamp, startOfDay, endOfDay } from "firebase/firestore";
+import { subDays } from 'date-fns';
 import { Skeleton } from "@/components/ui/skeleton";
 import React from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -210,7 +211,6 @@ export default function AnalyticsDashboard() {
                            </CardHeader>
                            <CardContent>
                                 <div className="h-[300px] w-full bg-muted rounded-md flex items-center justify-center">
-                                   <BarChartIcon className="h-16 w-16 text-muted-foreground" />
                                    <p className="ml-4 text-muted-foreground">Historical data charts will be available soon.</p>
                                 </div>
                            </CardContent>
@@ -287,3 +287,4 @@ export default function AnalyticsDashboard() {
         </Tabs>
     );
 }
+
