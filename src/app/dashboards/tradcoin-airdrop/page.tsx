@@ -7,10 +7,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit } from "lucide-react";
+import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 const airdropPhases = [
     { id: 'phase1', name: 'Phase 1: Early Adopters', status: 'Completed', claimed: '1.2M / 1.2M' },
@@ -18,27 +19,50 @@ const airdropPhases = [
     { id: 'phase3', name: 'Phase 3: Public Launch', status: 'Upcoming', claimed: '0 / 5.0M' },
 ];
 
-const earningRules = [
-    { id: 'SIGNUP_VERIFY', action: 'Sign Up & Verify Email', icon: <UserPlus className="w-5 h-5 text-primary" />, points: 50, description: "One-time reward for joining the platform." },
-    { id: 'PURCHASE_KES', action: 'Make a Purchase', icon: <ShoppingCart className="w-5 h-5 text-primary" />, points: 1, description: "Points earned per 100 KES spent." },
-    { id: 'WRITE_REVIEW', action: 'Write a Product Review', icon: <Star className="w-5 h-5 text-primary" />, points: 15, description: "Reward for reviewing a purchased product." },
-    { id: 'REFERRAL_SUCCESS', action: 'Refer a New User', icon: <UserPlus className="w-5 h-5 text-primary" />, points: 100, description: "Awarded when your referral verifies their account." },
+const buyerEarningRules = [
+  { id: 'SIGNUP_VERIFY', action: 'Sign Up & Verify Email', icon: <UserPlus className="w-5 h-5 text-primary" />, points: 50, description: "One-time reward for joining the platform." },
+  { id: 'PURCHASE_KES', action: 'Make a Purchase', icon: <ShoppingCart className="w-5 h-5 text-primary" />, points: 1, description: "Points earned per 100 KES spent." },
+  { id: 'WRITE_REVIEW', action: 'Write a Product Review', icon: <Star className="w-5 h-5 text-primary" />, points: 15, description: "Reward for reviewing a purchased product." },
+  { id: 'REFERRAL_SUCCESS', action: 'Refer a New User', icon: <UserPlus className="w-5 h-5 text-primary" />, points: 100, description: "Awarded when your referral verifies their account." },
 ];
 
-const conversionRules = [
-    { pointType: 'Verification Point', ratio: '1:1.2', description: 'Points from KYC/business verification' },
-    { pointType: 'Transaction Point', ratio: '1:1', description: 'Points from buying/selling' },
-    { pointType: 'Community Point', ratio: '1:0.8', description: 'Points from referrals, reviews etc.' },
+const sellerEarningRules = [
+    { id: 'VERIFY_PROFILE', action: 'Complete Profile Verification', icon: <ShieldCheck className="w-5 h-5 text-primary" />, points: 150, description: 'One-time reward for becoming a "Verified" seller.' },
+    { id: 'FIRST_PRODUCT_PUBLISH', action: 'Publish First Product', icon: <UploadCloud className="w-5 h-5 text-primary" />, points: 25, description: "Awarded when the first product goes live." },
+    { id: 'FIVE_STAR_REVIEW', action: 'Receive a 5-Star Review', icon: <Star className="w-5 h-5 text-primary" />, points: 10, description: "Reward for each 5-star review received from a verified buyer." },
 ];
 
 export default function TradCoinAirdropDashboard() {
     const [isEditing, setIsEditing] = React.useState(false);
+    const router = useRouter();
+    const pathname = usePathname();
+    const searchParams = useSearchParams();
+
+    const activeTab = searchParams.get('tab') || 'overview';
+    
+    const handleTabChange = (value: string) => {
+        const params = new URLSearchParams(window.location.search);
+        params.set('tab', value);
+        router.push(`${pathname}?${params.toString()}`);
+    };
 
     return (
-        <Tabs defaultValue="overview">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Coins className="w-6 h-6 text-primary" />
+                        TradCoin & Points Management
+                    </CardTitle>
+                    <CardDescription>
+                        Oversee the TradCoin airdrop, define points earning rules, and manage the overall rewards economy.
+                    </CardDescription>
+                </CardHeader>
+            </Card>
+
             <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="overview">Airdrop Overview</TabsTrigger>
-                <TabsTrigger value="conversion">Points & Conversion</TabsTrigger>
+                <TabsTrigger value="points">Points Earning Rules</TabsTrigger>
                 <TabsTrigger value="analytics">Analytics</TabsTrigger>
             </TabsList>
 
@@ -79,14 +103,14 @@ export default function TradCoinAirdropDashboard() {
                 </Card>
             </TabsContent>
             
-            <TabsContent value="conversion">
+            <TabsContent value="points">
                  <div className="space-y-6">
                     <Card>
                         <CardHeader>
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>Points Earning Rules</CardTitle>
-                                    <CardDescription>Define how users are awarded TradPoints for performing key actions.</CardDescription>
+                                    <CardTitle>Buyer Earning Rules</CardTitle>
+                                    <CardDescription>Define how buyers are awarded TradPoints.</CardDescription>
                                 </div>
                                 <Button onClick={() => setIsEditing(!isEditing)}>
                                     <Edit className="mr-2 h-4 w-4" /> {isEditing ? 'Save Rules' : 'Edit Rules'}
@@ -95,7 +119,7 @@ export default function TradCoinAirdropDashboard() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                {earningRules.map(rule => (
+                                {buyerEarningRules.map(rule => (
                                     <div key={rule.id} className="flex items-center justify-between rounded-lg border p-4">
                                         <div className="flex items-center gap-4">
                                             {rule.icon}
@@ -120,33 +144,35 @@ export default function TradCoinAirdropDashboard() {
 
                      <Card>
                         <CardHeader>
-                            <div className="flex justify-between items-center">
+                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle>TradPoints to $Trad Conversion Rules</CardTitle>
-                                    <CardDescription>Define the conversion ratios for different types of points.</CardDescription>
+                                    <CardTitle>Seller Earning Rules</CardTitle>
+                                    <CardDescription>Define how sellers are awarded TradPoints.</CardDescription>
                                 </div>
-                                <Button variant="outline"><Settings className="mr-2 h-4 w-4" /> Edit Ratios</Button>
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <Table>
-                                <TableHeader>
-                                    <TableRow>
-                                        <TableHead>Point Type</TableHead>
-                                        <TableHead>Conversion Ratio (Points:$Trad)</TableHead>
-                                        <TableHead>Description</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {conversionRules.map((rule, index) => (
-                                        <TableRow key={index}>
-                                            <TableCell className="font-medium">{rule.pointType}</TableCell>
-                                            <TableCell>{rule.ratio}</TableCell>
-                                            <TableCell>{rule.description}</TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
+                           <div className="space-y-4">
+                                {sellerEarningRules.map(rule => (
+                                    <div key={rule.id} className="flex items-center justify-between rounded-lg border p-4">
+                                        <div className="flex items-center gap-4">
+                                            {rule.icon}
+                                            <div>
+                                                <p className="font-semibold">{rule.action}</p>
+                                                <p className="text-sm text-muted-foreground">{rule.description}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            {isEditing ? (
+                                                <Input type="number" defaultValue={rule.points} className="w-24 h-9" />
+                                            ) : (
+                                                <p className="font-bold text-lg">{rule.points}</p>
+                                            )}
+                                            <span className="text-muted-foreground">Points</span>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </CardContent>
                     </Card>
                 </div>
