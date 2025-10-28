@@ -4,7 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
-import { awardPoints } from '@/app/(auth)/actions'; // Import the awardPoints function
+import { awardPoints } from '@/lib/points';
 
 export async function POST(request: NextRequest) {
   const { reviewId, productId, manufacturerId, rating } = await request.json();
@@ -79,4 +79,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update ratings.', details: error.message }, { status: 500 });
   }
 }
+    
+
     
