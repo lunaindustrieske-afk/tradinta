@@ -4,7 +4,7 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Users, ShoppingCart, DollarSign, Activity, BarChart as BarChartIcon } from "lucide-react";
+import { Users, ShoppingCart, DollarSign, Activity, BarChart as BarChartIcon, Loader2 } from "lucide-react";
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, query, where, collectionGroup } from "firebase/firestore";
@@ -188,7 +188,7 @@ const ProductAnalytics = () => {
 
 
 // --- MAIN DASHBOARD COMPONENT ---
-export default function AnalyticsDashboard() {
+function AnalyticsDashboardContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -241,4 +241,12 @@ export default function AnalyticsDashboard() {
             </div>
         </div>
     );
+}
+
+export default function AnalyticsDashboard() {
+    return (
+        <React.Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <AnalyticsDashboardContent />
+        </React.Suspense>
+    )
 }
