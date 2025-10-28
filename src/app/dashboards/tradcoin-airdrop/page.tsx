@@ -2,12 +2,11 @@
 'use client';
 
 import * as React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp } from "lucide-react";
+import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,6 +15,7 @@ import { useDoc, useFirestore, useMemoFirebase, setDocumentNonBlocking } from '@
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
 const airdropPhases = [
     { id: 'phase1', name: 'Phase 1: Early Adopters', status: 'Completed', claimed: '1.2M / 1.2M' },
@@ -48,6 +48,20 @@ type PointsConfig = {
     sellerFiveStarReviewPoints?: number;
     globalSellerPointMultiplier?: number;
 }
+
+const NavLink = ({ active, onClick, children }: { active: boolean, onClick: () => void, children: React.ReactNode }) => (
+    <button
+        onClick={onClick}
+        className={cn(
+            "flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md w-full text-left",
+            active ? "bg-muted text-primary" : "hover:bg-muted/50"
+        )}
+    >
+        {children}
+        <ChevronRight className={cn("h-4 w-4 transition-transform", active ? "transform translate-x-1" : "")} />
+    </button>
+);
+
 
 export default function TradCoinAirdropDashboard() {
     const [isEditing, setIsEditing] = React.useState(false);
@@ -108,7 +122,6 @@ export default function TradCoinAirdropDashboard() {
         }
     };
 
-
     const activeTab = searchParams.get('tab') || 'overview';
     
     const handleTabChange = (value: string) => {
@@ -117,8 +130,147 @@ export default function TradCoinAirdropDashboard() {
         router.push(`${pathname}?${params.toString()}`);
     };
 
+    const renderOverview = () => (
+         <Card>
+            <CardHeader>
+                <CardTitle>TradCoin Airdrop Overview</CardTitle>
+                <CardDescription>Oversee the distribution of $Trad tokens converted from TradPoints.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Airdrop Phase</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Claimed $Trad</TableHead>
+                            <TableHead>Progress</TableHead>
+                            <TableHead>Actions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {airdropPhases.map((phase) => (
+                            <TableRow key={phase.id}>
+                                <TableCell className="font-medium">{phase.name}</TableCell>
+                                <TableCell><Badge variant={phase.status === 'Active' ? 'default' : 'outline'}>{phase.status}</Badge></TableCell>
+                                <TableCell>{phase.claimed}</TableCell>
+                                <TableCell>
+                                    {phase.progress ? <Progress value={phase.progress} className="w-[60%]" /> : 'N/A'}
+                                </TableCell>
+                                <TableCell>
+                                    <Button variant="outline" size="sm" disabled={phase.status !== 'Active'}>Manage Phase</Button>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </CardContent>
+        </Card>
+    );
+
+    const renderPointsRules = () => (
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <div>
+                            <CardTitle>Points Earning Rules</CardTitle>
+                            <CardDescription>Define how users are awarded TradPoints for their actions.</CardDescription>
+                        </div>
+                        <Button onClick={isEditing ? handleSaveRules : () => setIsEditing(true)} disabled={isSaving}>
+                            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : isEditing ? <Save className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
+                            {isSaving ? 'Saving...' : isEditing ? 'Save Rules' : 'Edit Rules'}
+                        </Button>
+                    </div>
+                </CardHeader>
+            </Card>
+                <Card>
+                <CardHeader>
+                    <CardTitle>Buyer Earning Rules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {isLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-20 w-full" />) :
+                        buyerEarningRuleDefs.map(rule => (
+                            <div key={rule.id} className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="flex items-center gap-4">
+                                    {rule.icon}
+                                    <div>
+                                        <p className="font-semibold">{rule.action}</p>
+                                        <p className="text-sm text-muted-foreground">{rule.description}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {isEditing ? (
+                                        <Input type="number" value={rules[rule.id] || 0} onChange={(e) => handleRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
+                                    ) : (
+                                        <p className="font-bold text-lg">{rules[rule.id] || 0}</p>
+                                    )}
+                                    <span className="text-muted-foreground">Points</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+
+                <Card>
+                <CardHeader>
+                    <CardTitle>Seller Earning Rules</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {isLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-20 w-full" />) :
+                        sellerEarningRuleDefs.map(rule => (
+                            <div key={rule.id} className="flex items-center justify-between rounded-lg border p-4">
+                                <div className="flex items-center gap-4">
+                                    {rule.icon}
+                                    <div>
+                                        <p className="font-semibold">{rule.action}</p>
+                                        <p className="text-sm text-muted-foreground">{rule.description}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {isEditing ? (
+                                        <Input type="number" value={rules[rule.id] || 0} onChange={(e) => handleRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
+                                    ) : (
+                                        <p className="font-bold text-lg">{rules[rule.id] || 0}</p>
+                                    )}
+                                    <span className="text-muted-foreground">Points</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+                <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><TrendingUp /> Global Boost Settings</CardTitle>
+                        <CardDescription>Apply platform-wide multipliers to incentivize specific user groups.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                        <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="flex items-center gap-4">
+                            <ShieldCheck className="w-5 h-5 text-primary" />
+                            <div>
+                                <p className="font-semibold">Global Seller Point Multiplier</p>
+                                <p className="text-sm text-muted-foreground">Boosts points earned from sales for all "Verified" sellers. Default is 1 (no boost).</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            {isEditing ? (
+                                <Input type="number" value={rules['globalSellerPointMultiplier'] || 1} onChange={(e) => handleRuleChange('globalSellerPointMultiplier', e.target.value)} className="w-24 h-9" />
+                            ) : (
+                                <p className="font-bold text-lg">{rules['globalSellerPointMultiplier'] || 1}x</p>
+                            )}
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+
     return (
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+        <div className="space-y-6">
             <Card>
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -131,149 +283,27 @@ export default function TradCoinAirdropDashboard() {
                 </CardHeader>
             </Card>
 
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="overview">Airdrop Overview</TabsTrigger>
-                <TabsTrigger value="points">Points Earning Rules</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="overview">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>TradCoin Airdrop Overview</CardTitle>
-                        <CardDescription>Oversee the distribution of $Trad tokens converted from TradPoints.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Airdrop Phase</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Claimed $Trad</TableHead>
-                                    <TableHead>Progress</TableHead>
-                                    <TableHead>Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {airdropPhases.map((phase) => (
-                                    <TableRow key={phase.id}>
-                                        <TableCell className="font-medium">{phase.name}</TableCell>
-                                        <TableCell><Badge variant={phase.status === 'Active' ? 'default' : 'outline'}>{phase.status}</Badge></TableCell>
-                                        <TableCell>{phase.claimed}</TableCell>
-                                        <TableCell>
-                                            {phase.progress ? <Progress value={phase.progress} className="w-[60%]" /> : 'N/A'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Button variant="outline" size="sm" disabled={phase.status !== 'Active'}>Manage Phase</Button>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </CardContent>
-                </Card>
-            </TabsContent>
-            
-            <TabsContent value="points">
-                 <div className="space-y-6">
+            <div className="grid md:grid-cols-4 gap-6">
+                <div className="md:col-span-1">
                     <Card>
-                        <CardHeader>
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle>Points Earning Rules</CardTitle>
-                                    <CardDescription>Define how users are awarded TradPoints for their actions.</CardDescription>
-                                </div>
-                                <Button onClick={isEditing ? handleSaveRules : () => setIsEditing(true)} disabled={isSaving}>
-                                  {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : isEditing ? <Save className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
-                                  {isSaving ? 'Saving...' : isEditing ? 'Save Rules' : 'Edit Rules'}
-                                </Button>
-                            </div>
-                        </CardHeader>
-                    </Card>
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Buyer Earning Rules</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                {isLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-20 w-full" />) :
-                                buyerEarningRuleDefs.map(rule => (
-                                    <div key={rule.id} className="flex items-center justify-between rounded-lg border p-4">
-                                        <div className="flex items-center gap-4">
-                                            {rule.icon}
-                                            <div>
-                                                <p className="font-semibold">{rule.action}</p>
-                                                <p className="text-sm text-muted-foreground">{rule.description}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {isEditing ? (
-                                                <Input type="number" value={rules[rule.id] || 0} onChange={(e) => handleRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
-                                            ) : (
-                                                <p className="font-bold text-lg">{rules[rule.id] || 0}</p>
-                                            )}
-                                            <span className="text-muted-foreground">Points</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                     <Card>
-                        <CardHeader>
-                            <CardTitle>Seller Earning Rules</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                           <div className="space-y-4">
-                                {isLoading ? Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-20 w-full" />) :
-                                sellerEarningRuleDefs.map(rule => (
-                                    <div key={rule.id} className="flex items-center justify-between rounded-lg border p-4">
-                                        <div className="flex items-center gap-4">
-                                            {rule.icon}
-                                            <div>
-                                                <p className="font-semibold">{rule.action}</p>
-                                                <p className="text-sm text-muted-foreground">{rule.description}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {isEditing ? (
-                                                <Input type="number" value={rules[rule.id] || 0} onChange={(e) => handleRuleChange(rule.id, e.target.value)} className="w-24 h-9" />
-                                            ) : (
-                                                <p className="font-bold text-lg">{rules[rule.id] || 0}</p>
-                                            )}
-                                            <span className="text-muted-foreground">Points</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                     <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><TrendingUp /> Global Boost Settings</CardTitle>
-                             <CardDescription>Apply platform-wide multipliers to incentivize specific user groups.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                             <div className="flex items-center justify-between rounded-lg border p-4">
-                                <div className="flex items-center gap-4">
-                                    <ShieldCheck className="w-5 h-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold">Global Seller Point Multiplier</p>
-                                        <p className="text-sm text-muted-foreground">Boosts points earned from sales for all "Verified" sellers. Default is 1 (no boost).</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    {isEditing ? (
-                                        <Input type="number" value={rules['globalSellerPointMultiplier'] || 1} onChange={(e) => handleRuleChange('globalSellerPointMultiplier', e.target.value)} className="w-24 h-9" />
-                                    ) : (
-                                        <p className="font-bold text-lg">{rules['globalSellerPointMultiplier'] || 1}x</p>
-                                    )}
-                                </div>
-                            </div>
+                        <CardContent className="p-4">
+                             <nav className="space-y-1">
+                                <NavLink active={activeTab === 'overview'} onClick={() => handleTabChange('overview')}>
+                                    Airdrop Overview
+                                </NavLink>
+                                <NavLink active={activeTab === 'points'} onClick={() => handleTabChange('points')}>
+                                    Points Earning Rules
+                                </NavLink>
+                            </nav>
                         </CardContent>
                     </Card>
                 </div>
-            </TabsContent>
-        </Tabs>
+                <div className="md:col-span-3">
+                    {activeTab === 'overview' && renderOverview()}
+                    {activeTab === 'points' && renderPointsRules()}
+                </div>
+            </div>
+
+        </div>
     );
 }
