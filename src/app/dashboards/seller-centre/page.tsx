@@ -40,6 +40,7 @@ import {
   BookCopy,
   Factory,
   Send,
+  Megaphone,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -116,52 +117,6 @@ type Product = {
   status: 'draft' | 'published' | 'archived';
 };
 
-const statusInfo: Record<
-  VerificationStatus,
-  {
-    icon: React.ReactNode;
-    title: string;
-    description: string;
-    badgeVariant: 'secondary' | 'default' | 'destructive' | 'outline';
-  }
-> = {
-  Unsubmitted: {
-    icon: <Info className="h-8 w-8 text-muted-foreground" />,
-    title: 'Documents Required',
-    description:
-      'Submit your business documents to get a "Verified" badge and build trust with buyers.',
-    badgeVariant: 'outline',
-  },
-  'Pending Legal': {
-    icon: <Clock className="h-8 w-8 text-yellow-500" />,
-    title: 'Pending Legal & Compliance Review',
-    description:
-      'Your business documents are being reviewed. This usually takes 2-3 business days.',
-    badgeVariant: 'default',
-  },
-  'Pending Admin': {
-    icon: <Clock className="h-8 w-8 text-blue-500" />,
-    title: 'Pending Admin Approval',
-    description:
-      'Your documents are approved. Final review of your shop profile is in progress.',
-    badgeVariant: 'default',
-  },
-  'Action Required': {
-    icon: <AlertTriangle className="h-8 w-8 text-destructive" />,
-    title: 'Action Required',
-    description:
-      'There was an issue with your submission. Please check your email for details and resubmit.',
-    badgeVariant: 'destructive',
-  },
-  Verified: {
-    icon: <ShieldCheck className="h-8 w-8 text-green-500" />,
-    title: 'Shop Verified',
-    description:
-      'Congratulations! Your shop is live and visible to all buyers on Tradinta.',
-    badgeVariant: 'secondary',
-  },
-};
-
 const VerificationStatusCard = ({
   manufacturerId,
 }: {
@@ -232,6 +187,52 @@ const calculateProfileCompleteness = (manufacturer: ManufacturerData | null) => 
 
     return Math.round((completedFields / totalFields) * 100);
 }
+
+const statusInfo: Record<
+  VerificationStatus,
+  {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    badgeVariant: 'secondary' | 'default' | 'destructive' | 'outline';
+  }
+> = {
+  Unsubmitted: {
+    icon: <Info className="h-8 w-8 text-muted-foreground" />,
+    title: 'Documents Required',
+    description:
+      'Submit your business documents to get a "Verified" badge and build trust with buyers.',
+    badgeVariant: 'outline',
+  },
+  'Pending Legal': {
+    icon: <Clock className="h-8 w-8 text-yellow-500" />,
+    title: 'Pending Legal & Compliance Review',
+    description:
+      'Your business documents are being reviewed. This usually takes 2-3 business days.',
+    badgeVariant: 'default',
+  },
+  'Pending Admin': {
+    icon: <Clock className="h-8 w-8 text-blue-500" />,
+    title: 'Pending Admin Approval',
+    description:
+      'Your documents are approved. Final review of your shop profile is in progress.',
+    badgeVariant: 'default',
+  },
+  'Action Required': {
+    icon: <AlertTriangle className="h-8 w-8 text-destructive" />,
+    title: 'Action Required',
+    description:
+      'There was an issue with your submission. Please check your email for details and resubmit.',
+    badgeVariant: 'destructive',
+  },
+  Verified: {
+    icon: <ShieldCheck className="h-8 w-8 text-green-500" />,
+    title: 'Shop Verified',
+    description:
+      'Congratulations! Your shop is live and visible to all buyers on Tradinta.',
+    badgeVariant: 'secondary',
+  },
+};
 
 export default function SellerDashboardPage() {
   const { user, role } = useUser();
@@ -342,7 +343,7 @@ export default function SellerDashboardPage() {
         <CardHeader>
             <CardTitle>Quick Access</CardTitle>
         </CardHeader>
-        <CardContent className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Button variant="outline" className="flex-col h-24" asChild>
                 <Link href="/dashboards/seller-centre/products" onClick={() => handleFeatureClick('quick_access:manage_products')}>
                     <Package className="w-6 h-6 mb-2" />
@@ -353,6 +354,12 @@ export default function SellerDashboardPage() {
                 <Link href="/dashboards/seller-centre/orders" onClick={() => handleFeatureClick('quick_access:view_orders')}>
                     <ShoppingCart className="w-6 h-6 mb-2" />
                     View Orders
+                </Link>
+            </Button>
+            <Button variant="outline" className="flex-col h-24" asChild>
+                <Link href="/dashboards/seller-centre/marketing" onClick={() => handleFeatureClick('quick_access:marketing')}>
+                    <Megaphone className="w-6 h-6 mb-2" />
+                    Marketing
                 </Link>
             </Button>
              <Button variant="outline" className="flex-col h-24" asChild>
