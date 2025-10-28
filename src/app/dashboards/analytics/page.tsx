@@ -4,27 +4,20 @@
 import * as React from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Users, ShoppingCart, DollarSign, Activity, MousePointerClick, BarChart as BarChartIcon, LineChart } from "lucide-react";
+import { Users, ShoppingCart, DollarSign, Activity, BarChart as BarChartIcon } from "lucide-react";
 import { Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ComposedChart, Bar, BarChart } from 'recharts';
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
-import { collection, query, where, collectionGroup, orderBy, Timestamp, startOfDay } from "firebase/firestore";
-import { subDays } from 'date-fns';
+import { collection, query, where, collectionGroup } from "firebase/firestore";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from '@/lib/utils';
 import { ChevronRight } from 'lucide-react';
+import FeatureUsageDashboard from '@/components/analytics/FeatureUsageDashboard';
 
 
 // --- TYPE DEFINITIONS ---
 type User = { role: string; };
 type Order = { totalAmount: number; };
 type Product = { category: string; };
-type FeatureUsage = {
-    feature: string;
-    timestamp: any;
-};
 
 // --- NAVIGATION LINK COMPONENT ---
 const NavLink = ({ active, onClick, children }: { active: boolean, onClick: () => void, children: React.ReactNode }) => (
@@ -194,116 +187,6 @@ const ProductAnalytics = () => {
 };
 
 
-// --- FEATURE USAGE COMPONENT ---
-const FeatureUsageAnalytics = () => {
-    const firestore = useFirestore();
-    const [timeFilter, setTimeFilter] = React.useState('7days');
-    
-    const usageQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        let q = query(collection(firestore, 'featureUsage'), orderBy('timestamp', 'desc'));
-        
-        const now = new Date();
-        if (timeFilter === 'today') {
-            q = query(q, where('timestamp', '>=', startOfDay(now)));
-        } else if (timeFilter === '7days') {
-            q = query(q, where('timestamp', '>=', subDays(now, 7)));
-        } else if (timeFilter === '30days') {
-             q = query(q, where('timestamp', '>=', subDays(now, 30)));
-        }
-        return q;
-
-    }, [firestore, timeFilter]);
-
-    const { data: usageEvents, isLoading } = useCollection<FeatureUsage>(usageQuery);
-
-    const aggregatedFeatures = React.useMemo(() => {
-        if (!usageEvents) return [];
-
-        const counts: Record<string, { feature: string; page: string; dashboard: string; count: number }> = {};
-        
-        usageEvents.forEach(event => {
-            const [resource, action] = event.feature.split(':');
-            const page = resource.replace(/_/g, ' ');
-            const dashboard = 'Seller Centre'; // This is hardcoded for now, can be derived later
-            
-            if (!counts[event.feature]) {
-                counts[event.feature] = {
-                    feature: action,
-                    page: page,
-                    dashboard: dashboard,
-                    count: 0
-                };
-            }
-            counts[event.feature].count++;
-        });
-
-        return Object.values(counts).sort((a,b) => b.count - a.count);
-
-    }, [usageEvents]);
-    
-    return (
-        <Card>
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div>
-                        <CardTitle>Feature Usage Analytics</CardTitle>
-                        <CardDescription>How users are interacting with key features.</CardDescription>
-                    </div>
-                    <Select value={timeFilter} onValueChange={setTimeFilter}>
-                        <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select time range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="today">Today</SelectItem>
-                            <SelectItem value="7days">Last 7 Days</SelectItem>
-                            <SelectItem value="30days">Last 30 Days</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Feature</TableHead>
-                            <TableHead>Page</TableHead>
-                            <TableHead>Dashboard</TableHead>
-                            <TableHead className="text-right">Usage Count</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading ? (
-                            Array.from({length: 4}).map((_, i) => (
-                                <TableRow key={i}>
-                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-32" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-24" /></TableCell>
-                                    <TableCell><Skeleton className="h-5 w-16 ml-auto" /></TableCell>
-                                </TableRow>
-                            ))
-                        ) : aggregatedFeatures.length > 0 ? (
-                            aggregatedFeatures.map(feature => (
-                                <TableRow key={feature.feature + feature.page}>
-                                    <TableCell className="font-medium capitalize">{feature.feature.replace(/_/g, ' ')}</TableCell>
-                                    <TableCell className="capitalize">{feature.page}</TableCell>
-                                    <TableCell>{feature.dashboard}</TableCell>
-                                    <TableCell className="text-right font-bold">{feature.count}</TableCell>
-                                </TableRow>
-                            ))
-                        ) : (
-                            <TableRow>
-                                <TableCell colSpan={4} className="h-24 text-center">No feature usage data for this period.</TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </CardContent>
-        </Card>
-    );
-};
-
-
 // --- MAIN DASHBOARD COMPONENT ---
 export default function AnalyticsDashboard() {
     const router = useRouter();
@@ -324,7 +207,7 @@ export default function AnalyticsDashboard() {
             case 'products':
                 return <ProductAnalytics />;
             case 'feature-usage':
-                return <FeatureUsageAnalytics />;
+                return <FeatureUsageDashboard />;
             case 'overview':
             default:
                 return <OverviewAnalytics />;
