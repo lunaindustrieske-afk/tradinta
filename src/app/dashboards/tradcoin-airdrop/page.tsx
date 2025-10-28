@@ -1,8 +1,9 @@
+
 'use client';
 
 import * as React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Coins, ChevronRight } from "lucide-react";
+import { Coins, ChevronRight, Loader2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import AirdropOverview from '@/components/tradcoin-admin/AirdropOverview';
@@ -24,7 +25,7 @@ const NavLink = ({ active, onClick, children }: { active: boolean, onClick: () =
 );
 
 
-export default function TradCoinAirdropDashboard() {
+function TradCoinAirdropDashboardContent() {
     const router = useRouter();
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -76,4 +77,12 @@ export default function TradCoinAirdropDashboard() {
 
         </div>
     );
+}
+
+export default function TradCoinAirdropDashboard() {
+    return (
+        <React.Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+            <TradCoinAirdropDashboardContent />
+        </React.Suspense>
+    )
 }
