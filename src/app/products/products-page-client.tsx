@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -53,44 +52,55 @@ import {
   Handshake,
   RefreshCw,
   ShieldCheck,
+  Building,
 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { type Product } from '@/lib/definitions';
+import { type Product, type Manufacturer } from '@/lib/definitions';
 import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { manufacturers as mockManufacturers } from '@/app/lib/mock-data';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Separator } from '../ui/separator';
 
-type ProductWithShopId = Product & { 
-    shopId: string; 
-    slug: string; 
-    variants: { price: number }[],
-    isVerified?: boolean;
-    isSponsored?: boolean; // Added for marketing
+type ProductWithShopId = Product & {
+  shopId: string;
+  slug: string;
+  variants: { price: number }[];
+  isVerified?: boolean;
+  isSponsored?: boolean; // Added for marketing
 };
 
 const categoryIcons: Record<string, React.ReactNode> = {
-    "Industrial & Manufacturing Supplies": <Factory className="w-5 h-5" />,
-    "Construction & Building Materials": <Building2 className="w-5 h-5" />,
-    "Food & Beverage": <UtensilsCrossed className="w-5 h-5" />,
-    "Beauty, Hygiene & Personal Care": <Sparkles className="w-5 h-5" />,
-    "Cleaning & Home Care": <Home className="w-5 h-5" />,
-    "Packaging, Printing & Branding": <Printer className="w-5 h-5" />,
-    "Automotive & Transport Supplies": <Car className="w-5 h-5" />,
-    "Office, School & Stationery Supplies": <BookOpen className="w-5 h-5" />,
-    "Fashion, Textiles & Apparel": <Shirt className="w-5 h-5" />,
-    "Furniture & Home Goods": <Armchair className="w-5 h-5" />,
-    "Agriculture & Agri-Processing": <Sprout className="w-5 h-5" />,
-    "Medical, Health & Safety": <HeartPulse className="w-5 h-5" />,
-    "Energy & Utilities": <Bolt className="w-5 h-5" />,
-    "Local & Small Manufacturers (Made in Kenya)": <Award className="w-5 h-5" />,
-    "Services & Trade Support": <Handshake className="w-5 h-5" />,
+  'Industrial & Manufacturing Supplies': <Factory className="w-5 h-5" />,
+  'Construction & Building Materials': <Building2 className="w-5 h-5" />,
+  'Food & Beverage': <UtensilsCrossed className="w-5 h-5" />,
+  'Beauty, Hygiene & Personal Care': <Sparkles className="w-5 h-5" />,
+  'Cleaning & Home Care': <Home className="w-5 h-5" />,
+  'Packaging, Printing & Branding': <Printer className="w-5 h-5" />,
+  'Automotive & Transport Supplies': <Car className="w-5 h-5" />,
+  'Office, School & Stationery Supplies': <BookOpen className="w-5 h-5" />,
+  'Fashion, Textiles & Apparel': <Shirt className="w-5 h-5" />,
+  'Furniture & Home Goods': <Armchair className="w-5 h-5" />,
+  'Agriculture & Agri-Processing': <Sprout className="w-5 h-5" />,
+  'Medical, Health & Safety': <HeartPulse className="w-5 h-5" />,
+  'Energy & Utilities': <Bolt className="w-5 h-5" />,
+  'Local & Small Manufacturers (Made in Kenya)': <Award className="w-5 h-5" />,
+  'Services & Trade Support': <Handshake className="w-5 h-5" />,
 };
 
-export function ProductsPageClient({ initialProducts }: { initialProducts: ProductWithShopId[] }) {
-  const [allProducts, setAllProducts] = useState<ProductWithShopId[]>(initialProducts);
+export function ProductsPageClient({
+  initialProducts,
+}: {
+  initialProducts: ProductWithShopId[];
+}) {
+  const [allProducts, setAllProducts] =
+    useState<ProductWithShopId[]>(initialProducts);
+  const [allManufacturers, setAllManufacturers] =
+    useState<Manufacturer[]>(mockManufacturers);
   const [isLoading, setIsLoading] = useState(false);
 
   const [filters, setFilters] = useState({
@@ -105,26 +115,40 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
     setIsLoading(false);
   };
 
-  const filteredProducts = useMemo(() => {
-    if(!allProducts) return [];
-    
-    let products = allProducts.filter(product => {
-      const matchesCategory = filters.category === 'all' || product.category === filters.category;
-      const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
-      
+  const { filteredProducts, filteredManufacturers } = useMemo(() => {
+    if (!allProducts || !allManufacturers)
+      return { filteredProducts: [], filteredManufacturers: [] };
+
+    let products = allProducts.filter((product) => {
+      const matchesCategory =
+        filters.category === 'all' || product.category === filters.category;
+      const matchesSearch =
+        searchQuery === '' ||
+        product.name.toLowerCase().includes(searchQuery.toLowerCase());
+
       return matchesCategory && matchesSearch;
     });
+    
+    let manufacturers = allManufacturers.filter(mfg => {
+        const matchesSearch = searchQuery === '' || 
+            mfg.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            mfg.industry.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        return matchesSearch;
+    });
 
-    // Prioritize sponsored products
+    // Prioritize sponsored items
     products.sort((a, b) => {
-        if (a.isSponsored && !b.isSponsored) return -1;
-        if (!a.isSponsored && b.isSponsored) return 1;
-        return 0;
+      if (a.isSponsored && !b.isSponsored) return -1;
+      if (!a.isSponsored && b.isSponsored) return 1;
+      return 0;
     });
     
-    return products;
-  }, [allProducts, filters, searchQuery]);
+    // Similarly, you can add `isSponsored` to manufacturers later
+    // manufacturers.sort((a, b) => ...);
 
+    return { filteredProducts: products.slice(0, 10), filteredManufacturers: manufacturers };
+  }, [allProducts, allManufacturers, filters, searchQuery]);
 
   const FilterSidebar = () => (
     <Card className="p-4 lg:p-6">
@@ -134,9 +158,7 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
           <Label className="font-semibold">Category</Label>
           <Select
             value={filters.category}
-            onValueChange={(value) =>
-              setFilters({ ...filters, category: value })
-            }
+            onValueChange={(value) => setFilters({ ...filters, category: value })}
           >
             <SelectTrigger>
               <SelectValue placeholder="Select Category" />
@@ -154,12 +176,12 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
       </div>
     </Card>
   );
-  
+
   const ProductGrid = () => {
     if (isLoading) {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-          {Array.from({ length: 9 }).map((_, i) => (
+          {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="space-y-2">
               <Skeleton className="h-48 w-full" />
               <Skeleton className="h-6 w-3/4" />
@@ -169,122 +191,176 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
         </div>
       );
     }
-
-    if (filteredProducts.length === 0) {
-      return (
-        <div className="col-span-full text-center py-12 bg-muted/50 rounded-lg">
-          <h3 className="text-lg font-semibold">No Products Found</h3>
-          <p className="text-muted-foreground mt-2">
-            Try adjusting your search or filter criteria.
-          </p>
-           <div className="mt-4 text-sm text-muted-foreground">
-            <p>Total products loaded: <span className="font-bold text-foreground">{allProducts?.length || 0}</span></p>
-            <p>Products after filtering: <span className="font-bold text-foreground">{filteredProducts?.length || 0}</span></p>
-            <details className="mt-2 text-left w-fit mx-auto bg-background p-2 rounded-md">
-              <summary className="cursor-pointer font-medium">Active Filters</summary>
-              <pre className="text-xs mt-1 whitespace-pre-wrap">{JSON.stringify(filters, null, 2)}</pre>
-            </details>
-          </div>
-        </div>
-      );
-    }
     
+    if (filteredProducts.length === 0) return null;
+
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredProducts.map((product) => {
-            const price = product.variants?.[0]?.price ?? 0;
-            return (
-              <Card key={product.id} className="overflow-hidden group flex flex-col">
-                <div className="flex-grow">
-                  <Link href={`/products/${product.shopId}/${product.slug}`}>
-                    <CardContent className="p-0">
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <Image
-                          src={product.imageUrl || 'https://i.postimg.cc/j283ydft/image.png'}
-                          alt={product.name}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform"
-                          data-ai-hint={product.imageHint}
-                        />
-                        {product.isSponsored && <Badge variant="destructive" className="absolute top-2 left-2">Sponsored</Badge>}
-                        {product.isVerified && !product.isSponsored && <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm flex items-center gap-1">
+          const price = product.variants?.[0]?.price ?? 0;
+          return (
+            <Card
+              key={product.id}
+              className="overflow-hidden group flex flex-col"
+            >
+              <div className="flex-grow">
+                <Link href={`/products/${product.shopId}/${product.slug}`}>
+                  <CardContent className="p-0">
+                    <div className="relative aspect-[4/3] overflow-hidden">
+                      <Image
+                        src={
+                          product.imageUrl ||
+                          'https://i.postimg.cc/j283ydft/image.png'
+                        }
+                        alt={product.name}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform"
+                        data-ai-hint={product.imageHint}
+                      />
+                      {product.isSponsored && (
+                        <Badge
+                          variant="destructive"
+                          className="absolute top-2 left-2"
+                        >
+                          Sponsored
+                        </Badge>
+                      )}
+                      {product.isVerified && !product.isSponsored && (
+                        <Badge
+                          variant="secondary"
+                          className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm flex items-center gap-1"
+                        >
                           <ShieldCheck className="h-4 w-4 text-green-600" />
                           Verified
-                        </Badge>}
-                      </div>
-                      <div className="p-4 space-y-2">
-                        <CardTitle className="text-lg leading-tight h-10">
-                          {product.name}
-                        </CardTitle>
-                        <CardDescription className="text-sm">
-                          From a trusted supplier in{' '}
-                          <span className="font-semibold text-primary">
-                            {product.category}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <CardTitle className="text-lg leading-tight h-10">
+                        {product.name}
+                      </CardTitle>
+                      <CardDescription className="text-sm">
+                        From a trusted supplier in{' '}
+                        <span className="font-semibold text-primary">
+                          {product.category}
+                        </span>
+                      </CardDescription>
+                      <div className="flex items-baseline justify-between">
+                        <p className="text-xl font-bold text-foreground">
+                          {price > 0
+                            ? `KES ${price.toLocaleString()}`
+                            : 'Inquire for Price'}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                          <span className="text-sm font-medium">
+                            {product.rating}
                           </span>
-                        </CardDescription>
-                        <div className="flex items-baseline justify-between">
-                          <p className="text-xl font-bold text-foreground">
-                            {price > 0 ? `KES ${price.toLocaleString()}` : 'Inquire for Price'}
-                          </p>
-                          <div className="flex items-center gap-1">
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                            <span className="text-sm font-medium">{product.rating}</span>
-                            <span className="text-xs text-muted-foreground">({product.reviewCount})</span>
-                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            ({product.reviewCount})
+                          </span>
                         </div>
                       </div>
-                    </CardContent>
-                  </Link>
-                </div>
-                <div className="p-4 pt-0">
-                  <RequestQuoteModal product={product}>
-                    <Button className="w-full mt-2">Request Quotation</Button>
-                  </RequestQuoteModal>
-                </div>
-              </Card>
-            )
+                    </div>
+                  </CardContent>
+                </Link>
+              </div>
+              <div className="p-4 pt-0">
+                <RequestQuoteModal product={product}>
+                  <Button className="w-full mt-2">Request Quotation</Button>
+                </RequestQuoteModal>
+              </div>
+            </Card>
+          );
         })}
       </div>
     );
   };
+  
+  const ManufacturerList = () => {
+    if (isLoading) {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 p-4 border rounded-lg">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-2 flex-grow">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    
+    if(filteredManufacturers.length === 0) return null;
 
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {filteredManufacturers.map(mfg => (
+                <Card key={mfg.id} className="hover:shadow-lg transition-shadow">
+                    <Link href={`/manufacturer/${mfg.slug}`}>
+                        <CardContent className="p-4 flex items-center gap-4">
+                            <Avatar className="h-16 w-16 border">
+                                <AvatarImage src={mfg.logoUrl} alt={mfg.name} />
+                                <AvatarFallback>{mfg.name.charAt(0)}</AvatarFallback>
+                            </Avatar>
+                            <div className="flex-grow">
+                                <h3 className="font-bold">{mfg.name}</h3>
+                                <p className="text-sm text-muted-foreground">{mfg.industry}</p>
+                                <div className="flex items-center gap-1 mt-1 text-sm">
+                                    <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                                    <span>{mfg.rating}</span>
+                                </div>
+                            </div>
+                            {mfg.isVerified && <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm flex items-center gap-1">
+                                <ShieldCheck className="h-4 w-4 text-green-600" /> Verified
+                            </Badge>}
+                        </CardContent>
+                    </Link>
+                </Card>
+            ))}
+        </div>
+    )
+  }
 
   return (
-     <div className="container mx-auto py-8">
+    <div className="container mx-auto py-8">
       <div className="mb-6">
-          <h1 className="text-4xl font-bold font-headline mb-2">
-              Tradinta Marketplace
-          </h1>
-          <p className="text-muted-foreground">
-              Source directly from Africa’s top manufacturers.
-          </p>
+        <h1 className="text-4xl font-bold font-headline mb-2">
+          Tradinta Marketplace
+        </h1>
+        <p className="text-muted-foreground">
+          Source directly from Africa’s top manufacturers.
+        </p>
       </div>
 
-       <div className="sticky top-14 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-4 px-4 border-b">
-         <ScrollArea className="w-full whitespace-nowrap">
-            <div className="flex w-max space-x-2">
-                 <Button
-                    variant={filters.category === 'all' ? 'default' : 'outline'}
-                    className="rounded-full"
-                    onClick={() => setFilters({ ...filters, category: 'all' })}
-                >
-                    All Categories
-                </Button>
-                {categories.map((cat) => (
-                    <Button
-                        key={cat.name}
-                        variant={filters.category === cat.name ? 'default' : 'outline'}
-                        className="rounded-full"
-                        onClick={() => setFilters({ ...filters, category: cat.name })}
-                    >
-                        {categoryIcons[cat.name]}
-                        <span className="ml-2">{cat.name}</span>
-                    </Button>
-                ))}
-            </div>
-            <ScrollBar orientation="horizontal" />
+      <div className="sticky top-14 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 -mx-4 px-4 border-b">
+        <ScrollArea className="w-full whitespace-nowrap">
+          <div className="flex w-max space-x-2">
+            <Button
+              variant={filters.category === 'all' ? 'default' : 'outline'}
+              className="rounded-full"
+              onClick={() => setFilters({ ...filters, category: 'all' })}
+            >
+              All Categories
+            </Button>
+            {categories.map((cat) => (
+              <Button
+                key={cat.name}
+                variant={filters.category === cat.name ? 'default' : 'outline'}
+                className="rounded-full"
+                onClick={() => setFilters({ ...filters, category: cat.name })}
+              >
+                {categoryIcons[cat.name]}
+                <span className="ml-2">{cat.name}</span>
+              </Button>
+            ))}
+          </div>
+          <ScrollBar orientation="horizontal" />
         </ScrollArea>
-       </div>
+      </div>
 
       <div className="grid lg:grid-cols-4 gap-8 mt-6">
         <div className="hidden lg:block lg:col-span-1">
@@ -311,36 +387,68 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
                   <SelectContent>
                     <SelectItem value="relevance">Sort by: Relevance</SelectItem>
                     <SelectItem value="newest">Sort by: Newest</SelectItem>
-                    <SelectItem value="price-asc">Sort by: Price Low-High</SelectItem>
-                    <SelectItem value="price-desc">Sort by: Price High-Low</SelectItem>
+                    <SelectItem value="price-asc">
+                      Sort by: Price Low-High
+                    </SelectItem>
+                    <SelectItem value="price-desc">
+                      Sort by: Price High-Low
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                 <Sheet>
+                <Sheet>
                   <SheetTrigger asChild>
-                      <Button variant="outline" size="icon" className="lg:hidden">
-                          <ListFilter className="h-5 w-5" />
-                      </Button>
+                    <Button variant="outline" size="icon" className="lg:hidden">
+                      <ListFilter className="h-5 w-5" />
+                    </Button>
                   </SheetTrigger>
                   <SheetContent side="left">
-                      <FilterSidebar />
+                    <FilterSidebar />
                   </SheetContent>
-              </Sheet>
+                </Sheet>
               </div>
             </div>
-             <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 text-muted-foreground"
-                onClick={fetchProducts}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                {isLoading ? 'Refreshing...' : 'Refresh'}
-              </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mt-2 text-muted-foreground"
+              onClick={fetchProducts}
+              disabled={isLoading}
+            >
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${isLoading ? 'animate-spin' : ''}`}
+              />
+              {isLoading ? 'Refreshing...' : 'Refresh'}
+            </Button>
           </div>
           
-          <ProductGrid />
+          <div className="space-y-12">
+            <div>
+              <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
+                <Search className="w-6 h-6" /> Product Results
+              </h2>
+              <ProductGrid />
+            </div>
+
+            <Separator />
+            
+            <div>
+              <h2 className="text-2xl font-bold font-headline mb-4 flex items-center gap-2">
+                <Building className="w-6 h-6" /> Manufacturer Results
+              </h2>
+              <ManufacturerList />
+            </div>
+          </div>
           
+          {filteredProducts.length === 0 && filteredManufacturers.length === 0 && (
+             <div className="col-span-full text-center py-12 bg-muted/50 rounded-lg">
+                <h3 className="text-lg font-semibold">No Results Found</h3>
+                <p className="text-muted-foreground mt-2">
+                    Try adjusting your search or filter criteria.
+                </p>
+            </div>
+          )}
+
+
           <div className="mt-8">
             <Pagination>
               <PaginationContent>
@@ -367,5 +475,5 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
         </div>
       </div>
     </div>
-  )
+  );
 }
