@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -9,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { generateClaimCodes, findUserAndTheirPoints, banUserFromTradPoints } from '@/app/dashboards/tradcoin-airdrop/actions';
-import { awardPoints } from '@/app/(auth)/actions';
+import { awardPoints } from '@/lib/points';
 import { Loader2, Ticket, Search, PlusCircle, AlertTriangle, Copy } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
@@ -135,8 +134,8 @@ export default function UserPointsManager() {
         try {
             // This is a client->server action call so it doesn't need to be awaited
             // by the client. The firestore argument will be handled by the server action.
-            awardPoints(
-                firestore, // This argument will be ignored by the server action
+            await awardPoints(
+                firestore, // This argument is a placeholder for the server action
                 foundUser.id,
                 Number(awardPointsValue),
                 awardReason,
