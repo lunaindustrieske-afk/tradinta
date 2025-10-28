@@ -1,4 +1,5 @@
 
+
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -46,7 +47,7 @@ type BlogPost = {
   slug: string;
 };
 
-type ProductWithShopId = Product & { shopId: string; slug: string; variants: { price: number }[] };
+type ProductWithShopId = Product & { shopId: string; slug: string; variants: { price: number }[], isSponsored?: boolean };
 
 const categories = [
   'Packaging',
@@ -221,7 +222,11 @@ const HeroCarousel = async () => {
 export default async function HomePage() {
   const blogPosts = await getAllBlogPosts();
   const recentBlogPosts = blogPosts.slice(0, 3);
-  const featuredProducts = (await getAllProducts()).slice(0, 4) as ProductWithShopId[];
+  const allProducts = (await getAllProducts()) as ProductWithShopId[];
+  // Logic for featured products: show sponsored first, then fill with regular items.
+  const sponsoredProducts = allProducts.filter(p => p.isSponsored);
+  const regularProducts = allProducts.filter(p => !p.isSponsored);
+  const featuredProducts = [...sponsoredProducts, ...regularProducts].slice(0, 4);
 
 
   return (
@@ -286,7 +291,8 @@ export default async function HomePage() {
                             className="object-cover group-hover:scale-105 transition-transform"
                             data-ai-hint={product.imageHint}
                           />
-                          <Badge variant="secondary" className="absolute top-2 left-2">Verified Factory</Badge>
+                          {product.isSponsored && <Badge variant="destructive" className="absolute top-2 left-2">Sponsored</Badge>}
+                          {product.isVerified && !product.isSponsored && <Badge variant="secondary" className="absolute top-2 left-2">Verified Factory</Badge>}
                         </div>
                         <div className="p-4">
                           <CardTitle className="text-lg mb-1 truncate">

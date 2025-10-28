@@ -1,4 +1,5 @@
 
+
 'use server';
 import { getDb } from '@/lib/firebase-admin';
 import { type Product, type Manufacturer } from './definitions';
@@ -109,92 +110,71 @@ type ManufacturerInfo = {
 };
 
 /**
- * Fetches all published products from all manufacturers.
- * This requires a composite index on products(status, createdAt).
+ * Fetches all products from all manufacturers for development purposes.
+ * This function avoids complex queries that require specific indexes.
+ * It now simulates `isSponsored` for some products.
  */
 export async function getAllProducts(): Promise<any[]> {
   try {
-    // 1. Get all published products using a collection group query.
-    // This is more efficient as it doesn't require fetching all manufacturers first.
-    const productsSnapshot = await db
-      .collectionGroup('products')
-      .where('status', '==', 'published')
-      .orderBy('createdAt', 'desc')
-      .get();
-      
-    if (productsSnapshot.empty) {
-        console.log("No published products found in collection group query.");
+    // 1. Fetch all manufacturers and create a map.
+    const manufCollection = db.collection('manufacturers');
+    const manufSnapshot = await manufCollection.get();
+    
+    const manufMap = new Map<string, ManufacturerInfo>();
+    manufSnapshot.forEach(doc => {
+      const data = doc.data() as Manufacturer;
+      manufMap.set(doc.id, { 
+        slug: data.slug,
+        shopId: data.shopId,
+        isVerified: data.verificationStatus === 'Verified',
+        suspensionDetails: data.suspensionDetails 
+      });
+    });
+
+    if (manufMap.size === 0) {
         return [];
     }
 
-    // 2. Extract manufacturer IDs from the product paths.
-    const manufacturerIds = new Set<string>();
-    productsSnapshot.docs.forEach(doc => {
-        const manufId = doc.ref.parent.parent?.id;
-        if (manufId) {
-            manufacturerIds.add(manufId);
+    // 2. Fetch all products using a collection group query without filters.
+    const productsSnapshot = await db.collectionGroup('products').get();
+    
+    let productIndex = 0;
+    const allProducts = productsSnapshot.docs.map(doc => {
+      const productData = doc.data() as Product;
+      const manufId = doc.ref.parent.parent?.id; // Get parent manufacturer ID
+      const manufInfo = manufId ? manufMap.get(manufId) : undefined;
+      
+      // Sanitize Timestamps to ISO strings
+      const sanitizedData: { [key: string]: any } = {};
+      for (const key in productData) {
+        const value = productData[key];
+        if (value && typeof value.toDate === 'function') {
+          sanitizedData[key] = value.toDate().toISOString();
+        } else {
+          sanitizedData[key] = value;
         }
+      }
+
+      // ** SIMULATE SPONSORED PRODUCTS **
+      // For this example, we'll mark every 5th product as sponsored.
+      // In a real app, this flag would come from the database based on a seller's marketing plan.
+      const isSponsored = productIndex % 5 === 0;
+      productIndex++;
+
+      return {
+        ...sanitizedData,
+        id: doc.id,
+        manufacturerSlug: manufInfo?.slug,
+        shopId: manufInfo?.shopId,
+        isVerified: manufInfo?.isVerified,
+        isSponsored: isSponsored,
+      };
     });
-
-    // 3. Fetch the required data for these manufacturers in a single batch (if possible).
-    // Firestore `in` query is limited to 30 items. For more, multiple queries are needed.
-    const manufMap = new Map<string, ManufacturerInfo>();
-    if (manufacturerIds.size > 0) {
-        const manufCollection = db.collection('manufacturers');
-        const manufSnapshot = await manufCollection.where('__name__', 'in', Array.from(manufacturerIds)).get();
-        manufSnapshot.forEach(doc => {
-            const data = doc.data() as Manufacturer;
-            if (!data.suspensionDetails?.isSuspended) { // Check suspension here
-                manufMap.set(doc.id, {
-                    slug: data.slug,
-                    shopId: data.shopId,
-                    isVerified: data.verificationStatus === 'Verified',
-                });
-            }
-        });
-    }
-
-    // 4. Combine product data with manufacturer data.
-    const allProducts = productsSnapshot.docs
-      .map(doc => {
-        const productData = doc.data() as Product;
-        const manufId = doc.ref.parent.parent?.id;
-        if (!manufId || !manufMap.has(manufId)) {
-          // This product belongs to a suspended manufacturer, so we filter it out.
-          return null;
-        }
-        const manufInfo = manufMap.get(manufId)!;
-
-        // Sanitize Timestamps to ISO strings
-        const sanitizedData: { [key: string]: any } = {};
-        for (const key in productData) {
-            const value = productData[key];
-            if (value && typeof value.toDate === 'function') {
-            sanitizedData[key] = value.toDate().toISOString();
-            } else {
-            sanitizedData[key] = value;
-            }
-        }
-        
-        return {
-            ...sanitizedData,
-            id: doc.id,
-            manufacturerId: manufId, // Ensure manufacturerId is present
-            manufacturerSlug: manufInfo.slug,
-            shopId: manufInfo.shopId,
-            isVerified: manufInfo.isVerified,
-        };
-      })
-      .filter(p => p !== null); // Remove nulls (products from suspended shops)
 
     return allProducts;
 
   } catch (error) {
-    console.error("Error fetching all products:", error);
-    // This error might indicate a missing index. Advise the user.
-    if ((error as any).code === 'FAILED_PRECONDITION') {
-        console.error("Firestore error: This query requires an index. Please check your `firestore.indexes.json` file or create the index in the Firebase console for the 'products' collection group.");
-    }
+    console.error("Error fetching all products (dev mode):", error);
     return [];
   }
 }

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -67,6 +68,7 @@ type ProductWithShopId = Product & {
     slug: string; 
     variants: { price: number }[],
     isVerified?: boolean;
+    isSponsored?: boolean; // Added for marketing
 };
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -105,12 +107,22 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
 
   const filteredProducts = useMemo(() => {
     if(!allProducts) return [];
-    return allProducts.filter(product => {
+    
+    let products = allProducts.filter(product => {
       const matchesCategory = filters.category === 'all' || product.category === filters.category;
       const matchesSearch = searchQuery === '' || product.name.toLowerCase().includes(searchQuery.toLowerCase());
       
       return matchesCategory && matchesSearch;
     });
+
+    // Prioritize sponsored products
+    products.sort((a, b) => {
+        if (a.isSponsored && !b.isSponsored) return -1;
+        if (!a.isSponsored && b.isSponsored) return 1;
+        return 0;
+    });
+    
+    return products;
   }, [allProducts, filters, searchQuery]);
 
 
@@ -194,7 +206,8 @@ export function ProductsPageClient({ initialProducts }: { initialProducts: Produ
                           className="object-cover group-hover:scale-105 transition-transform"
                           data-ai-hint={product.imageHint}
                         />
-                        {product.isVerified && <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm flex items-center gap-1">
+                        {product.isSponsored && <Badge variant="destructive" className="absolute top-2 left-2">Sponsored</Badge>}
+                        {product.isVerified && !product.isSponsored && <Badge variant="secondary" className="absolute top-2 left-2 bg-background/80 backdrop-blur-sm flex items-center gap-1">
                           <ShieldCheck className="h-4 w-4 text-green-600" />
                           Verified
                         </Badge>}

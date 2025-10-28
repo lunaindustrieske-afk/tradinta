@@ -13,6 +13,9 @@ export type Product = {
   rating: number;
   reviewCount: number;
   manufacturerId: string; // Firebase UID of the manufacturer
+  isVerified?: boolean;
+  status?: 'published' | 'draft' | 'archived'; // Add status to Product
+  isSponsored?: boolean; // Added for marketing features
 };
 
 export type Order = {
@@ -39,17 +42,20 @@ export type Campaign = {
 export type Manufacturer = {
   id: string; // Firebase UID
   shopId: string; // Short, unique, URL-friendly ID
+  shopName?: string;
+  tagline?: string;
   slug: string;
   name: string;
-  logoUrl: string;
-  coverImageUrl: string;
+  logoUrl?: string;
+  logoHistory?: string[]; // Array of previously used logo URLs
+  overview: string;
   industry: string;
   location: string;
   memberSince: number;
   rating: number;
-  isVerified: boolean;
+  isVerified: boolean; // This is a computed field in the final product data
+  verificationStatus?: 'Unsubmitted' | 'Pending Legal' | 'Pending Admin' | 'Action Required' | 'Verified'; // The source of truth
   acceptsTradPay: boolean;
-  overview: string;
   certifications: string[];
   businessType: string;
   workforceSize: string;
@@ -65,6 +71,12 @@ export type Manufacturer = {
     rating: number;
     comment: string;
   }[];
+  suspensionDetails?: {
+    isSuspended: boolean;
+    reason: string;
+    prohibitions: string[];
+    publicDisclaimer: boolean;
+  };
 };
 
 export type Review = {
