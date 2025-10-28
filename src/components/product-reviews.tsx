@@ -2,13 +2,13 @@
 'use client';
 
 import * as React from 'react';
-import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, orderBy, doc, serverTimestamp } from 'firebase/firestore';
 import { type Review } from '@/lib/definitions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
-import { Star, CheckCircle, Trash2, Flag } from 'lucide-react';
+import { Star, CheckCircle, Trash2, Flag, MessageSquare, Send, Loader2 } from 'lucide-react';
 import { LeaveReviewForm } from '@/components/leave-review-form';
 import { Separator } from './ui/separator';
 import { Button } from './ui/button';
@@ -26,7 +26,58 @@ import {
 } from '@/components/ui/alert-dialog';
 import { logFeatureUsage } from '@/lib/analytics';
 import { ReportModal } from './report-modal';
+import { Textarea } from './ui/textarea';
 
+const ReplyForm = ({ review, onReplySuccess }: { review: Review, onReplySuccess: () => void }) => {
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const { toast } = useToast();
+    const [replyText, setReplyText] = React.useState('');
+    const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+    const handleReplySubmit = async () => {
+        if (!replyText.trim() || !user || !firestore) return;
+        setIsSubmitting(true);
+        try {
+            const replyData = {
+                text: replyText,
+                authorId: user.uid,
+                authorName: user.displayName || 'Admin',
+                createdAt: serverTimestamp(),
+            };
+            // In a real app, you might add this to a 'replies' subcollection.
+            // For simplicity, we'll update the review document.
+            const reviewRef = doc(firestore, 'reviews', review.id);
+            await addDocumentNonBlocking(collection(reviewRef, 'replies'), replyData);
+
+            toast({ title: 'Reply Posted!' });
+            setReplyText('');
+            onReplySuccess();
+        } catch (error: any) {
+            toast({ title: 'Error', description: `Could not post reply: ${error.message}`, variant: 'destructive' });
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+    
+    return (
+        <div className="pl-11 pt-2 space-y-2">
+            <Textarea 
+                placeholder={`Replying to ${review.buyerName}...`}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                className="min-h-[80px]"
+            />
+            <div className="flex justify-end gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setReplyText('')}>Cancel</Button>
+                <Button size="sm" onClick={handleReplySubmit} disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                    Post Reply
+                </Button>
+            </div>
+        </div>
+    )
+}
 
 interface ProductReviewsProps {
     productId: string;
@@ -36,6 +87,8 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
     const firestore = useFirestore();
     const { user, role } = useUser();
     const { toast } = useToast();
+    const [replyingTo, setReplyingTo] = React.useState<string | null>(null);
+
 
     const reviewsQuery = useMemoFirebase(() => {
         if (!firestore || !productId) return null;
@@ -104,7 +157,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                         </div>
                     ) : reviews && reviews.length > 0 ? (
                         reviews.map(review => (
-                            <div key={review.id} className="p-4 border rounded-lg space-y-2 group">
+                            <div key={review.id} className="p-4 border rounded-lg group">
                                 <div className="flex justify-between items-start">
                                     <div className="flex items-center gap-3">
                                         <Avatar>
@@ -125,7 +178,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                             ))}
                                         </div>
                                          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <ReportModal reportType="Review" referenceId={review.id}>
+                                            <ReportModal reportType="Review" referenceId={review.id} productName={product.name}>
                                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive">
                                                      <Flag className="w-4 h-4"/>
                                                  </Button>
@@ -156,7 +209,17 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                         </div>
                                     </div>
                                 </div>
-                                <p className="text-sm text-muted-foreground pl-11">"{review.comment}"</p>
+                                <p className="text-sm text-muted-foreground pl-11 pt-1">"{review.comment}"</p>
+                                <div className="pl-11 pt-2">
+                                     {(isAdmin || user?.uid === review.buyerId) && (
+                                        replyingTo !== review.id ? (
+                                            <Button variant="ghost" size="sm" onClick={() => setReplyingTo(review.id)}>
+                                                <MessageSquare className="mr-2 h-4 w-4" /> Reply
+                                            </Button>
+                                        ) : null
+                                     )}
+                                </div>
+                                {replyingTo === review.id && <ReplyForm review={review} onReplySuccess={() => { setReplyingTo(null); forceRefetch(); }} />}
                             </div>
                         ))
                     ) : (

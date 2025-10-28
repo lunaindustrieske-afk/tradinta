@@ -32,6 +32,7 @@ import { createSystemAlert } from '@/lib/system-alerts';
 interface ReportModalProps {
   reportType: 'Product' | 'Review' | 'Shop';
   referenceId: string;
+  productName?: string; // Optional product name for context
   children: React.ReactNode;
 }
 
@@ -45,6 +46,7 @@ const reportReasons = {
 export function ReportModal({
   reportType,
   referenceId,
+  productName,
   children,
 }: ReportModalProps) {
   const { toast } = useToast();
@@ -128,7 +130,8 @@ export function ReportModal({
             <Flag className="w-5 h-5 text-destructive"/> Report Content
           </DialogTitle>
           <DialogDescription>
-            Report a {reportType.toLowerCase()} that violates Tradinta's policies. Your report is confidential.
+            Report a {reportType.toLowerCase()} that violates Tradinta's policies.
+            {productName && ` For product: "${productName}".`} Your report is confidential.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
@@ -173,5 +176,3 @@ export function ReportModal({
     </Dialog>
   );
 }
-
-    
