@@ -64,7 +64,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
-import { type Product, type Manufacturer } from '@/lib/definitions';
+import { type Product, type Manufacturer } from '@/app/lib/definitions';
 import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
