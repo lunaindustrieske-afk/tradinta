@@ -65,14 +65,14 @@ import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { RequestQuoteModal } from '@/components/request-quote-modal';
 import { type Product, type Manufacturer } from '@/lib/definitions';
-import { categories } from '@/lib/categories';
+import { categories } from '@/app/lib/categories';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { getAllProducts } from '@/app/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { manufacturers as mockManufacturers } from '@/app/lib/mock-data';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { PlaceHolderImages } from '@/app/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 
 type ProductWithShopId = Product & {
