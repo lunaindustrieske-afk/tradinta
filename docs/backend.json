@@ -101,6 +101,20 @@
         "address": {
           "type": "string",
           "description": "Physical address of the buyer."
+        },
+        "tradPointsStatus": {
+          "type": "object",
+          "description": "Details regarding the user's status in the TradPoints program.",
+          "properties": {
+            "isBanned": {
+              "type": "boolean",
+              "description": "If true, the user cannot earn or spend points."
+            },
+            "banReason": {
+              "type": "string",
+              "description": "The reason provided by an admin for the ban."
+            }
+          }
         }
       },
       "required": [
@@ -934,5 +948,3 @@
     ]
   }
 }
-
-    

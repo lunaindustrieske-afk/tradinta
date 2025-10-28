@@ -19,7 +19,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Coins, Star, UserPlus, ShoppingCart, Loader2, RefreshCw, Sparkles, Gift, Check, Ticket, Hash } from 'lucide-react';
+import { Coins, Star, UserPlus, ShoppingCart, Loader2, RefreshCw, Sparkles, Gift, Check, Ticket, Hash, AlertTriangle } from 'lucide-react';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +28,8 @@ import { reconcileUserPoints } from '@/app/(auth)/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import Link from 'next/link';
 
 type PointsLedgerEvent = {
     id: string;
@@ -49,6 +51,14 @@ type PointsConfig = {
     buyerReferralPoints?: number;
 }
 
+type UserProfile = {
+    tradintaId: string;
+    tradPointsStatus?: {
+        isBanned: boolean;
+        banReason: string;
+    }
+}
+
 export default function TradPointsDashboardPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -60,7 +70,7 @@ export default function TradPointsDashboardPage() {
     if (!user) return null;
     return doc(firestore, 'users', user.uid);
   }, [user, firestore]);
-  const { data: userProfile, isLoading: isLoadingProfile } = useDoc(userDocRef);
+  const { data: userProfile, isLoading: isLoadingProfile } = useDoc<UserProfile>(userDocRef);
 
   // Fetch points configuration
   const pointsConfigRef = useMemoFirebase(() => firestore ? doc(firestore, 'platformSettings', 'pointsConfig') : null, [firestore]);
@@ -114,6 +124,12 @@ export default function TradPointsDashboardPage() {
   }, [userProfile, firestore]);
   const { data: referrals, isLoading: isLoadingReferrals } = useCollection<ReferredUser>(referralsQuery);
   
+  React.useEffect(() => {
+    if (user && !isReconciling && !isLoadingProfile) {
+        handleReconcile();
+    }
+  }, [user, isLoadingProfile]);
+  
   const totalPoints = React.useMemo(() => {
     if (!ledgerEvents) return 0;
     return ledgerEvents.reduce((sum, event) => sum + event.points, 0);
@@ -132,13 +148,11 @@ export default function TradPointsDashboardPage() {
     setIsReconciling(true);
     try {
         const result = await reconcileUserPoints(user.uid);
-        if(result.success) {
+        if(result.success && result.pointsAwarded > 0) {
             toast({
-                title: result.pointsAwarded > 0 ? "Reconciliation Complete!" : "All Good!",
+                title: "Reconciliation Complete!",
                 description: result.message,
             });
-        } else {
-            throw new Error(result.message);
         }
     } catch (error: any) {
         toast({ title: 'Error Reconciling Points', description: error.message, variant: 'destructive' });
@@ -147,7 +161,6 @@ export default function TradPointsDashboardPage() {
     }
   };
 
-  
   const renderLedgerRows = () => {
       const isLoading = isLoadingLedger || isLoadingProfile;
       if (isLoading) {
@@ -179,13 +192,49 @@ export default function TradPointsDashboardPage() {
           </TableRow>
       ));
   };
-
+  
+  if (userProfile?.tradPointsStatus?.isBanned) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+        <Card className="max-w-md text-center">
+            <CardHeader>
+                <CardTitle className="flex flex-col items-center gap-2">
+                    <AlertTriangle className="w-12 h-12 text-destructive" />
+                    Participation Suspended
+                </CardTitle>
+                <CardDescription>Your account has been restricted from the TradPoints program.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <p className="font-semibold">Reason:</p>
+                <p className="text-muted-foreground">{userProfile.tradPointsStatus.banReason || 'Violation of program policies.'}</p>
+            </CardContent>
+            <CardFooter className="flex-col">
+                <p className="text-xs text-muted-foreground">If you believe this is an error, please contact support.</p>
+                <Button asChild variant="link" className="mt-2"><Link href="/dashboards/support">Contact Support</Link></Button>
+            </CardFooter>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
+       <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link href="/dashboards/buyer">Dashboard</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>TradPoints</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
       <Card>
         <CardHeader>
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-start">
             <CardTitle className="flex items-center gap-2">
                 <Coins className="w-6 h-6 text-primary" />
                 My TradPoints

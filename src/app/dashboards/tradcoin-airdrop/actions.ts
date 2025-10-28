@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getFirestore, FieldValue, DocumentReference } from 'firebase-admin/firestore';
 import { customInitApp } from '@/firebase/admin';
 import { nanoid } from 'nanoid';
 
@@ -56,22 +56,22 @@ export async function voidClaimCode(codeId: string): Promise<{ success: boolean;
 
 export async function findUserAndTheirPoints(identifier: string): Promise<{ success: boolean; message?: string; user?: any }> {
     try {
-        let userQuery;
+        let userDocRef: DocumentReference;
+
         if (identifier.includes('@')) {
-             const emailDocRef = db.collection('emails').doc(identifier);
-             const emailDoc = await emailDocRef.get();
+             const emailDoc = await db.collection('emails').doc(identifier).get();
              if (!emailDoc.exists) throw new Error('User with this email not found.');
              const userId = emailDoc.data()!.userId;
-             userQuery = db.collection('users').doc(userId);
+             userDocRef = db.collection('users').doc(userId);
         } else {
             const usersRef = db.collection('users');
             const q = usersRef.where('tradintaId', '==', identifier).limit(1);
             const snapshot = await q.get();
             if (snapshot.empty) throw new Error('User with this Tradinta ID not found.');
-            userQuery = snapshot.docs[0].ref;
+            userDocRef = snapshot.docs[0].ref;
         }
         
-        const userDoc = await userQuery.get();
+        const userDoc = await userDocRef.get();
         if (!userDoc.exists) throw new Error('User profile not found.');
 
         const userData = userDoc.data();
@@ -87,12 +87,43 @@ export async function findUserAndTheirPoints(identifier: string): Promise<{ succ
             user: {
                 id: userDoc.id,
                 fullName: userData?.fullName,
+                tradintaId: userData?.tradintaId,
+                tradPointsStatus: userData?.tradPointsStatus || { isBanned: false },
                 totalPoints,
                 ledger
             }
         };
 
     } catch (error: any) {
+        return { success: false, message: error.message };
+    }
+}
+
+export async function banUserFromTradPoints({ userId, tradintaId, reason, ban }: { userId: string, tradintaId?: string, reason: string, ban: boolean }): Promise<{ success: boolean, message: string }> {
+    try {
+        const userRef = db.collection('users').doc(userId);
+        
+        // Update user's ban status
+        await userRef.update({
+            'tradPointsStatus.isBanned': ban,
+            'tradPointsStatus.banReason': reason,
+        });
+
+        // If banning, void their referral code if it exists
+        if (ban && tradintaId) {
+            const referralCodeRef = db.collection('referralCodes').doc(tradintaId);
+            const referralCodeDoc = await referralCodeRef.get();
+            if (referralCodeDoc.exists) {
+                await referralCodeRef.update({ status: 'voided' });
+            }
+        }
+        
+        // In a real scenario, you'd also want to log this administrative action
+        
+        return { success: true, message: `User has been successfully ${ban ? 'banned from' : 'reinstated to'} the TradPoints program.` };
+
+    } catch (error: any) {
+        console.error('Error updating TradPoints ban status:', error);
         return { success: false, message: error.message };
     }
 }

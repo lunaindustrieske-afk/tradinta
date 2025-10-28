@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -5,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight, PlusCircle, Ticket, User, Search } from "lucide-react";
+import { Coins, Gift, Settings, BarChart, UserPlus, ShoppingCart, Star, Edit, ShieldCheck, UploadCloud, Save, Loader2, TrendingUp, ChevronRight, PlusCircle, Ticket, User, Search, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,11 +16,14 @@ import { doc, collection, query, orderBy, getDocs, where, limit } from 'firebase
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { generateClaimCodes, voidClaimCode, findUserAndTheirPoints } from './actions';
+import { generateClaimCodes, voidClaimCode, findUserAndTheirPoints, banUserFromTradPoints } from './actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { awardPoints } from '@/app/(auth)/actions';
 import { useAuth } from '@/firebase';
 import { Separator } from '@/components/ui/separator';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Textarea } from '@/components/ui/textarea';
+
 
 const airdropPhases = [
     { id: 'phase1', name: 'Phase 1: Early Adopters', status: 'Completed', claimed: '1.2M / 1.2M' },
@@ -241,6 +245,11 @@ type FoundUser = {
   fullName: string;
   totalPoints: number;
   ledger: PointsLedgerEvent[];
+  tradintaId?: string;
+  tradPointsStatus?: {
+    isBanned: boolean;
+    banReason?: string;
+  };
 }
 
 function ClaimCodesManager() {
@@ -260,6 +269,12 @@ function ClaimCodesManager() {
     const [awardReason, setAwardReason] = React.useState('');
     const [awardNote, setAwardNote] = React.useState('');
     const [isAwarding, setIsAwarding] = React.useState(false);
+    
+    // Ban State
+    const [isBanModalOpen, setIsBanModalOpen] = React.useState(false);
+    const [banReason, setBanReason] = React.useState('');
+    const [isProcessingBan, setIsProcessingBan] = React.useState(false);
+
 
     const codesQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -356,7 +371,6 @@ function ClaimCodesManager() {
         }
     };
 
-
     const handleVoidCode = async (codeId: string) => {
         try {
             const result = await voidClaimCode(codeId);
@@ -370,6 +384,58 @@ function ClaimCodesManager() {
             toast({ title: 'Error', description: error.message, variant: 'destructive' });
         }
     };
+    
+    const handleBanUser = async () => {
+        if (!foundUser) return;
+        if (!banReason.trim()) {
+            toast({ title: 'Reason is required to ban a user.', variant: 'destructive' });
+            return;
+        }
+        setIsProcessingBan(true);
+        try {
+            const result = await banUserFromTradPoints({
+                userId: foundUser.id,
+                tradintaId: foundUser.tradintaId,
+                reason: banReason,
+                ban: true // Banning action
+            });
+            if (result.success) {
+                toast({ title: 'User Banned from TradPoints', description: `${foundUser.fullName} can no longer participate in the points program.` });
+                handleUserSearch(new Event('submit') as any); // Refresh user data
+                setIsBanModalOpen(false);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+             toast({ title: 'Error', description: `Failed to ban user: ${error.message}`, variant: 'destructive' });
+        } finally {
+            setIsProcessingBan(false);
+        }
+    };
+
+    const handleUnbanUser = async () => {
+        if (!foundUser) return;
+        setIsProcessingBan(true);
+        try {
+            const result = await banUserFromTradPoints({
+                userId: foundUser.id,
+                tradintaId: foundUser.tradintaId,
+                reason: '', // Reason not needed for unban
+                ban: false // Unbanning action
+            });
+            if (result.success) {
+                toast({ title: 'User Reinstated', description: `${foundUser.fullName} can now participate in the points program again.` });
+                handleUserSearch(new Event('submit') as any); // Refresh user data
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error: any) {
+             toast({ title: 'Error', description: `Failed to reinstate user: ${error.message}`, variant: 'destructive' });
+        } finally {
+            setIsProcessingBan(false);
+        }
+    };
+
 
     const getStatusVariant = (status: ClaimCode['status']) => {
         switch (status) {
@@ -383,7 +449,7 @@ function ClaimCodesManager() {
     return (
         <div className="space-y-6">
             <Card>
-                <CardHeader><CardTitle>Manual Point Adjustments</CardTitle><CardDescription>Search for a user by email or Tradinta ID to view their points ledger and make adjustments.</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Manual Point Adjustments & User Management</CardTitle><CardDescription>Search for a user by email or Tradinta ID to view their points ledger and make adjustments.</CardDescription></CardHeader>
                 <CardContent>
                     <form onSubmit={handleUserSearch} className="flex items-center gap-2 mb-4">
                         <Input placeholder="Search by Email or Tradinta ID..." value={searchIdentifier} onChange={e => setSearchIdentifier(e.target.value)} />
@@ -400,7 +466,10 @@ function ClaimCodesManager() {
                                 <CardHeader>
                                     <CardTitle className="flex items-center justify-between">
                                         <span>{foundUser.fullName}</span>
-                                        <Badge>{foundUser.totalPoints.toLocaleString()} Points</Badge>
+                                        <div className="flex items-center gap-2">
+                                            {foundUser.tradPointsStatus?.isBanned && <Badge variant="destructive">Banned</Badge>}
+                                            <Badge>{foundUser.totalPoints.toLocaleString()} Points</Badge>
+                                        </div>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -423,6 +492,55 @@ function ClaimCodesManager() {
                                         </Table>
                                      </ScrollArea>
                                 </CardContent>
+                                 <CardFooter>
+                                    {foundUser.tradPointsStatus?.isBanned ? (
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="secondary" className="w-full">Reinstate User</Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This will allow {foundUser.fullName} to earn and spend TradPoints again. Their referral code will need to be manually reactivated if applicable.
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleUnbanUser} disabled={isProcessingBan}>
+                                                        {isProcessingBan && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                                        Confirm Reinstatement
+                                                    </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    ) : (
+                                        <Dialog open={isBanModalOpen} onOpenChange={setIsBanModalOpen}>
+                                            <DialogTrigger asChild>
+                                                <Button variant="destructive" className="w-full">
+                                                    <AlertTriangle className="mr-2 h-4 w-4" /> Ban from TradPoints
+                                                </Button>
+                                            </DialogTrigger>
+                                            <DialogContent>
+                                                <DialogHeader>
+                                                    <DialogTitle>Ban {foundUser.fullName} from TradPoints?</DialogTitle>
+                                                    <DialogDescription>The user will no longer be able to earn or spend points, and their referral code will be voided. This action is reversible.</DialogDescription>
+                                                </DialogHeader>
+                                                <div className="grid gap-2 py-4">
+                                                    <Label htmlFor="ban-reason">Reason for Ban</Label>
+                                                    <Textarea id="ban-reason" value={banReason} onChange={e => setBanReason(e.target.value)} placeholder="e.g., Abuse of referral system." />
+                                                </div>
+                                                <DialogFooter>
+                                                    <Button variant="outline" onClick={() => setIsBanModalOpen(false)}>Cancel</Button>
+                                                    <Button variant="destructive" onClick={handleBanUser} disabled={isProcessingBan}>
+                                                        {isProcessingBan && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                                        Confirm Ban
+                                                    </Button>
+                                                </DialogFooter>
+                                            </DialogContent>
+                                        </Dialog>
+                                    )}
+                                </CardFooter>
                             </Card>
                             <Separator />
                             <form onSubmit={handleAwardPoints}>
